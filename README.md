@@ -45,6 +45,16 @@ your region and location in Settings.
 **Keep it on your own network.** Port 8095 is plain HTTP and the kids' page has no login. Don't forward it to the
 internet. For HTTPS, see below; the login cookie is marked `Secure` there.
 
+## Updating
+
+```sh
+git pull
+docker build -t unsubscribird:latest app
+docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
+```
+
+Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database and clips are in your own folders.
+
 ## How it works
 
 * **Only labels a person confirms become training data.** Model suggestions never train anything by themselves.
