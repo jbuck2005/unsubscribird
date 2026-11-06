@@ -8,6 +8,8 @@ Standing rules for AI assistants working in this repository.
 - No AI provenance tags (C2PA / Content Credentials, XMP) in committed images or other files. Generate binary assets locally and strip metadata before committing.
 - Stage files by name. Never `git add -A` or `git add .`.
 - Never force-push `main`.
+- Name branches `dev/<topic>`. Never put "claude" in a branch name: merging copies it into the history of `main`.
+- Keep "claude" and "anthropic" out of commit messages and PR titles, including for changes to this file (write "project rules"). Deployment refuses commits that contain them.
 
 ## Privacy
 - The repo is public, and the data it handles (feeder clips, images, labels) comes from real households and is of unknown quality. Privacy comes first in every design decision.
