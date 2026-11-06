@@ -150,7 +150,7 @@ class Recognizer:
         topic, body = [c for c in self.discovery() if c[0].endswith("/last_bird_photo/config")][0]
         key = f"species_{slug(name)}"
         return (topic.replace("/last_bird_photo/", f"/{key}/"),
-                {**body, "name": f"{name} photo", "unique_id": f"{self.s.ha_id}_{key}", "default_entity_id": f"image.{self.s.ha_id}_{key}",
+                {**body, "name": f"{name} photo", "unique_id": f"{self.s.ha_id}_{key}", "default_entity_id": f"image.{self.s.ha_id}_{slug(name)}_photo",
                  "image_topic": self.t(f"species/{slug(name)}/image")})
 
     def publish_discovery(self) -> None:

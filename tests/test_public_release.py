@@ -44,6 +44,15 @@ def test_home_assistant_ids_come_from_settings(monkeypatch):
     assert configs[0][1]["device"]["identifiers"] == ["my_feeder"] and configs[0][1]["device"]["name"] == "My Feeder"
 
 
+def test_the_gallery_finds_each_species_photo(monkeypatch):
+    """The gallery names image.<id>_<slug>_photo, so a new species must register under that id."""
+    from wbs.recognition import Recognizer
+    monkeypatch.setenv("WBS_HA_ID", "my_feeder")
+    _, body = Recognizer(Settings(), main.db, lambda *a: None).species_image_config("Blue Jay")
+    assert body["default_entity_id"] == "image.my_feeder_blue_jay_photo"
+    assert body["unique_id"] == "my_feeder_species_blue_jay"
+
+
 def test_example_env_has_no_credentials():
     example = (ROOT / "deploy/.env.example").read_text()
     for key in ("WBS_MQTT_USER", "WBS_MQTT_PASSWORD", "WBS_ADMIN_PASSWORD"):

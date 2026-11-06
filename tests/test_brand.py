@@ -48,5 +48,8 @@ def test_renaming_the_site_never_changes_home_assistant_entity_ids(monkeypatch):
     r = Recognizer(Settings(), main.db, lambda *a: None)
     for topic, body in [*r.discovery(), r.sighting_config(), r.species_image_config("Blue Jay")]:
         component = topic.split("/")[-4]
-        assert body["default_entity_id"] == f"{component}.{body['unique_id']}", topic
+        if "/species_blue_jay/" in topic:   # the gallery names these image.<id>_<slug>_photo
+            assert body["default_entity_id"] == "image.unsubscribird_blue_jay_photo", topic
+        else:
+            assert body["default_entity_id"] == f"{component}.{body['unique_id']}", topic
         assert body["default_entity_id"].split(".")[1].startswith("unsubscribird_"), topic
