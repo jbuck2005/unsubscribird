@@ -37,6 +37,9 @@ PREFS = (
          "Removes the camera's dark wake-up, at the first keyframe at or after this time (keyframes are 2 s apart). "
          "New clips only: clips already cut stay as they are. 0 = no cut.", "float", 0, 10, unit="s"),
     Pref("frames_per_visit", "Clips and frames", "Frames kept per visit", "New visits only.", "int", 1, 6),
+    Pref("prelabel_paused", "Clips and frames", "Pause AI pre-labels",
+         "Stops using LM Studio, to free the GPU. Clips, recognition and the kids' page keep working. New visits "
+         "wait and catch up when you resume, within about 2 minutes.", "bool"),
     Pref("prelabel_frames", "Clips and frames", "Frames sent to LM Studio", "Per visit, best frames first.", "int", 1, 6),
     Pref("quiet_activity", "Clips and frames", "Quiet clip threshold",
          "Clips with less movement than this are suggested as Empty and skip LM Studio.", "float", 0, 1),

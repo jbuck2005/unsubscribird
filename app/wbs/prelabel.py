@@ -124,11 +124,20 @@ class Prelabeler:
     def start(self) -> None:
         threading.Thread(target=self._loop, name="prelabel", daemon=True).start()
 
+    def next_model(self) -> str | None:
+        """The model to pre-label with now, or None while paused or none is ready."""
+        if self.paused:
+            return None
+        if self.s.prelabel_paused:
+            self.lm.status = "paused on the Settings page"
+            return None
+        return self.lm.pick_model()
+
     def _loop(self) -> None:
         while not self.stop.is_set():
             wait = 15
             try:
-                model = None if self.paused else self.lm.pick_model()
+                model = self.next_model()
                 if model is None:
                     wait = 120
                 else:
@@ -146,7 +155,7 @@ class Prelabeler:
 
     def label_frame(self, trace_id: str, frame) -> dict[str, Any] | None:
         """Suggest a label for one frame right now (used when a person grabs a replacement frame)."""
-        model = self.lm.pick_model()
+        model = None if self.s.prelabel_paused else self.lm.pick_model()
         if model is None:
             return None
         result, raw = self.lm.ask(model, (self.s.image_dir / frame["path"]).read_bytes())

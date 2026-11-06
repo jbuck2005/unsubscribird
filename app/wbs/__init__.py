@@ -1,3 +1,3 @@
 """un-subscribird: collect feeder visits, pre-label with a local VLM, confirm by hand, train."""
 
-__version__ = "0.20.1"
+__version__ = "0.21.0"

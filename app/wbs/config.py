@@ -33,6 +33,8 @@ class Settings:
     # Only use a model LM Studio already has loaded (never make it load/swap models on the PC).
     lmstudio_require_loaded: bool = field(
         default_factory=lambda: _env("WBS_LMSTUDIO_REQUIRE_LOADED", "true").lower() in ("1", "true", "yes"))
+    # Keep LM Studio's GPU free for something else. New visits wait and catch up on resume.
+    prelabel_paused: bool = field(default_factory=lambda: _env("WBS_PRELABEL_PAUSED", "false").lower() in ("1", "true", "yes"))
     frames_per_visit: int = field(default_factory=lambda: int(_env("WBS_FRAMES_PER_VISIT", "4")))
     prelabel_frames: int = field(default_factory=lambda: int(_env("WBS_PRELABEL_FRAMES", "3")))
     embed_enabled: bool = field(default_factory=lambda: _env("WBS_EMBED", "true").lower() in ("1", "true", "yes"))

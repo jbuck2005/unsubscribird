@@ -56,6 +56,24 @@ def test_one_bad_value_saves_nothing():
     assert "frames_per_visit" not in main.prefs.saved()
 
 
+def test_pausing_stops_lm_studio_and_resuming_starts_it(monkeypatch):
+    lm = main.prelabeler.lm
+    calls = []
+    monkeypatch.setattr(lm, "pick_model", lambda: calls.append(1) or "model")
+    main.prefs.save({"prelabel_paused": True})
+    assert main.prelabeler.next_model() is None
+    assert main.prelabeler.label_frame("x", None) is None
+    assert calls == [] and lm.status.startswith("paused")
+    main.prefs.save({"prelabel_paused": False})
+    assert main.prelabeler.next_model() == "model" and calls == [1]
+
+
+def test_the_pause_switch_is_on_the_settings_api():
+    body = TestClient(main.app).get("/api/settings").json()
+    assert value(body, "prelabel_paused")["kind"] == "bool"
+    assert value(TestClient(main.app).put("/api/settings", json={"prelabel_paused": True}).json(), "prelabel_paused")["value"] is True
+
+
 def test_every_pref_is_a_real_setting_and_no_secrets():
     for p in PREFS:
         assert hasattr(settings, p.key)
