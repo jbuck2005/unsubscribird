@@ -1,4 +1,4 @@
-# Bird camera dashboard sections driven by Unsubscribird (local recognition), replacing the
+# Bird camera dashboard sections driven by un-subscribird (local recognition), replacing the
 # Vicohome cloud's bird names. The "Camera health" section is appended from ha-vicohome-bridge.
 # Built into the dashboard by deploy/ha/build_dashboard.py.
 - type: grid

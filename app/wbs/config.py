@@ -41,7 +41,7 @@ class Settings:
     ha_topic: str = field(default_factory=lambda: _env("WBS_HA_TOPIC", "unsubscribird"))
     # Home Assistant's id for this device. Changing it makes new entities, so it isn't on the Settings page.
     ha_id: str = field(default_factory=lambda: _env("WBS_HA_ID", "unsubscribird"))
-    site_name: str = field(default_factory=lambda: _env("WBS_SITE_NAME", "Unsubscribird"))
+    site_name: str = field(default_factory=lambda: _env("WBS_SITE_NAME", "un-subscribird"))
     ha_discovery_prefix: str = field(default_factory=lambda: _env("WBS_HA_DISCOVERY_PREFIX", "homeassistant"))
     ha_model_confidence: float = field(default_factory=lambda: float(_env("WBS_HA_MODEL_CONFIDENCE", "0.75")))
     ha_vlm_confidence: float = field(default_factory=lambda: float(_env("WBS_HA_VLM_CONFIDENCE", "0.8")))

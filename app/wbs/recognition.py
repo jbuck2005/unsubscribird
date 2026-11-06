@@ -98,7 +98,8 @@ class Recognizer:
 
         def cfg(component, key, body):
             return (f"{p}/{component}/{self.s.ha_id}/{key}/config",
-                    {**base, **body, "unique_id": f"{self.s.ha_id}_{key}"})
+                    {**base, **body, "unique_id": f"{self.s.ha_id}_{key}",
+                     "default_entity_id": f"{component}.{self.s.ha_id}_{key}"})
 
         return [
             cfg("sensor", "last_bird", {"name": "Last bird", "icon": "mdi:bird", "state_topic": self.t("last_bird"),
@@ -141,14 +142,15 @@ class Recognizer:
         dev = {"identifiers": [self.s.ha_id], "name": self.s.site_name}
         return (f"{self.s.ha_discovery_prefix}/event/{self.s.ha_id}/sighting/config",
                 {"device": dev, "has_entity_name": True, "name": "Sighting", "icon": "mdi:binoculars",
-                 "unique_id": f"{self.s.ha_id}_sighting", "state_topic": self.t("sighting"),
+                 "unique_id": f"{self.s.ha_id}_sighting", "default_entity_id": f"event.{self.s.ha_id}_sighting",
+                 "state_topic": self.t("sighting"),
                  "event_types": self.sighting_types()})
 
     def species_image_config(self, name: str) -> tuple[str, dict]:
         topic, body = [c for c in self.discovery() if c[0].endswith("/last_bird_photo/config")][0]
         key = f"species_{slug(name)}"
         return (topic.replace("/last_bird_photo/", f"/{key}/"),
-                {**body, "name": f"{name} photo", "unique_id": f"{self.s.ha_id}_{key}",
+                {**body, "name": f"{name} photo", "unique_id": f"{self.s.ha_id}_{key}", "default_entity_id": f"image.{self.s.ha_id}_{key}",
                  "image_topic": self.t(f"species/{slug(name)}/image")})
 
     def publish_discovery(self) -> None:

@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
     recognizer.stop.set()
 
 
-app = FastAPI(title="Unsubscribird", version=__version__, lifespan=lifespan)
+app = FastAPI(title="un-subscribird", version=__version__, lifespan=lifespan)
 auth = Auth(settings.data_dir)
 PREFIX = re.compile(r"(/[A-Za-z0-9_-]+)+")
 

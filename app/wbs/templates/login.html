@@ -1,16 +1,16 @@
-<!doctype html>
+{% import "_brand.html" as brand %}<!doctype html>
 <html lang="en" data-base="{{ base }}" data-lat="{{ cfg.sun_lat }}" data-lon="{{ cfg.sun_lon }}" data-theme-default="{{ cfg.theme_default }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="{{ base }}/static/theme.js?v={{ version }}"></script>
   <title>Settings login · {{ cfg.site_name }}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  {{ brand.icons(base, version) }}
   <link rel="stylesheet" href="{{ base }}/static/style.css?v={{ version }}">
 </head>
 <body data-page="login">
   <main style="max-width:380px;margin:12vh auto;padding:0 16px">
-    <h2>🐦 {{ cfg.site_name }}</h2>
+    <h2 class="brand"><img src="{{ base }}/static/brand/mark-192.png?v={{ version }}" alt="">{{ brand.wordmark(cfg.site_name) }}</h2>
     <p class="hint">Settings: review, training and the rest. <a href="{{ base }}/">← Back to the birds</a></p>
     {% if not configured %}
       <p class="msg err">Login isn't set up yet: add WBS_ADMIN_PASSWORD to the stack's .env and redeploy.</p>

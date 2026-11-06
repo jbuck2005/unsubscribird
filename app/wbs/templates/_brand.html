@@ -1,0 +1,13 @@
+{#- The site name, drawn as the un-subscribird wordmark ("un-" red-orange, "subscri" amber, "bird" blue, as in the
+    logo) when it is the project's own name. A custom WBS_SITE_NAME is shown as plain text. -#}
+{%- macro wordmark(name) -%}
+{%- set n = name|lower -%}
+{%- if n in ("unsubscribird", "un-subscribird") -%}
+<span class="wordmark" aria-label="{{ name }}"><span class="un">{{ name[:-11] }}</span><span class="sub">{{ name[-11:-4] }}</span><span class="bird">{{ name[-4:] }}</span></span>
+{%- else -%}{{ name }}{%- endif -%}
+{%- endmacro -%}
+{%- macro icons(base, version) -%}
+  <link rel="icon" type="image/png" href="{{ base }}/static/brand/favicon-64.png?v={{ version }}">
+  <link rel="apple-touch-icon" href="{{ base }}/static/brand/mark-192.png?v={{ version }}">
+  <meta name="theme-color" content="#142132">
+{%- endmacro -%}

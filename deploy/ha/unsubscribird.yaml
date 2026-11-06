@@ -1,15 +1,15 @@
-# Home Assistant package for Unsubscribird (github.com/jbuck2005/unsubscribird).
+# Home Assistant package for un-subscribird (github.com/jbuck2005/unsubscribird).
 # Change notify.mobile_app_YOUR_PHONE below to your phone.
 # Install: copy to /config/packages/unsubscribird.yaml, then reload automations (or restart).
-# The entities themselves come from MQTT discovery (device "Unsubscribird").
+# The entities themselves come from MQTT discovery (device "un-subscribird", or your WBS_SITE_NAME).
 
 automation:
   - id: unsubscribird_first_species
-    alias: Unsubscribird - notify first species of the day
+    alias: un-subscribird - notify first species of the day
     description: >-
       Phone notification with the photo the first time each bird species is recognised at the feeder
       each day, and a "new species" alert the first time a species is ever seen. Results come from the
-      Unsubscribird app (confirmed label > local model > LM Studio). Uncertain visits, empty
+      un-subscribird app (confirmed label > local model > LM Studio). Uncertain visits, empty
       visits and other animals never notify. Tapping opens the visit in the review page (home network only).
     mode: queued
     max: 10

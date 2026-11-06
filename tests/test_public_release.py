@@ -32,7 +32,7 @@ def test_the_site_name_comes_from_settings():
         for page in ("/", "/login", "/admin"):
             assert "Robin&#39;s Feeder" in TestClient(main.app).get(page).text
     finally:
-        main.settings.site_name = "Unsubscribird"
+        main.settings.site_name = "un-subscribird"
 
 
 def test_home_assistant_ids_come_from_settings(monkeypatch):

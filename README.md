@@ -1,4 +1,9 @@
-# Unsubscribird
+# un-subscribird
+
+<p align="center"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="app/wbs/static/brand/logo-dark.png">
+  <img src="app/wbs/static/brand/logo-light.png" alt="un-subscribird: No Strings. Just Wings. A bird breaking free of a rope tether and a broken credit card." width="600">
+</picture></p>
 
 Your own bird identification for a Vicohome-based feeder camera, trained on your birds and run on your own computers,
 instead of a monthly subscription for AI bird ID.
@@ -8,7 +13,7 @@ The camera itself still reports through the Vicohome cloud, which [ha-vicohome-b
 brings into Home Assistant. This project has no connection with Vicohome.
 
 ```
-Vicohome cloud ──> ha-vicohome-bridge (HA add-on) ──MQTT + MP4 clips──> Unsubscribird
+Vicohome cloud ──> ha-vicohome-bridge (HA add-on) ──MQTT + MP4 clips──> un-subscribird
                                                                          ├─ collector: snapshot, clip, best frames
                                                                          ├─ pre-labeller: LM Studio vision model (suggestions)
                                                                          ├─ review web UI: you confirm/correct -> labels

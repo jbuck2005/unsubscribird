@@ -1,19 +1,19 @@
-<!doctype html>
+{% import "_brand.html" as brand %}<!doctype html>
 <html lang="en" data-base="{{ base }}" data-lat="{{ cfg.sun_lat }}" data-lon="{{ cfg.sun_lon }}" data-theme-default="{{ cfg.theme_default }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="{{ base }}/static/theme.js?v={{ version }}"></script>
   <title>{{ cfg.site_name }}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  {{ brand.icons(base, version) }}
   <link rel="stylesheet" href="{{ base }}/static/kids.css?v={{ version }}">
 </head>
 <body data-sort="{{ cfg.kids_sort }}">
   <header class="kids-head">
     <div class="title">
-      <span class="bird">🐦</span>
+      <img class="mark" src="{{ base }}/static/brand/mark-192.png?v={{ version }}" alt="">
       <div>
-        <h1>{{ cfg.site_name }}</h1>
+        <h1>{{ brand.wordmark(cfg.site_name) }}</h1>
         <p id="subtitle">Who came to the feeder?</p>
       </div>
     </div>
