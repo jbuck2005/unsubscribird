@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="toolbar">
+  <div class="tabs" id="queues">
+    <button data-q="review" class="on">To review <b data-count="review"></b></button>
+    <button data-q="uncertain">Uncertain <b data-count="uncertain"></b></button>
+    <button data-q="check" title="Confirmed visits the trained model doubts (cross-checked without seeing them)">Check labels <b data-count="check"></b></button>
+    <button data-q="waiting">Waiting <b data-count="waiting"></b></button>
+    <button data-q="labelled">Labelled <b data-count="labelled"></b></button>
+    <button data-q="failed">Failed <b data-count="failed"></b></button>
+    <button data-q="excluded">Excluded <b data-count="excluded"></b></button>
+  </div>
+  <div class="batch">
+    <button class="btn primary" id="confirm-all" disabled>Confirm all</button>
+    <span id="batch-msg" class="msg"></span>
+  </div>
+  <details class="keys"><summary>Keys</summary>
+    <kbd>/</kbd> type species · <kbd>e</kbd> Empty · <kbd>s</kbd> Squirrel · <kbd>u</kbd> Unknown bird
+    (these only change the visit and move on) · <kbd>1</kbd>–<kbd>6</kbd> toggle frame · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd> blurry: grab another frame · <kbd>j</kbd>/<kbd>k</kbd> next/prev ·
+    <kbd>z</kbd> zoom · <kbd>Enter</kbd> confirm this visit · <kbd>Shift</kbd>+<kbd>A</kbd> confirm all ·
+    Check labels: <kbd>c</kbd> keep (label is right)
+  </details>
+</div>
+<p class="hint">Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species.
+Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, or ↻ to swap a blurry frame for a sharper one from the clip.</p>
+<datalist id="species-list"></datalist>
+<div id="visits"></div>
+<div class="pager"><button id="more" hidden>Load more</button></div>
+{% endblock %}

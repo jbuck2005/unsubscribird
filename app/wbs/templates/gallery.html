@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="toolbar">
+  <h2 id="g-title" style="margin:0">Snapshots</h2>
+  <div class="row" style="align-items:center">
+    <button class="btn" id="g-prev" title="Previous day">◀</button>
+    <input type="date" id="g-day">
+    <button class="btn" id="g-next" title="Next day">▶</button>
+    <select id="g-species"></select>
+  </div>
+</div>
+<p class="hint" id="g-summary"></p>
+<div id="g-visits"></div>
+{% endblock %}

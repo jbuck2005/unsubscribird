@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Settings</h2>
+<p class="hint">Saved here for good: these survive updates, are in the nightly backup and take effect as soon as you
+  save. "↺ default" goes back to the value in the stack's .env file, which is the starting value and fallback.
+  Passwords and server addresses are only in .env.</p>
+<form id="prefs"></form>
+<div class="row prefs-save">
+  <button class="btn primary" id="prefs-save" type="button" disabled>Save changes</button>
+  <span class="msg" id="prefs-msg"></span>
+</div>
+{% endblock %}

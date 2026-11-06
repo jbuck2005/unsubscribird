@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Model</h2>
+<p class="hint">v1 = a classifier on BioCLIP 2 image features, trained only on visits you confirmed. Accuracy is
+measured by visit with cross-validation (each visit's frames stay together), next to how BioCLIP alone and the
+LM Studio model did on the same visits.</p>
+<div id="progress" class="cards"></div>
+<div class="row" style="align-items:center">
+  <button class="btn primary" id="train">Train now</button>
+  <span id="train-msg" class="msg"></span>
+</div>
+<p class="hint" id="auto-msg"></p>
+<h3>Confirmed visits per species</h3>
+<p class="hint">A species needs <b id="minv">3</b> confirmed visits to be learned; the rest wait.</p>
+<div id="per-species"></div>
+<div id="latest"></div>
+<h3>Compare LM Studio models</h3>
+<p class="hint">Runs the pre-labelling prompt on a sample of your confirmed visits (up to <b>6 per species, 40 in total</b>,
+2 frames each) for every model you tick, and scores each against your labels. <b>LM Studio loads each model as it is
+asked for, which can unload the model you have loaded</b> (it is requested again at the end). Pre-labelling pauses
+while it runs. Best done when the PC is otherwise idle.</p>
+<div id="bake-models" class="row" style="flex-direction:column;align-items:flex-start;gap:4px"></div>
+<div class="row" style="align-items:center;margin-top:8px">
+  <button class="btn primary" id="bake-run">Run comparison</button>
+  <span id="bake-msg" class="msg"></span>
+</div>
+<table id="bake" style="margin-top:10px"><thead><tr><th>Model</th><th>Run</th><th class="n">Visits</th><th class="n">Visit accuracy</th>
+  <th class="n">Bird present</th><th class="n">Valid answers</th><th class="n">s / frame</th><th>Status</th></tr></thead><tbody></tbody></table>
+<h3>All models</h3>
+<table id="models"><thead><tr><th>Model</th><th>Trained</th><th class="n">Species</th><th class="n">Visits</th>
+  <th class="n">Visit accuracy</th><th class="n">BioCLIP alone</th><th class="n">LM Studio</th><th></th></tr></thead><tbody></tbody></table>
+{% endblock %}

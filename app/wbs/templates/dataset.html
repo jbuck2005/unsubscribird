@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Training data</h2>
+<p class="hint">Confirmed visits per species. Corrected = you changed the model's suggestion.
+Row colour = how likely the species is around Ottawa <b>this month</b>:
+<span class="legend s-expected">expected</span> <span class="legend s-possible">possible, likely migrating</span>
+<span class="legend s-unlikely">very unlikely</span> (from general range knowledge, not live sightings).</p>
+<div id="summary" class="cards"></div>
+<table id="species-table"><thead><tr><th data-sort="name">Species</th><th data-sort="scientific">Scientific name</th>
+  <th data-sort="family">Family</th><th class="n" data-sort="visits">Visits</th><th class="n" data-sort="frames">Frames</th>
+  <th class="n" data-sort="corrected">Corrected</th></tr></thead><tbody></tbody></table>
+<h3>Add a species</h3>
+<form id="add-species" class="row">
+  <input name="name" placeholder="Common name" required>
+  <input name="scientific" placeholder="Scientific name">
+  <select name="kind"><option value="bird">bird</option><option value="other">other</option></select>
+  <button>Add</button> <span id="add-msg"></span>
+</form>
+{% endblock %}

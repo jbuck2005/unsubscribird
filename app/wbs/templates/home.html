@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-base="{{ base }}" data-lat="{{ cfg.sun_lat }}" data-lon="{{ cfg.sun_lon }}" data-theme-default="{{ cfg.theme_default }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="{{ base }}/static/theme.js?v={{ version }}"></script>
+  <title>{{ cfg.site_name }}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  <link rel="stylesheet" href="{{ base }}/static/kids.css?v={{ version }}">
+</head>
+<body data-sort="{{ cfg.kids_sort }}">
+  <header class="kids-head">
+    <div class="title">
+      <span class="bird">🐦</span>
+      <div>
+        <h1>{{ cfg.site_name }}</h1>
+        <p id="subtitle">Who came to the feeder?</p>
+      </div>
+    </div>
+    <div class="head-tools">
+      <button id="theme-toggle" class="theme-toggle" aria-label="Light or dark"></button>
+      <a class="settings" href="{{ base }}/admin" title="Settings (grown-ups)">⚙︎</a>
+    </div>
+  </header>
+
+  <nav class="kids-bar">
+    <div class="day">
+      <button id="prev-day" aria-label="Previous day">◀</button>
+      <span id="day-label">Today</span>
+      <button id="next-day" aria-label="Next day">▶</button>
+    </div>
+    <div class="sort" role="group" aria-label="Order">
+      <button data-sort="new" class="on">Newest first</button>
+      <button data-sort="old">Oldest first</button>
+      <button data-sort="bird">By bird</button>
+    </div>
+  </nav>
+
+  <div id="chips" class="chips"></div>
+  <main id="grid" class="grid"></main>
+  <div id="empty" class="empty" hidden>
+    <div class="empty-bird">🐦</div>
+    <p id="empty-text">The feeder is quiet. No birds yet!</p>
+    <button id="see-yesterday" class="chip" hidden>See yesterday's birds</button>
+  </div>
+
+  <div id="viewer" class="viewer" hidden>
+    <button class="close" id="v-close" aria-label="Close">✕</button>
+    <button class="nav prev" id="v-prev" aria-label="Previous clip">◀</button>
+    <figure>
+      <video id="v-video" controls playsinline autoplay></video>
+      <figcaption><span id="v-name"></span> <span id="v-time"></span> <span id="v-count"></span></figcaption>
+    </figure>
+    <button class="nav next" id="v-next" aria-label="Next clip">▶</button>
+  </div>
+  <script src="{{ base }}/static/kids.js?v={{ version }}"></script>
+</body>
+</html>

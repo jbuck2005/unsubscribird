@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-base="{{ base }}" data-lat="{{ cfg.sun_lat }}" data-lon="{{ cfg.sun_lon }}" data-theme-default="{{ cfg.theme_default }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="{{ base }}/static/theme.js?v={{ version }}"></script>
+  <title>{{ cfg.site_name }}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v={{ version }}">
+</head>
+<body data-page="{{ page }}">
+  <header>
+    <span class="brand">🐦 {{ cfg.site_name }}</span>
+    <nav>
+      <a href="{{ base }}/" title="The kids' page">🏠 Home</a>
+      <a href="{{ base }}/admin" class="{{ 'on' if page == 'review' }}">Review</a>
+      <a href="{{ base }}/admin/gallery" class="{{ 'on' if page == 'gallery' }}">Gallery</a>
+      <a href="{{ base }}/admin/dataset" class="{{ 'on' if page == 'dataset' }}">Dataset</a>
+      <a href="{{ base }}/admin/model" class="{{ 'on' if page == 'model' }}">Model</a>
+      <a href="{{ base }}/admin/status" class="{{ 'on' if page == 'status' }}">Status</a>
+      <a href="{{ base }}/admin/settings" class="{{ 'on' if page == 'settings' }}">Settings</a>
+      <a href="{{ base }}/logout">Log out</a>
+    </nav>
+    <span class="ver">v{{ version }}</span>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Light or dark"></button>
+  </header>
+  <main>{% block main %}{% endblock %}</main>
+  <div id="lightbox" hidden><img alt=""></div>
+  <script src="{{ base }}/static/app.js?v={{ version }}"></script>
+</body>
+</html>

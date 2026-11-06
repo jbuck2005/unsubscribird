@@ -1,0 +1,110 @@
+# Bird camera dashboard sections driven by Unsubscribird (local recognition), replacing the
+# Vicohome cloud's bird names. The "Camera health" section is appended from ha-vicohome-bridge.
+# Built into the dashboard by deploy/ha/build_dashboard.py.
+- type: grid
+  cards:
+    - type: heading
+      heading: Latest visitor
+      icon: mdi:cctv
+    - type: picture-entity
+      entity: image.__CAMERA___snapshot
+      show_name: false
+      show_state: false
+      tap_action:
+        action: more-info
+      grid_options:
+        columns: full
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        {% set b = states.sensor.__CAMERA___last_bird %}
+        {% set ba = b.attributes if b is not none else {} %}
+        {% set r = states.sensor.unsubscribird_last_visit %}
+        {% set ra = r.attributes if r is not none else {} %}
+        {% set src = {'model': 'local model', 'lmstudio': 'LM Studio', 'confirmed': 'confirmed by you',
+                      'motion': 'nothing moved', 'uncertain': 'not sure'} %}
+        {% if not ba.get('trace_id') %}
+        _Waiting for the first visit..._
+        {% else %}
+        {% if r is not none and ra.get('trace_id') == ba.get('trace_id') %}
+        ## {{ r.state }}{% if r.state == 'Uncertain' and ra.get('guess') %} <small>(maybe {{ ra.get('guess') }})</small>{% endif %}
+
+        **{{ ((ra.get('confidence') or 0) * 100) | round(0) | int }}%** · {{ src.get(ra.get('source'), ra.get('source')) }} ·
+        {% else %}
+        ## Identifying…
+
+        {% endif -%}
+        {% if ba.get('time') %}{{ relative_time(as_datetime(ba.get('time'))) }} ago ({{ as_datetime(ba.get('time')) | as_local | as_timestamp | timestamp_custom('%a %H:%M') }}){% endif %}
+        {%- if ba.get('clip_url') %} · <a href="{{ ba.get('clip_url') }}" target="_blank">▶ clip</a>{% endif %}
+        · <a href="__WBS_PUBLIC_URL__/?visit={{ ba.get('trace_id') }}" target="_blank">review ↗</a>
+        {% endif %}
+    - type: tile
+      entity: sensor.unsubscribird_bird_visits_today
+      name: Bird visits today
+    - type: tile
+      entity: binary_sensor.__CAMERA___motion
+      name: At the feeder
+
+- type: grid
+  cards:
+    - type: heading
+      heading: Recently seen
+      icon: mdi:view-gallery
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        {% set g = states.sensor.unsubscribird_species_gallery %}
+        {% set items = g.attributes.get('species', []) if g is not none else [] %}
+        {% if not items %}
+        _No birds recognised in the last week yet._
+        {% else %}
+        <table width="100%">
+        {% for row in items | batch(3) %}<tr>
+        {% for it in row %}<td align="center" width="33%" valign="top">
+        {% set pic = state_attr(it.image, 'entity_picture') %}
+        <a href="__WBS_PUBLIC_URL__/gallery?species={{ it.name | urlencode }}" target="_blank">{% if pic %}<img src="{{ pic }}" width="100%">{% else %}photos{% endif %}</a><br>
+        {{ it.get('dot', '') }} <b>{{ it.name }}</b><br>
+        <small>{{ relative_time(as_datetime(it.last_seen)) }} ago<br>{{ it.today }} today · {{ it.week }} this week</small>
+        </td>{% endfor %}
+        </tr>{% endfor %}
+        </table>
+        {% endif %}
+    - type: tile
+      entity: sensor.unsubscribird_species_today
+      name: Species today
+
+- type: grid
+  cards:
+    - type: heading
+      heading: Today
+      icon: mdi:calendar-today
+    - type: markdown
+      grid_options:
+        columns: full
+      content: >-
+        {% set t = states.sensor.unsubscribird_species_today %}
+        {% set a = t.attributes if t is not none else {} %}
+        {% set src = {'model': 'model', 'lmstudio': 'LM Studio', 'confirmed': '✓ you', 'motion': 'no motion',
+                      'uncertain': 'not sure'} %}
+        {% if a.get('by_species') %}
+        **{{ a.get('bird_visits', 0) }} bird visits** ·
+        {% for k, n in a.get('by_species').items() %}{{ k }} ×{{ n }}{{ ', ' if not loop.last }}{% endfor %}
+
+        {% endif %}
+        {% for r in a.get('sightings', []) %}
+        {{ r.get('dot', '') }} **{{ as_datetime(r.time) | as_local | as_timestamp | timestamp_custom('%H:%M') }}**
+        {% if r.species == 'Uncertain' %}_{{ ('maybe ' ~ r.guess) if r.guess else 'not sure' }}_{% else %}{{ r.species }}{% endif %}
+        <small>{{ ((r.confidence or 0) * 100) | round(0) | int }}% · {{ src.get(r.source, r.source) }}</small>
+        {%- if r.clip_url %} · <a href="{{ r.clip_url }}" target="_blank">▶</a>{% endif %}
+        · <a href="{{ a.get('review_base', '') }}{{ r.trace_id }}" target="_blank">↗</a><br>
+        {% else %}
+        _No sightings yet today._
+        {% endfor %}
+    - type: logbook
+      target:
+        entity_id: event.unsubscribird_sighting
+      hours_to_show: 24
+      grid_options:
+        columns: full

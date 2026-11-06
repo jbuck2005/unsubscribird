@@ -1,0 +1,46 @@
+# Home Assistant package for Unsubscribird (github.com/jbuck2005/unsubscribird).
+# Change notify.mobile_app_YOUR_PHONE below to your phone.
+# Install: copy to /config/packages/unsubscribird.yaml, then reload automations (or restart).
+# The entities themselves come from MQTT discovery (device "Unsubscribird").
+
+automation:
+  - id: unsubscribird_first_species
+    alias: Unsubscribird - notify first species of the day
+    description: >-
+      Phone notification with the photo the first time each bird species is recognised at the feeder
+      each day, and a "new species" alert the first time a species is ever seen. Results come from the
+      Unsubscribird app (confirmed label > local model > LM Studio). Uncertain visits, empty
+      visits and other animals never notify. Tapping opens the visit in the review page (home network only).
+    mode: queued
+    max: 10
+    triggers:
+      - trigger: state
+        entity_id: event.unsubscribird_visit
+    conditions:
+      # from 'unavailable' = the app reconnected and HA restored the old event: not a new visit
+      - condition: template
+        value_template: >-
+          {{ trigger.from_state is not none and trigger.from_state.state != 'unavailable'
+             and trigger.to_state.state not in ['unknown', 'unavailable']
+             and trigger.to_state.attributes.event_type == 'bird'
+             and trigger.to_state.attributes.first_today | default(false) }}
+    actions:
+      - variables:
+          a: "{{ trigger.to_state.attributes }}"
+          ever: "{{ a.first_ever | default(false) }}"
+          source: >-
+            {{ {'model': 'local model', 'lmstudio': 'LM Studio', 'confirmed': 'confirmed'}.get(a.source, a.source) }}
+      - action: notify.mobile_app_YOUR_PHONE
+        continue_on_error: true
+        data:
+          title: "{{ '✨ New species at the feeder: ' if ever else '🐦 First today at the feeder: ' }}{{ a.species }}"
+          message: >-
+            {{ ((a.confidence or 0) * 100) | round(0) | int }}% · {{ source }} ·
+            {{ as_datetime(a.time) | as_local | as_timestamp | timestamp_custom('%H:%M') }}
+          data:
+            ttl: 0
+            priority: high
+            image: /api/image_proxy/image.unsubscribird_last_bird_photo
+            clickAction: "{{ a.review_url }}"
+            tag: "unsubscribird_{{ a.species | slugify }}"
+            group: unsubscribird
