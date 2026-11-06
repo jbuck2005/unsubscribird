@@ -7,3 +7,5 @@ images/
 /.private
 /private
 private/
+.claude/*
+!.claude/CLAUDE.md
