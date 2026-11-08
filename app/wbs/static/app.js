@@ -193,16 +193,22 @@ const Review = {
     inp.className = "ftagin"; inp.setAttribute("list", "species-list");
     inp.placeholder = "This frame shows…"; inp.value = v._fs.get(fid) || "";
     $(".imgwrap", fe).append(inp);
-    const done = (apply) => {
-      if (apply) this.setTag(v, el, fid, inp.value.trim());
-      inp.remove(); el.focus({ preventScroll: true });
+    // Kept on Enter, on picking from the list, and on clicking away (e.g. straight to Update): only Esc cancels.
+    let closed = false;
+    const done = (apply, refocus) => {
+      if (closed) return;
+      closed = true;
+      if (apply && inp.value.trim() !== (v._fs.get(fid) || "")) this.setTag(v, el, fid, inp.value.trim());
+      inp.remove();
+      if (refocus) el.focus({ preventScroll: true });
     };
     inp.addEventListener("keydown", (e) => {
       e.stopPropagation();
-      if (e.key === "Enter") { e.preventDefault(); done(true); }
-      else if (e.key === "Escape") { e.preventDefault(); done(false); }
+      if (e.key === "Enter") { e.preventDefault(); done(true, true); }
+      else if (e.key === "Escape") { e.preventDefault(); done(false, true); }
     });
-    inp.addEventListener("blur", () => { if (inp.isConnected) done(false); });
+    inp.addEventListener("change", () => done(true, false));
+    inp.addEventListener("blur", () => done(true, false));
     inp.focus(); inp.select();
   },
 
