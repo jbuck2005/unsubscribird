@@ -87,6 +87,8 @@ and per-bird chips. Empty visits never appear. A new visit appears by itself onc
 
 * **Review** (`/admin`): keyboard driven: Enter confirm, `/` species, `e`/`s`/`u` quick labels, `1`-`6` toggle frames,
   `j`/`k` move, `z` zoom. ↻ swaps a blurry frame. Check labels and Exclude clean up the training data.
+  Disagree lists visits to review where the trained model and LM Studio name different things (check those
+  before Confirm all, which takes LM Studio's answer).
 * **Gallery** (`/admin/gallery`), **Dataset** (`/admin/dataset`: species colour coded by season, sortable),
   **Model** (`/admin/model`: training, accuracy, LM Studio bake-off), **Status** (`/admin/status`).
 * **Settings** (`/admin/settings`): long-term preferences: clip order and theme, the clip cut, frames per visit,

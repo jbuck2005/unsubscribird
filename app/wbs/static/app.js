@@ -47,7 +47,7 @@ const Review = {
   },
 
   async counts() {
-    for (const q of ["review", "uncertain", "check", "waiting", "labelled", "failed", "excluded"]) {
+    for (const q of ["review", "uncertain", "disagree", "check", "waiting", "labelled", "failed", "excluded"]) {
       const r = await api(`/api/visits?queue=${q}&limit=0`);
       $(`[data-count="${q}"]`).textContent = r.total;
     }
@@ -58,6 +58,7 @@ const Review = {
     $(".hint").innerHTML = q === "check"
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
       : q === "excluded" ? "Visits kept out of training. <b>Restore</b> puts one back."
+      : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> works as usual."
       : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, or ↻ to swap a blurry frame for a sharper one from the clip.";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     this.load();
@@ -124,6 +125,7 @@ const Review = {
         Suggested: ${esc(cons.species)} · ${Math.round(cons.confidence * 100)}% · ${cons.votes}/${cons.frames} frames</span>` : "";
     el.innerHTML = `
       <div class="vhead"><span class="time">${esc(fmtTime(v.time))}</span>
+        ${v.disagree && !v.label ? `<span class="chip unknown" title="The trained model and LM Studio name different things: look before confirming">⚠ disagree</span>` : ""}
         ${consChip}${altChips}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}

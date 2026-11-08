@@ -144,6 +144,26 @@ def clip_basename(v, species: str | None) -> str:
     return f"{when}_{sp}"
 
 
+def disagreement(model: dict | None, cons: dict | None) -> bool:
+    """The trained model and LM Studio (or the motion check) name different things for this visit."""
+    return bool(model and cons and model.get("species") and cons.get("species")
+                and model["species"].strip().lower() != cons["species"].strip().lower())
+
+
+def visit_disagrees(trace_id: str, index: dict[str, str]) -> bool:
+    """disagreement() for one visit, with one query (the Disagree queue checks every unreviewed visit)."""
+    sugg = [dict(s) for s in db.q("""SELECT s.source, s.bird_present, s.species, s.confidence, s.other_animal
+                                     FROM suggestions s LEFT JOIN frames f ON f.id=s.frame_id
+                                     WHERE s.trace_id=? AND s.source IN ('vlm','motion','model')
+                                       AND (s.frame_id IS NULL OR f.rejected=0) ORDER BY s.id""", trace_id)]
+    models = [s for s in sugg if s["source"] == "model"]
+    cons = consensus([s for s in sugg if s["source"] != "model"])
+    if cons:
+        cons["species"] = canonical(cons["species"], index)
+    model = models[-1] if models else None
+    return disagreement(model and {**model, "species": canonical(model["species"], index)}, cons)
+
+
 def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
     frames = [dict(f) for f in db.q("""SELECT f.*, d.source det_source, d.label det_label, d.score det_score,
                                               d.x1, d.y1, d.x2, d.y2 FROM frames f
@@ -158,10 +178,11 @@ def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
         s.pop("raw", None)
     label = db.one("SELECT * FROM labels WHERE trace_id=?", v["trace_id"])
     cons = consensus([s for s in sugg if s["source"] in ("vlm", "motion")])
-    others = {s["source"]: s for s in sugg if s["source"] in ("bioclip", "model")}
+    others = {s["source"]: s for s in sugg if s["source"] in ("bioclip", "model")}   # the latest of each
     if cons:
         cons["species"] = canonical(cons["species"], index)
         cons["known"] = cons["species"].lower() in index
+    model_sugg = others.get("model")
     check = db.one("""SELECT c.*, m.id model FROM label_checks c JOIN models m ON m.id=c.model_id AND m.active=1
                       WHERE c.trace_id=?""", v["trace_id"])
     # The clip's name follows the best "detection": your label > recognised result > LM Studio's suggestion.
@@ -172,6 +193,7 @@ def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
             "clip_href": f"/clips/{v['trace_id']}/{clip_name}" if clip_name else None,
             "frames": frames, "suggestions": [s for s in sugg if s["source"] in ("vlm", "motion")],
             "consensus": cons, "bioclip": others.get("bioclip"), "model": others.get("model"),
+            "disagree": disagreement(model_sugg, cons),
             "label": ({**dict(label), "frame_ids": json.loads(label["frame_ids"])} if label else None)}
 
 
@@ -322,6 +344,8 @@ QUEUES = {
     "review": "v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0",
     "uncertain": "v.rec_source='uncertain' AND l.trace_id IS NULL AND v.excluded=0",
     "check": DOUBTFUL,
+    # To review, narrowed in Python to visits where the model and LM Studio disagree (see visit_disagrees).
+    "disagree": "v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0",
     "waiting": "v.status IN ('new','frames') AND l.trace_id IS NULL AND v.excluded=0",
     "labelled": "l.trace_id IS NOT NULL AND v.excluded=0",
     "excluded": "v.excluded=1",
@@ -341,12 +365,19 @@ def api_visits(queue: str = "review", limit: int = 20, offset: int = 0, species:
     if species:
         where += " AND l.species=?"
         args.append(species)
+    index = species_index()
+    if queue == "disagree":   # needs the consensus, which is worked out in Python: filter, then page
+        ids = [r["trace_id"] for r in db.q(f"""SELECT v.trace_id FROM visits v LEFT JOIN labels l USING(trace_id)
+                                               WHERE {where} ORDER BY v.ts DESC""", *args)
+               if visit_disagrees(r["trace_id"], index)]
+        page = ids[offset:offset + min(limit, 100)]
+        rows = [db.one("SELECT * FROM visits WHERE trace_id=?", t) for t in page]
+        return {"total": len(ids), "visits": [visit_json(v, index) for v in rows if v]}
     total = db.one(f"SELECT COUNT(*) n FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}",
                    *args)["n"]
     order = "c.p_label ASC, v.ts DESC" if queue == "check" else "(v.rec_source='uncertain') DESC, v.ts DESC"
     rows = db.q(f"""SELECT v.* FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}
                     ORDER BY {order} LIMIT ? OFFSET ?""", *args, min(limit, 100), offset)
-    index = species_index()
     return {"total": total, "visits": [visit_json(v, index) for v in rows]}
 
 
