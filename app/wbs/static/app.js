@@ -106,8 +106,9 @@ const Review = {
     const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const frames = v.frames.map((f, n) => {
       const s = byFrame[f.id];
-      const cap = s ? (s.bird_present ? `${esc(s.species || "bird?")} ${s.confidence != null ? Math.round(s.confidence * 100) + "%" : ""}`
-        : esc(s.other_animal || "no bird")) : (f.kind === "snapshot" ? "snapshot" : "not checked");
+      // LM Studio's guess for this frame, never the label: say so, so it isn't mistaken for what the frame counts as.
+      const cap = s ? "LM Studio: " + (s.bird_present ? `${esc(s.species || "bird?")} ${s.confidence != null ? Math.round(s.confidence * 100) + "%" : ""}`
+        : esc(s.other_animal || "no bird")) : (f.kind === "snapshot" ? "snapshot" : "LM Studio: not checked");
       const why = s?.notes ? `<br><span class="why">${esc(s.notes)}</span>` : "";
       return `<div class="frame ${v._frames.has(f.id) ? "in" : ""}" data-f="${f.id}">
           <div class="imgwrap"><img loading="lazy" src="${BASE}/img/${esc(f.thumb || f.path)}" data-full="${BASE}/img/${esc(f.path)}" alt="">
@@ -217,11 +218,26 @@ const Review = {
     const main = ($(".actions input", el).value || "").trim().toLowerCase();
     const msg = $(".msg", el);
     if (name && !known) { msg.className = "msg err"; msg.textContent = `'${name}' is not in the species list.`; return; }
-    if (!name || known.name.toLowerCase() === main) v._fs.delete(fid);
-    else { v._fs.set(fid, known.name); if (!v._frames.has(fid)) this.toggle(v, el, fid); }
+    const n = v.frames.findIndex((f) => f.id === fid) + 1;
+    const mainName = ($(".actions input", el).value || "").trim() || "the visit's species";
+    const had = v._fs.get(fid);
+    const save = v.label ? "Update" : "Confirm";
+    msg.className = "msg";
+    if (!name || known.name.toLowerCase() === main) {
+      if (!had && v._frames.has(fid)) {   // nothing to change: say so instead of doing nothing silently
+        msg.textContent = `Frame ${n} already counts as ${mainName} (the visit's species).`;
+        return;
+      }
+      v._fs.delete(fid);
+      if (!v._frames.has(fid)) this.toggle(v, el, fid);
+      msg.textContent = `Frame ${n} now counts as ${mainName} (the visit's species). Press ${save} to save.`;
+    } else {
+      v._fs.set(fid, known.name);
+      if (!v._frames.has(fid)) this.toggle(v, el, fid);
+      msg.textContent = `Frame ${n} now counts as ${known.name}. Press ${save} to save.`;
+    }
     const tag = $(`.frame[data-f="${fid}"] .ftag`, el);
     tag.textContent = v._fs.get(fid) || ""; tag.hidden = !v._fs.has(fid);
-    msg.className = "msg"; msg.textContent = "";
     this.markEdited(v, el);
   },
 
