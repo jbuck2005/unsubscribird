@@ -58,7 +58,7 @@ const Review = {
     $(".hint").innerHTML = q === "check"
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
       : q === "excluded" ? "Visits kept out of training. <b>Restore</b> puts one back."
-      : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> works as usual."
+      : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
       : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     this.load();
@@ -160,7 +160,7 @@ const Review = {
       });
       fe.addEventListener("dblclick", () => zoom($("img", fe).dataset.full));
     });
-    const input = $("input", el);
+    const input = $(".actions input", el);
     input.addEventListener("change", () => this.pickSpecies(v, el, input.value));
     input.addEventListener("input", () => { v._species = input.value; this.markEdited(v, el); });
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); this.pickSpecies(v, el, input.value); this.save(v, el); } });
@@ -208,7 +208,7 @@ const Review = {
 
   setTag(v, el, fid, name) {
     const known = this.species.find((s) => s.name.toLowerCase() === name.toLowerCase());
-    const main = ($("input", el).value || "").trim().toLowerCase();
+    const main = ($(".actions input", el).value || "").trim().toLowerCase();
     const msg = $(".msg", el);
     if (name && !known) { msg.className = "msg err"; msg.textContent = `'${name}' is not in the species list.`; return; }
     if (!name || known.name.toLowerCase() === main) v._fs.delete(fid);
@@ -235,7 +235,7 @@ const Review = {
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
       const fs = new Map(v._fs);
       if (fs.has(fid)) { fs.set(r.frame.id, fs.get(fid)); fs.delete(fid); }
-      nv._preset = { species: $("input", el).value, frames, fs, edited: v._edited };
+      nv._preset = { species: $(".actions input", el).value, frames, fs, edited: v._edited };
       const i = this.visits.indexOf(v);
       this.visits[i] = nv;
       const ne = this.card(nv, i);
@@ -260,31 +260,54 @@ const Review = {
     return this.visits.map((v, i) => ({ v, el: $$(".visit")[i] })).filter(({ v, el }) => el && !v.label && !v.excluded);
   },
 
+  // The model and LM Studio disagree and nobody has touched the card: Confirm all would save LM Studio's guess
+  // unseen, so it leaves these for one-by-one review (Enter). Changing the card on purpose releases it.
+  held(v) { return !!v.disagree && !v._edited; },
+
+  // Labelled cards with changes (species, frames, frame tags) that only Update saves: Confirm all never does.
+  unsaved() {
+    return this.visits.map((v, i) => ({ v, el: $$(".visit")[i] })).filter(({ v, el }) => el && v.label && v._edited);
+  },
+
   updateConfirmAll() {
     const b = $("#confirm-all");
     if (!b) return;
-    const n = this.pending().length;
+    const n = this.pending().filter(({ v }) => !this.held(v)).length;
     b.textContent = `Confirm all (${n})`;
     b.disabled = n === 0;
   },
 
   async confirmAll() {
     const known = new Set(this.species.map((s) => s.name.toLowerCase()));
-    const items = [], skipped = [];
+    const items = [], skipped = [], held = [];
     for (const { v, el } of this.pending()) {
-      const species = ($("input", el).value || "").trim();
+      const species = ($(".actions input", el).value || "").trim();
+      if (this.held(v)) { held.push(el); continue; }
       if (!species || !known.has(species.toLowerCase()) || !v._frames.size) { skipped.push(el); continue; }
       items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), _v: v, _el: el });
     }
-    skipped.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err";
-      m.textContent = "Skipped by Confirm all: pick a species from the list (and at least one frame)."; });
-    if (!items.length) { alert("Nothing to confirm: every loaded visit needs a species from the list."); return; }
+    const unsaved = this.unsaved().map(({ el }) => el);
+    const mark = (els, text) => els.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err"; m.textContent = text; });
+    mark(skipped, "Skipped by Confirm all: pick a species from the list (and at least one frame).");
+    mark(held, "Skipped by Confirm all: the model and LM Studio disagree. Check the frames, then confirm this one (Enter).");
+    mark(unsaved, "Not saved: Confirm all only saves new visits. Press Update to save your changes to this label.");
+    const notes = [
+      held.length && `${held.length} skipped: the model and LM Studio disagree (check each, then Enter)`,
+      skipped.length && `${skipped.length} skipped: no valid species`,
+      unsaved.length && `${unsaved.length} already-labelled visit(s) have unsaved changes: press Update on each`,
+    ].filter(Boolean);
+    if (!items.length) {
+      alert("Nothing to confirm." + (notes.length ? "\n\n" + notes.join("\n") : "\n\nEvery loaded visit needs a species from the list."));
+      const first = $$(".visit").findIndex((c) => held.includes(c) || unsaved.includes(c));
+      if (first >= 0) this.setFocus(first);
+      return;
+    }
     const tally = {};
     items.forEach((it) => (tally[it.species] = (tally[it.species] || 0) + 1));
     const summary = Object.entries(tally).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(", ");
     const edited = items.filter((it) => it._v._edited).length;
-    if (!confirm(`Confirm ${items.length} visit(s) as training data?\n\n${summary}\n\n${edited} changed by you` +
-                 (skipped.length ? `, ${skipped.length} skipped (no valid species)` : "") + ".")) return;
+    if (!confirm(`Confirm ${items.length} visit(s) as training data?\n\n${summary}\n\n${edited} changed by you.` +
+                 (notes.length ? "\n\n" + notes.join("\n") : ""))) return;
     const btn = $("#confirm-all"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const r = await api("/api/labels/batch", { method: "POST",
@@ -293,6 +316,7 @@ const Review = {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
         if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also }; el.classList.add("done");
+          v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
           m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}).`; }
         else { el.classList.add("skipped"); m.className = "msg err"; m.textContent = res.error; }
       });
@@ -304,7 +328,7 @@ const Review = {
 
   pickSpecies(v, el, name) {
     v._species = name;
-    $("input", el).value = name;
+    $(".actions input", el).value = name;
     this.markEdited(v, el);
     if (!v.label) {
       v._frames = new Set(this.defaultFrames(v, name));
@@ -317,12 +341,13 @@ const Review = {
 
   async save(v, el) {
     const msg = $(".msg", el);
-    const species = ($("input", el).value || "").trim();
+    const species = ($(".actions input", el).value || "").trim();
     if (!species) { msg.className = "msg err"; msg.textContent = "Type or pick a species first."; return; }
     try {
       const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
         body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v) }) });
       v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also };
+      v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
       el.classList.add("done"); el.classList.remove("skipped");
       msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}).`;
       this.counts(); this.updateConfirmAll();
@@ -381,7 +406,7 @@ const Review = {
     else if (k === "k") this.setFocus(this.focus - 1);
     else if (k === "x") this.setFocus(this.focus + 1);
     else if (k === "Enter") this.save(v, el);
-    else if (k === "/") { e.preventDefault(); $("input", el).focus(); $("input", el).select(); }
+    else if (k === "/") { e.preventDefault(); $(".actions input", el).focus(); $(".actions input", el).select(); }
     else if (k === "e") { this.pickSpecies(v, el, "Empty"); this.setFocus(this.focus + 1); }
     else if (k === "s") { this.pickSpecies(v, el, "Squirrel"); this.setFocus(this.focus + 1); }
     else if (k === "u") { this.pickSpecies(v, el, "Unknown bird"); this.setFocus(this.focus + 1); }
