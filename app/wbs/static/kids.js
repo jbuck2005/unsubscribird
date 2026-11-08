@@ -39,19 +39,21 @@ async function load(keepPlaying = false) {
   const q = new URLSearchParams({ day: state.day });
   const r = await fetch(`${BASE}/api/public/day?${q}`);
   const data = await r.json();
-  state.visits = data.visits.map((v) => ({ ...v, clip: BASE + v.clip, poster: v.poster && BASE + v.poster }));
+  state.visits = data.visits.map((v) => ({ ...v, clip: BASE + v.clip, poster: v.poster && BASE + v.poster,
+    posters: Object.fromEntries(Object.entries(v.posters || {}).map(([s, p]) => [s, p && BASE + p])) }));
   state.counts = data.counts;
+  state.dots = data.dots || {};
   render(keepPlaying);
 }
 
 function render(keepPlaying) {
   $("#day-label").textContent = dayLabel(state.day);
   $("#next-day").disabled = state.day >= localToday();
-  const total = Object.values(state.counts || {}).reduce((a, b) => a + b, 0);
+  const total = state.visits.length;   // a visit with two species counts once here
   $("#subtitle").textContent = total ? `${total} visit${total === 1 ? "" : "s"} ${state.day === localToday() ? "so far today" : ""}` : "Who came to the feeder?";
   $$(".sort button").forEach((b) => b.classList.toggle("on", b.dataset.sort === state.sort));
   // species chips (filter)
-  const dots = Object.fromEntries(state.visits.map((v) => [v.species, v.dot]));
+  const dots = { ...state.dots, ...Object.fromEntries(state.visits.map((v) => [v.species, v.dot])) };
   $("#chips").innerHTML = Object.keys(state.counts || {}).length > 1 || state.species
     ? `<button class="chip ${state.species ? "" : "on"}" data-sp="">All birds</button>` +
       Object.entries(state.counts).map(([sp, n]) =>
@@ -59,7 +61,11 @@ function render(keepPlaying) {
     : "";
   $$("#chips .chip").forEach((c) => c.addEventListener("click", () => { state.species = c.dataset.sp; setUrl(); render(); }));
 
-  const list = state.visits.filter((v) => !state.species || v.species === state.species);
+  // A visit with two species (say a jay and a squirrel) is under both chips, named by the chip it was found by.
+  const list = state.visits.filter((v) => !state.species || v.species === state.species || (v.also || []).includes(state.species))
+    .map((v) => !state.species || v.species === state.species ? v
+      : { ...v, species: state.species, dot: dots[state.species] || "", poster: v.posters[state.species] || v.poster,
+          also: [v.species, ...v.also.filter((s) => s !== state.species)] });
   state.shown = sortVisits(list, state.sort);
   if (keepPlaying && state.open >= 0) return;          // don't reshuffle under an open clip
   $("#empty").hidden = state.shown.length > 0;
@@ -70,7 +76,7 @@ function render(keepPlaying) {
     <article class="tile" data-i="${i}" tabindex="0" aria-label="${esc(v.species)} at ${esc(fmtTime(v.ts))}">
       <video muted loop playsinline preload="none" ${v.poster ? `poster="${esc(v.poster)}"` : ""} data-src="${esc(v.clip)}"></video>
       <span class="play">▶</span>
-      <div class="label"><span>${esc(v.dot || "")} ${esc(v.species)}</span><span class="time">${esc(fmtTime(v.ts))}</span></div>
+      <div class="label"><span>${esc(v.dot || "")} ${esc(v.species)}${(v.also || []).length ? ` <small>+ ${esc(v.also.join(", "))}</small>` : ""}</span><span class="time">${esc(fmtTime(v.ts))}</span></div>
     </article>`).join("");
   $$("#grid .tile").forEach((t) => {
     const vid = $("video", t);
@@ -100,7 +106,7 @@ function showClip() {
   if (v.poster) player.poster = v.poster;
   player.muted = false;
   player.play().catch(() => { player.muted = true; player.play().catch(() => {}); });
-  $("#v-name").textContent = `${v.dot || ""} ${v.species}`;
+  $("#v-name").textContent = `${v.dot || ""} ${v.species}${(v.also || []).length ? " + " + v.also.join(", ") : ""}`;
   $("#v-time").textContent = fmtTime(v.ts);
   $("#v-count").textContent = `${state.open + 1} / ${state.shown.length}`;
   $("#v-prev").disabled = state.open === 0;

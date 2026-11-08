@@ -215,7 +215,7 @@ class Recognizer:
         self.publish(self.t("last_visit"), json.dumps(payload), True)
         if event_type(d["species"]) == "bird" and d["species"] != "Unknown bird":
             self.publish(self.t("last_bird"), json.dumps(payload), True)
-            frame = self.best_frame(v["trace_id"])
+            frame = self.best_frame(v["trace_id"], d["species"])
             if frame:
                 self.publish(self.t("image"), (self.s.image_dir / frame["path"]).read_bytes(), True)
         self.publish_today()
@@ -260,7 +260,7 @@ class Recognizer:
             if event_type(v["rec_species"]) == "bird" and v["rec_species"] != "Unknown bird":
                 d, model, vlm = self.decide_visit(v["trace_id"])
                 self.publish(self.t("last_bird"), json.dumps(self.payload(v, d, model, vlm)), True)
-                frame = self.best_frame(v["trace_id"])
+                frame = self.best_frame(v["trace_id"], d["species"])
                 if frame:
                     self.publish(self.t("image"), (self.s.image_dir / frame["path"]).read_bytes(), True)
                 break
@@ -280,27 +280,52 @@ class Recognizer:
         start = datetime.fromtimestamp(v["ts"]).astimezone().replace(hour=0, minute=0, second=0,
                                                                       microsecond=0).timestamp()
         earlier = """SELECT 1 FROM visits v LEFT JOIN labels l USING(trace_id)
-                     WHERE v.trace_id != ? AND v.ts < ? AND v.ts >= ? AND (v.rec_species = ? OR l.species = ?) LIMIT 1"""
-        today = self.db.one(earlier, v["trace_id"], v["ts"], start, species, species) is None
-        ever = today and self.db.one(earlier, v["trace_id"], v["ts"], 0, species, species) is None
+                     WHERE v.trace_id != ? AND v.ts < ? AND v.ts >= ? AND (v.rec_species = ? OR l.species = ?
+                       OR EXISTS (SELECT 1 FROM json_each(COALESCE(l.also, '[]')) WHERE value = ?)) LIMIT 1"""
+        today = self.db.one(earlier, v["trace_id"], v["ts"], start, species, species, species) is None
+        ever = today and self.db.one(earlier, v["trace_id"], v["ts"], 0, species, species, species) is None
         return {"first_today": today, "first_ever": ever}
 
-    def best_frame(self, trace_id: str):
-        return self.db.one("""SELECT * FROM frames WHERE trace_id=? AND rejected=0
-                              ORDER BY (kind='clip') DESC, score DESC LIMIT 1""", trace_id)
+    def species_frames(self, trace_id: str, species: str | None) -> tuple[set[int], set[int]]:
+        """(frames a person marked as `species`, frames marked as something else) on a mixed visit."""
+        lab = self.db.one("SELECT species, frame_ids, frame_species FROM labels WHERE trace_id=?", trace_id)
+        if not lab or not lab["frame_species"] or not species:
+            return set(), set()
+        fs = {int(k): s for k, s in json.loads(lab["frame_species"]).items()}
+        ids = json.loads(lab["frame_ids"])
+        mine = {i for i in ids if fs.get(i, lab["species"]) == species}
+        return mine, {i for i in ids if i not in mine}
+
+    def best_frame(self, trace_id: str, species: str | None = None):
+        """The visit's best frame; on a mixed visit, one that shows `species` (never another species' frame)."""
+        mine, others = self.species_frames(trace_id, species)
+        rows = self.db.q("""SELECT * FROM frames WHERE trace_id=? AND rejected=0
+                            ORDER BY (kind='clip') DESC, score DESC""", trace_id)
+        return next((r for r in rows if r["id"] in mine), None) or \
+            next((r for r in rows if r["id"] not in others), None) or (rows[0] if rows else None)
+
+    def also_seen(self, start: float, end: float | None = None) -> list[tuple[Any, str]]:
+        """(visit, species) for the other species a person marked on frames of mixed visits, oldest first."""
+        rows = self.db.q("""SELECT v.*, l.also FROM visits v JOIN labels l USING(trace_id)
+                            WHERE v.rec_at IS NOT NULL AND v.ts >= ? AND v.ts < ? AND l.also IS NOT NULL
+                              AND v.excluded=0 ORDER BY v.ts""", start, end or float("inf"))
+        return [(r, s) for r in rows for s in json.loads(r["also"]) if s != r["rec_species"]]
 
     def today_summary(self) -> dict[str, Any]:
         start = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         rows = self.db.q("SELECT rec_species s, COUNT(*) n FROM visits WHERE rec_at IS NOT NULL AND ts >= ? "
                          "GROUP BY rec_species", start)
         counts = {r["s"]: r["n"] for r in rows}
+        bird_visits = sum(n for s, n in counts.items() if event_type(s) == "bird")   # visits, before mixed extras
+        for _, s in self.also_seen(start):   # a squirrel on a chickadee visit was at the feeder too
+            counts[s] = counts.get(s, 0) + 1
         birds = {s: n for s, n in counts.items() if event_type(s) == "bird" and s != "Unknown bird"}
         recent = [{"time": r["time"] or datetime.fromtimestamp(r["ts"]).astimezone().isoformat(),
                    "species": r["rec_species"], "confidence": r["rec_conf"], "source": r["rec_source"],
                    "guess": r["rec_guess"], "trace_id": r["trace_id"], "clip_url": r["clip_url"]}
                   for r in self.db.q("""SELECT * FROM visits WHERE rec_at IS NOT NULL
                                         ORDER BY ts DESC LIMIT 10""")]
-        return {"species": len(birds), "bird_visits": sum(n for s, n in counts.items() if event_type(s) == "bird"),
+        return {"species": len(birds), "bird_visits": bird_visits,
                 "recent": recent, "review_base": f"{self.s.public_url}/admin?visit=",
                 "sightings": self.sightings(start),
                 "by_species": dict(sorted(birds.items(), key=lambda kv: -kv[1])),
@@ -309,13 +334,15 @@ class Recognizer:
 
     def sightings(self, start: float) -> list[dict[str, Any]]:
         """Today's non-empty visits, newest first, each with its species' colour for the day."""
-        rows = self.db.q("""SELECT * FROM visits WHERE rec_at IS NOT NULL AND ts >= ? AND rec_species != 'Empty'
-                            ORDER BY ts""", start)
-        colours = day_colours([r["rec_species"] for r in rows])
+        rows = [(r, r["rec_species"]) for r in self.db.q("""SELECT * FROM visits WHERE rec_at IS NOT NULL AND ts >= ?
+                                                             AND rec_species != 'Empty' ORDER BY ts""", start)]
+        rows = sorted(rows + self.also_seen(start), key=lambda rs: rs[0]["ts"])   # stable: main species first
+        colours = day_colours([s for _, s in rows])
         return [{"time": r["time"] or datetime.fromtimestamp(r["ts"]).astimezone().isoformat(),
-                 "species": r["rec_species"], "dot": colours[r["rec_species"]], "confidence": r["rec_conf"],
-                 "source": r["rec_source"], "guess": r["rec_guess"], "trace_id": r["trace_id"], "clip_url": r["clip_url"]}
-                for r in reversed(rows[-25:])]
+                 "species": s, "dot": colours[s], "confidence": r["rec_conf"] if s == r["rec_species"] else 1.0,
+                 "source": r["rec_source"] if s == r["rec_species"] else "confirmed", "guess": r["rec_guess"],
+                 "trace_id": r["trace_id"], "clip_url": r["clip_url"]}
+                for r, s in reversed(rows[-25:])]
 
     def publish_today(self) -> None:
         self.publish(self.t("today"), json.dumps(self.today_summary()), True)
@@ -330,9 +357,10 @@ class Recognizer:
         now = now or time.time()
         today = datetime.fromtimestamp(now).astimezone().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         items: dict[str, dict[str, Any]] = {}
-        for r in self.db.q("""SELECT trace_id, ts, time, rec_species FROM visits WHERE rec_at IS NOT NULL AND ts >= ?
-                              ORDER BY ts DESC""", now - GALLERY_DAYS * 86400):
-            sp = r["rec_species"]
+        rows = [(r, r["rec_species"]) for r in self.db.q("""SELECT * FROM visits WHERE rec_at IS NOT NULL AND ts >= ?
+                                                             ORDER BY ts""", now - GALLERY_DAYS * 86400)]
+        rows = sorted(rows + self.also_seen(now - GALLERY_DAYS * 86400), key=lambda rs: -rs[0]["ts"])
+        for r, sp in rows:
             if event_type(sp) != "bird" or sp == "Unknown bird":
                 continue
             it = items.setdefault(sp, {"name": sp, "slug": slug(sp), "image": f"image.{self.s.ha_id}_{slug(sp)}_photo",
@@ -345,14 +373,17 @@ class Recognizer:
             it["dot"] = colours.get(it["name"], "")
         return list(items.values())[:GALLERY_MAX]
 
-    def portrait(self, trace_id: str) -> bytes | None:
+    def portrait(self, trace_id: str, species: str | None = None) -> bytes | None:
         """The bird crop (if detected) or the whole frame of a visit's best frame, as a ~640 px JPEG."""
         from PIL import Image
         from .detect import square_crop_box
-        f = self.db.one("""SELECT f.path, d.x1, d.y1, d.x2, d.y2 FROM frames f LEFT JOIN detections d ON d.frame_id=f.id
-                           WHERE f.trace_id=? AND f.rejected=0
-                           ORDER BY (d.frame_id IS NOT NULL) DESC, (f.kind='clip') DESC, f.score DESC LIMIT 1""",
-                        trace_id)
+        mine, others = self.species_frames(trace_id, species)
+        rows = self.db.q("""SELECT f.id, f.path, d.x1, d.y1, d.x2, d.y2 FROM frames f
+                            LEFT JOIN detections d ON d.frame_id=f.id WHERE f.trace_id=? AND f.rejected=0
+                            ORDER BY (d.frame_id IS NOT NULL) DESC, (f.kind='clip') DESC, f.score DESC""", trace_id)
+        # On a mixed visit: a frame marked as this species, else one not marked as another species.
+        f = next((r for r in rows if r["id"] in mine), None) or next((r for r in rows if r["id"] not in others), None) \
+            or (rows[0] if rows else None)
         if not f:
             return None
         img = Image.open(self.s.image_dir / f["path"]).convert("RGB")
@@ -371,7 +402,7 @@ class Recognizer:
             if it["slug"] not in self._gallery_sent:
                 topic, body = self.species_image_config(it["name"])
                 self.publish(topic, json.dumps(body), True)
-            photo = self.portrait(it["trace_id"])
+            photo = self.portrait(it["trace_id"], it["name"])
             if photo:
                 self.publish(self.t(f"species/{it['slug']}/image"), photo, True)
             self._gallery_sent[it["slug"]] = it["trace_id"]

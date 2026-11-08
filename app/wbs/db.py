@@ -102,6 +102,11 @@ class DB:
             lcols = {r[1] for r in c.execute("PRAGMA table_info(labels)")}
             if "checked" not in lcols:   # 0.12: when a person last confirmed this label is right
                 c.execute("ALTER TABLE labels ADD COLUMN checked REAL")
+            # 0.24: mixed visits. frame_species = {"<frame id>": species} for frames that show something other than
+            # the visit's main species; also = the other species seen (JSON list, no Empty), kept for SQL.
+            for col in ("frame_species", "also"):
+                if col not in lcols:
+                    c.execute(f"ALTER TABLE labels ADD COLUMN {col} TEXT")
             # Cross-validated (out-of-fold) check of every confirmed visit, per trained model.
             c.execute("""CREATE TABLE IF NOT EXISTS label_checks (
                 model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
@@ -196,15 +201,32 @@ class DB:
                        result.get("confidence"), result.get("other_animal"), result.get("notes"), raw, time.time()))
 
     def set_label(self, trace_id: str, species: str, frame_ids: list[int], count: int | None,
-                  source: str) -> None:
+                  source: str, frame_species: dict[int, str] | None = None) -> None:
+        """frame_species: frames (from frame_ids) that show a different species than `species`."""
         now = time.time()
+        fs = {str(f): s for f, s in (frame_species or {}).items() if f in frame_ids and s != species}
+        also = sorted({s for s in fs.values() if s != "Empty"})
         with self.tx() as c:   # a person just confirmed it, so it also counts as checked now
-            c.execute("""INSERT INTO labels(trace_id, species, count, frame_ids, source, created, updated, checked)
-                         VALUES (?,?,?,?,?,?,?,?)
+            c.execute("""INSERT INTO labels(trace_id, species, count, frame_ids, source, created, updated, checked,
+                                            frame_species, also)
+                         VALUES (?,?,?,?,?,?,?,?,?,?)
                          ON CONFLICT(trace_id) DO UPDATE SET species=excluded.species, count=excluded.count,
                          frame_ids=excluded.frame_ids, source=excluded.source, updated=excluded.updated,
-                         checked=excluded.checked""",
-                      (trace_id, species, count, json.dumps(frame_ids), source, now, now, now))
+                         checked=excluded.checked, frame_species=excluded.frame_species, also=excluded.also""",
+                      (trace_id, species, count, json.dumps(frame_ids), source, now, now, now,
+                       json.dumps(fs) if fs else None, json.dumps(also) if also else None))
+
+    def set_label_frames(self, trace_id: str, frame_ids: list[int], frame_species: dict[str, str] | None,
+                         touch: bool = True) -> None:
+        """Change which frames a label uses (a frame swapped or re-picked), keeping its species.
+        touch=False also keeps its `updated` time."""
+        fs = {k: s for k, s in (frame_species or {}).items() if int(k) in frame_ids}
+        also = sorted({s for s in fs.values() if s != "Empty"})
+        with self.tx() as c:
+            c.execute("UPDATE labels SET frame_ids=?, frame_species=?, also=?, updated=CASE WHEN ? THEN ? ELSE updated END "
+                      "WHERE trace_id=?",
+                      (json.dumps(frame_ids), json.dumps(fs) if fs else None, json.dumps(also) if also else None,
+                       int(touch), time.time(), trace_id))
 
     def delete_label(self, trace_id: str) -> None:
         with self.tx() as c:

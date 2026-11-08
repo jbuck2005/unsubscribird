@@ -84,8 +84,8 @@ def repick(db: DB, trace_id: str, lm: LMStudio | None, model: str | None, apply:
             with db.tx() as c:
                 c.execute("UPDATE frames SET rejected=0 WHERE id IN (%s)" % ",".join("?" * len(frame_ids)), frame_ids)
             out["label_frames"] = "kept old (no new frame fits the label)"
-        with db.tx() as c:   # keep the person's label, source and timestamps; only the frames move
-            c.execute("UPDATE labels SET frame_ids=? WHERE trace_id=?", (json.dumps(frame_ids), trace_id))
+        # keep the person's label, source and timestamps; only the frames move (per-frame species of dropped frames go)
+        db.set_label_frames(trace_id, frame_ids, json.loads(lab["frame_species"] or "{}"), touch=False)
         out["label"] = lab["species"]
     return out
 

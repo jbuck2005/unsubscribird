@@ -36,7 +36,7 @@ def test_review_queue_and_confirm():
     v = next(x for x in r["visits"] if x["trace_id"] == "trace0001")
     assert v["consensus"]["species"] == "Blue Jay" and v["consensus"]["known"]  # case normalised
     assert c.post("/api/visits/trace0001/label", json={"species": "blue jay", "frame_ids": ids[:2]}).json() == \
-        {"ok": True, "species": "Blue Jay", "source": "confirmed"}
+        {"ok": True, "species": "Blue Jay", "source": "confirmed", "frame_species": {}, "also": []}
     assert all(x["trace_id"] != "trace0001" for x in c.get("/api/visits?queue=review").json()["visits"])
     lab = c.get("/api/visits?queue=labelled").json()["visits"][0]["label"]
     assert lab["species"] == "Blue Jay" and lab["frame_ids"] == ids[:2]

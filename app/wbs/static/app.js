@@ -59,7 +59,7 @@ const Review = {
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
       : q === "excluded" ? "Visits kept out of training. <b>Restore</b> puts one back."
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> works as usual."
-      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, or ↻ to swap a blurry frame for a sharper one from the clip.";
+      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     this.load();
   },
@@ -100,6 +100,8 @@ const Review = {
     const initial = v._preset?.species ?? (v.label?.species || (cons && cons.known ? cons.species : ""));
     v._species = initial;
     v._frames = v._preset?.frames ?? new Set(v.label ? v.label.frame_ids : this.defaultFrames(v, initial));
+    // Mixed visits: frame id -> the species that frame shows instead of the visit's species.
+    v._fs = v._preset?.fs ?? new Map(Object.entries(v.label?.frame_species || {}).map(([k, s]) => [+k, s]));
     v._edited = !!v._preset?.edited;
     const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const frames = v.frames.map((f, n) => {
@@ -113,6 +115,8 @@ const Review = {
             style="left:${f.x1 * 100}%;top:${f.y1 * 100}%;width:${(f.x2 - f.x1) * 100}%;height:${(f.y2 - f.y1) * 100}%"></span>` : ""}</div>
           <span class="tick">${v._frames.has(f.id) ? "✓" : "✕"}</span><span class="num">${n + 1}${f.t != null ? " · " + f.t + "s" : ""}</span>
           ${v.clip ? `<button class="regrab" title="Blurry? Grab a different frame from the clip (Shift+${n + 1})">↻</button>` : ""}
+          <button class="tagbtn" title="This frame shows a different species (Alt+${n + 1}, or t then ${n + 1})">🏷</button>
+          <span class="ftag" ${v._fs.has(f.id) ? "" : "hidden"}>${esc(v._fs.get(f.id) || "")}</span>
           <div class="cap">${cap}${why}</div></div>`;
     }).join("");
     const other = (s, label) => s ? `<span class="chip alt" title="${esc(s.notes || "")}">${label}: ${esc(s.species || "–")} ${s.confidence != null ? Math.round(s.confidence * 100) + "%" : ""}</span>` : "";
@@ -129,7 +133,7 @@ const Review = {
         ${consChip}${altChips}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
-        ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}</span>` : ""}
+        ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}
         <span class="chip edited" ${v._edited ? "" : "hidden"}>✎ changed</span>
         ${v.clip_href ? `<a class="meta" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
       <div class="frames">${frames || '<span class="msg">No frames yet.</span>'}</div>
@@ -148,7 +152,12 @@ const Review = {
       e.stopPropagation(); this.regrab(v, el, +b.closest(".frame").dataset.f);
     }));
     $$(".frame", el).forEach((fe) => {
-      fe.addEventListener("click", (e) => { if (e.shiftKey) return zoom($("img", fe).dataset.full); this.toggle(v, el, +fe.dataset.f); });
+      fe.addEventListener("click", (e) => {
+        if (e.target.closest(".tagbtn")) { e.stopPropagation(); return this.tagFrame(v, el, +fe.dataset.f); }
+        if (e.target.closest(".ftagin")) return;
+        if (e.shiftKey) return zoom($("img", fe).dataset.full);
+        this.toggle(v, el, +fe.dataset.f);
+      });
       fe.addEventListener("dblclick", () => zoom($("img", fe).dataset.full));
     });
     const input = $("input", el);
@@ -175,6 +184,46 @@ const Review = {
     this.markEdited(v, el);
   },
 
+  // Mark one frame as showing another species (a squirrel in a chickadee visit). Empty or the visit's own species
+  // clears it. The frame is ticked, since only ticked frames are training data.
+  tagFrame(v, el, fid) {
+    const fe = $(`.frame[data-f="${fid}"]`, el);
+    if (!fe || $(".ftagin", fe)) return;
+    const inp = document.createElement("input");
+    inp.className = "ftagin"; inp.setAttribute("list", "species-list");
+    inp.placeholder = "This frame shows…"; inp.value = v._fs.get(fid) || "";
+    $(".imgwrap", fe).append(inp);
+    const done = (apply) => {
+      if (apply) this.setTag(v, el, fid, inp.value.trim());
+      inp.remove(); el.focus({ preventScroll: true });
+    };
+    inp.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") { e.preventDefault(); done(true); }
+      else if (e.key === "Escape") { e.preventDefault(); done(false); }
+    });
+    inp.addEventListener("blur", () => { if (inp.isConnected) done(false); });
+    inp.focus(); inp.select();
+  },
+
+  setTag(v, el, fid, name) {
+    const known = this.species.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    const main = ($("input", el).value || "").trim().toLowerCase();
+    const msg = $(".msg", el);
+    if (name && !known) { msg.className = "msg err"; msg.textContent = `'${name}' is not in the species list.`; return; }
+    if (!name || known.name.toLowerCase() === main) v._fs.delete(fid);
+    else { v._fs.set(fid, known.name); if (!v._frames.has(fid)) this.toggle(v, el, fid); }
+    const tag = $(`.frame[data-f="${fid}"] .ftag`, el);
+    tag.textContent = v._fs.get(fid) || ""; tag.hidden = !v._fs.has(fid);
+    msg.className = "msg"; msg.textContent = "";
+    this.markEdited(v, el);
+  },
+
+  // What the API gets: per-frame species of ticked frames only.
+  frameSpecies(v) {
+    return Object.fromEntries([...v._fs].filter(([fid]) => v._frames.has(fid)));
+  },
+
   async regrab(v, el, fid) {
     const fe = $(`.frame[data-f="${fid}"]`, el);
     const msg = $(".msg", el);
@@ -184,7 +233,9 @@ const Review = {
       const nv = await api(`/api/visits/${v.trace_id}`);
       const frames = new Set([...v._frames].filter((x) => x !== fid));
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
-      nv._preset = { species: $("input", el).value, frames, edited: v._edited };
+      const fs = new Map(v._fs);
+      if (fs.has(fid)) { fs.set(r.frame.id, fs.get(fid)); fs.delete(fid); }
+      nv._preset = { species: $("input", el).value, frames, fs, edited: v._edited };
       const i = this.visits.indexOf(v);
       this.visits[i] = nv;
       const ne = this.card(nv, i);
@@ -223,7 +274,7 @@ const Review = {
     for (const { v, el } of this.pending()) {
       const species = ($("input", el).value || "").trim();
       if (!species || !known.has(species.toLowerCase()) || !v._frames.size) { skipped.push(el); continue; }
-      items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], _v: v, _el: el });
+      items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), _v: v, _el: el });
     }
     skipped.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err";
       m.textContent = "Skipped by Confirm all: pick a species from the list (and at least one frame)."; });
@@ -237,11 +288,11 @@ const Review = {
     const btn = $("#confirm-all"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const r = await api("/api/labels/batch", { method: "POST",
-        body: JSON.stringify(items.map(({ trace_id, species, frame_ids }) => ({ trace_id, species, frame_ids }))) });
+        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species }) => ({ trace_id, species, frame_ids, frame_species }))) });
       r.results.forEach((res, n) => {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
-        if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids }; el.classList.add("done");
+        if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also }; el.classList.add("done");
           m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}).`; }
         else { el.classList.add("skipped"); m.className = "msg err"; m.textContent = res.error; }
       });
@@ -269,10 +320,11 @@ const Review = {
     const species = ($("input", el).value || "").trim();
     if (!species) { msg.className = "msg err"; msg.textContent = "Type or pick a species first."; return; }
     try {
-      const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST", body: JSON.stringify({ species, frame_ids: [...v._frames] }) });
-      v.label = { species: r.species, frame_ids: [...v._frames] };
+      const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
+        body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v) }) });
+      v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also };
       el.classList.add("done"); el.classList.remove("skipped");
-      msg.className = "msg"; msg.textContent = `Saved: ${r.species} (${r.source}).`;
+      msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}).`;
       this.counts(); this.updateConfirmAll();
       this.setFocus(this.focus + 1);
     } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
@@ -312,12 +364,20 @@ const Review = {
   },
 
   key(e) {
-    if (e.target.tagName === "INPUT" || e.ctrlKey || e.metaKey || e.altKey || !lightbox.hidden) return;
+    if (e.target.tagName === "INPUT" || e.ctrlKey || e.metaKey || !lightbox.hidden) return;
     const el = $$(".visit")[this.focus];
     const v = this.visits[this.focus];
     if (!el || !v) return;
     const k = e.key;
-    if (k === "j") this.setFocus(this.focus + 1);
+    const tagging = this._tagNext; this._tagNext = false;
+    const digit = /^Digit[1-9]$/.test(e.code) ? +e.code.slice(5) : 0;
+    if (e.altKey) {   // Alt+1-6: species of one frame (some browsers keep Alt+digit for tabs: use t, then the digit)
+      if (!digit || !v.frames[digit - 1]) return;
+      this.tagFrame(v, el, v.frames[digit - 1].id);
+    }
+    else if (tagging && digit) { if (v.frames[digit - 1]) this.tagFrame(v, el, v.frames[digit - 1].id); }
+    else if (k === "t") { this._tagNext = true; }
+    else if (k === "j") this.setFocus(this.focus + 1);
     else if (k === "k") this.setFocus(this.focus - 1);
     else if (k === "x") this.setFocus(this.focus + 1);
     else if (k === "Enter") this.save(v, el);

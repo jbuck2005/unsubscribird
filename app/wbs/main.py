@@ -194,7 +194,9 @@ def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
             "frames": frames, "suggestions": [s for s in sugg if s["source"] in ("vlm", "motion")],
             "consensus": cons, "bioclip": others.get("bioclip"), "model": others.get("model"),
             "disagree": disagreement(model_sugg, cons),
-            "label": ({**dict(label), "frame_ids": json.loads(label["frame_ids"])} if label else None)}
+            "label": ({**dict(label), "frame_ids": json.loads(label["frame_ids"]),
+                       "frame_species": json.loads(label["frame_species"] or "{}"),
+                       "also": json.loads(label["also"] or "[]")} if label else None)}
 
 
 # ---- pages ----------------------------------------------------------------------
@@ -314,24 +316,33 @@ def api_public_day(day: str | None = None, species: str | None = None):
         raise HTTPException(400, "day must be YYYY-MM-DD")
     start = datetime(d.year, d.month, d.day).astimezone().timestamp()
     end = (datetime(d.year, d.month, d.day) + timedelta(days=1)).astimezone().timestamp()
-    rows = db.q(f"""SELECT v.*, COALESCE(l.species, v.rec_species) shown FROM visits v LEFT JOIN labels l USING(trace_id)
+    rows = db.q(f"""SELECT v.*, COALESCE(l.species, v.rec_species) shown, l.also FROM visits v
+                    LEFT JOIN labels l USING(trace_id)
                     WHERE v.ts >= ? AND v.ts < ? AND {PUBLIC_VISIT}
                     ORDER BY v.ts""", start, end)
-    colours = day_colours([r["shown"] for r in rows])
+    also = {r["trace_id"]: [s for s in json.loads(r["also"] or "[]") if s != r["shown"]] for r in rows}
+    colours = day_colours([s for r in rows for s in [r["shown"], *also[r["trace_id"]]]])
     out, counts = [], {}
     for r in rows:
         name = "Mystery bird" if r["shown"] in ("Uncertain", "Unknown bird") else r["shown"]
-        counts[name] = counts.get(name, 0) + 1
-        if species and name != species:
+        for s in [name, *also[r["trace_id"]]]:   # a mixed visit counts for each species in it
+            counts[s] = counts.get(s, 0) + 1
+        if species and species != name and species not in also[r["trace_id"]]:
             continue
-        poster = db.one("""SELECT COALESCE(thumb, path) p FROM frames WHERE trace_id=? AND rejected=0
-                           ORDER BY (kind='clip') DESC, score DESC LIMIT 1""", r["trace_id"])
+        tile = species or name   # filtered by its second species: show and picture that one
+        posters = {}
+        for s in [name, *also[r["trace_id"]]]:   # each species' own frame, for the chip it is found by
+            f = recognizer.best_frame(r["trace_id"], s if s != "Mystery bird" else None)
+            posters[s] = f"/img/{f['thumb'] or f['path']}" if f else None
         clip = clip_basename(r, None if name == "Mystery bird" else name) + ".mp4"
-        out.append({"trace_id": r["trace_id"], "ts": r["ts"], "species": name, "dot": colours.get(r["shown"], ""),
-                    "clip": f"/clips/{r['trace_id']}/{clip}", "poster": f"/img/{poster['p']}" if poster else None})
+        out.append({"trace_id": r["trace_id"], "ts": r["ts"], "species": tile,
+                    "also": [s for s in [name, *also[r["trace_id"]]] if s != tile],
+                    "dot": colours.get(r["shown"] if tile == name else tile, ""),
+                    "clip": f"/clips/{r['trace_id']}/{clip}", "poster": posters.get(tile), "posters": posters})
     out.reverse()   # newest first
     return {"day": d.isoformat(), "today": d == datetime.now().date(), "species": species,
-            "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out}
+            "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out,
+            "dots": {("Mystery bird" if s in ("Uncertain", "Unknown bird") else s): c for s, c in colours.items()}}
 
 
 # ---- API ------------------------------------------------------------------------
@@ -393,6 +404,8 @@ class LabelIn(BaseModel):
     species: str
     frame_ids: list[int]
     count: int | None = None
+    # Mixed visits: frames (from frame_ids) showing something other than `species`, e.g. {123: "Squirrel"}.
+    frame_species: dict[int, str] = {}
 
 
 def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str, Any]:
@@ -407,10 +420,22 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
     frame_ids = [i for i in body.frame_ids if i in valid]
     if not frame_ids:
         raise HTTPException(400, "pick at least one frame")
+    per_frame = {}
+    for fid, sp in body.frame_species.items():
+        if fid not in frame_ids:
+            continue                      # an unticked frame isn't training data, so its species doesn't matter
+        other = canonical(sp, index)
+        if not other or other.lower() not in index:
+            raise HTTPException(400, f"frame {fid}: '{sp}' is not in the species list")
+        if other != name:
+            per_frame[fid] = other
+    if per_frame and len(per_frame) == len(frame_ids):
+        raise HTTPException(400, f"every frame is set to another species: none shows {name}")
     cons = visit_json(v, index)["consensus"]
     source = "confirmed" if cons and cons["species"] == name else "corrected"
-    db.set_label(trace_id, name, frame_ids, body.count, source)
-    return {"ok": True, "species": name, "source": source}
+    db.set_label(trace_id, name, frame_ids, body.count, source, per_frame)
+    also = sorted({s for s in per_frame.values() if s != "Empty"})
+    return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also}
 
 
 def ha_refresh(trace_id: str) -> None:
@@ -500,9 +525,10 @@ def api_replace_frame(frame_id: int):
         ids = json.loads(label["frame_ids"])
         if frame_id in ids:
             ids = [new_id if i == frame_id else i for i in ids]
-            with db.tx() as c:
-                c.execute("UPDATE labels SET frame_ids=?, updated=? WHERE trace_id=?",
-                          (json.dumps(ids), time.time(), v["trace_id"]))
+            fs = json.loads(label["frame_species"] or "{}")
+            if str(frame_id) in fs:       # the new frame is from the same moment's neighbourhood: same species
+                fs[str(new_id)] = fs.pop(str(frame_id))
+            db.set_label_frames(v["trace_id"], ids, fs)
     new = db.one("SELECT * FROM frames WHERE id=?", new_id)
     try:
         suggestion = prelabeler.label_frame(v["trace_id"], new)
@@ -679,23 +705,26 @@ def api_gallery(day: str | None = None, species: str | None = None):
         raise HTTPException(400, "day must be YYYY-MM-DD")
     start = datetime(d.year, d.month, d.day).astimezone().timestamp()
     end = (datetime(d.year, d.month, d.day) + timedelta(days=1)).astimezone().timestamp()
-    rows = db.q("""SELECT v.*, COALESCE(l.species, v.rec_species) shown, l.species confirmed
+    rows = db.q("""SELECT v.*, COALESCE(l.species, v.rec_species) shown, l.species confirmed, l.also
                    FROM visits v LEFT JOIN labels l USING(trace_id)
                    WHERE v.ts >= ? AND v.ts < ? AND COALESCE(l.species, v.rec_species) IS NOT NULL
                    ORDER BY v.ts DESC""", start, end)
+    also = {r["trace_id"]: [s for s in json.loads(r["also"] or "[]") if s != r["shown"]] for r in rows}
     counts: dict[str, int] = {}
     for r in rows:
-        if r["shown"] not in ("Empty",):
-            counts[r["shown"]] = counts.get(r["shown"], 0) + 1
-    chosen = [r for r in rows if species and r["shown"] == species] if species else \
-        [r for r in rows if r["shown"] not in ("Empty",)]
+        for s in [r["shown"], *also[r["trace_id"]]]:
+            if s != "Empty":
+                counts[s] = counts.get(s, 0) + 1
+    chosen = [r for r in rows if r["shown"] == species or species in also[r["trace_id"]]] if species else \
+        [r for r in rows if r["shown"] not in ("Empty",) or also[r["trace_id"]]]
     index = species_index()
     visits = []
     for r in chosen:
         vj = visit_json(r, index)
         visits.append({k: vj[k] for k in ("trace_id", "time", "ts", "frames", "clip", "clip_url", "rec_species",
                                           "rec_source", "rec_conf", "rec_guess", "clip_name", "clip_href")} |
-                      {"species": r["shown"], "confirmed": r["confirmed"] is not None})
+                      {"species": r["shown"], "also": also[r["trace_id"]], "confirmed": r["confirmed"] is not None,
+                       "frame_species": (vj["label"] or {}).get("frame_species", {})})
     return {"day": d.isoformat(), "species": species, "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
             "visits": visits}
 

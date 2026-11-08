@@ -1,6 +1,8 @@
 """Trainer v1: logistic regression on BioCLIP 2 embeddings of user-confirmed frames (CPU, seconds).
 
 * Training data = only frames listed in `labels` (a person confirmed them). Rejected frames never count.
+* Each frame trains as its own species: the visit's label, or the per-frame species a person set on a mixed visit
+  (a squirrel frame in a chickadee visit trains as Squirrel). Visit-level scores use the visit's main label.
 * Evaluation is by VISIT: all frames of a visit stay on the same side of a split (they are near-duplicates),
   and a visit's prediction is the mean of its frames' probabilities.
 * Classes need at least `min_visits` confirmed visits; others are listed as "not enough data yet".
@@ -29,9 +31,10 @@ C_GRID = (0.5, 2.0, 8.0)
 def build_dataset(db: DB, worker: EmbedWorker) -> dict[str, Any]:
     names, text = worker.embedder.text_embeddings(worker.species_rows())
     non_bird = {r[0] for r in worker.species_rows() if r[2] == "other"}
-    X, y, groups, frame_ids = [], [], [], []
+    X, y, main, groups, frame_ids = [], [], [], [], []
     missing = 0
     for lab in db.q("SELECT l.* FROM labels l JOIN visits v USING(trace_id) WHERE v.excluded=0"):
+        per_frame = json.loads(lab["frame_species"] or "{}")
         for fid in json.loads(lab["frame_ids"]):
             r = db.one("""SELECT e.* FROM embeddings e JOIN frames f ON f.id=e.frame_id
                           WHERE e.frame_id=? AND f.rejected=0""", fid)
@@ -41,17 +44,35 @@ def build_dataset(db: DB, worker: EmbedWorker) -> dict[str, Any]:
             views = from_blob(r["data"], r["views"], r["dim"])
             z = zero_shot(views, names, text, non_bird)
             X.append(frame_feature(views, z["view"]))
-            y.append(lab["species"])
+            y.append(per_frame.get(str(fid), lab["species"]))
+            main.append(lab["species"])
             groups.append(lab["trace_id"])
             frame_ids.append(fid)
-    return {"X": np.array(X, dtype=np.float32), "y": np.array(y), "groups": np.array(groups),
+    return {"X": np.array(X, dtype=np.float32), "y": np.array(y), "main": np.array(main), "groups": np.array(groups),
             "frame_ids": frame_ids, "missing_embeddings": missing}
 
 
-def visit_level(probs: np.ndarray, groups: np.ndarray, y: np.ndarray) -> tuple[list[str], np.ndarray, np.ndarray]:
+def visits_per_class(y: np.ndarray, groups: np.ndarray) -> Counter:
+    """Visits each species appears in (a mixed visit counts for each of its species)."""
+    return Counter(s for _, s in {(g, s) for g, s in zip(groups, y)})
+
+
+def visit_labels(y: np.ndarray, main: np.ndarray, groups: np.ndarray, classes: list[str]) -> np.ndarray:
+    """Per frame: its visit's label for visit-level scoring. The main label, or, if that species isn't trained
+    (too few visits), the visit's most common frame species that is."""
+    out = main.copy()
+    for g in np.unique(groups):
+        m = groups == g
+        if main[m][0] not in classes:
+            trained = [s for s in y[m] if s in classes] or list(y[m])
+            out[m] = Counter(trained).most_common(1)[0][0]
+    return out
+
+
+def visit_level(probs: np.ndarray, groups: np.ndarray, vlab: np.ndarray) -> tuple[list[str], np.ndarray, np.ndarray]:
     visits = list(dict.fromkeys(groups))
     vp = np.array([probs[groups == g].mean(axis=0) for g in visits])
-    vy = np.array([y[groups == g][0] for g in visits])
+    vy = np.array([vlab[groups == g][0] for g in visits])
     return visits, vp, vy
 
 
@@ -91,8 +112,8 @@ def cross_validate(X, y, groups, classes: list[str], C: float, seed: int = 0) ->
     from sklearn.linear_model import LogisticRegression
     from sklearn.model_selection import StratifiedGroupKFold
 
-    visits_per_class = Counter(y[np.unique(groups, return_index=True)[1]])
-    n_splits = min(5, min(visits_per_class[c] for c in classes))
+    per_class = visits_per_class(y, groups)
+    n_splits = min(5, min(per_class[c] for c in classes))
     if n_splits < 2:
         return None
     oof = np.zeros((len(y), len(classes)))
@@ -105,9 +126,9 @@ def cross_validate(X, y, groups, classes: list[str], C: float, seed: int = 0) ->
     return {"oof": oof, "n_splits": n_splits}
 
 
-def metrics_from(oof: np.ndarray, X, y, groups, classes: list[str]) -> dict[str, Any]:
+def metrics_from(oof: np.ndarray, X, y, groups, classes: list[str], vlab: np.ndarray | None = None) -> dict[str, Any]:
     frame_pred = np.array(classes)[oof.argmax(axis=1)]
-    visits, vp, vy = visit_level(oof, groups, y)
+    visits, vp, vy = visit_level(oof, groups, y if vlab is None else vlab)
     vpred = np.array(classes)[vp.argmax(axis=1)]
     per_class = {}
     for c in classes:
@@ -178,17 +199,18 @@ class Trainer:
 
         self.status["message"] = "building dataset"
         ds = build_dataset(self.db, self.worker)
-        X, y, groups = ds["X"], ds["y"], ds["groups"]
+        X, y, groups, main = ds["X"], ds["y"], ds["groups"], ds["main"]
         if not len(y):
             raise ValueError("no confirmed frames with embeddings yet")
-        vcount = Counter(y[np.unique(groups, return_index=True)[1]])
+        vcount = visits_per_class(y, groups)
         classes = sorted(c for c, n in vcount.items() if n >= min_visits)
         too_few = {c: n for c, n in vcount.items() if n < min_visits}
         if len(classes) < 2:
             raise ValueError(f"need at least 2 species with {min_visits}+ confirmed visits; have "
                              + ", ".join(f"{c} {n}" for c, n in vcount.most_common()))
         keep = np.isin(y, classes)
-        X, y, groups = X[keep], y[keep], groups[keep]
+        X, y, groups, main = X[keep], y[keep], groups[keep], main[keep]
+        vlab = visit_labels(y, main, groups, classes)
 
         self.status["message"] = "cross-validating"
         best = None
@@ -196,7 +218,7 @@ class Trainer:
             cv = cross_validate(X, y, groups, classes, C)
             if cv is None:
                 break
-            m = metrics_from(cv["oof"], X, y, groups, classes)
+            m = metrics_from(cv["oof"], X, y, groups, classes, vlab)
             if best is None or m["visit_accuracy"] > best[1]["visit_accuracy"]:
                 best = (C, m, cv["n_splits"], cv["oof"])
         C = best[0] if best else 2.0
@@ -204,7 +226,7 @@ class Trainer:
         T = 1.0
         checks: list[tuple] = []
         if best:
-            vids, vp, vy = visit_level(best[3], groups, y)
+            vids, vp, vy = visit_level(best[3], groups, vlab)
             T = fit_temperature(vp, vy, classes)
             cal = calibrate(vp, T)
             for vid, p, lab in zip(vids, cal, vy):
@@ -216,7 +238,7 @@ class Trainer:
         metrics.update({"C": C, "cv_folds": best[2] if best else 0, "too_few": too_few,
                         "missing_embeddings": ds["missing_embeddings"], **(extra_metrics or {})})
         visits = list(dict.fromkeys(groups))
-        labels = {g: y[groups == g][0] for g in visits}
+        labels = {g: vlab[groups == g][0] for g in visits}
         metrics["baselines"] = baselines(self.db, visits, labels)
 
         self.status["message"] = "fitting final model"

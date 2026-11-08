@@ -63,6 +63,10 @@ Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database
 ## How it works
 
 * **Only labels a person confirms become training data.** Model suggestions never train anything by themselves.
+* **Mixed visits.** A squirrel can turn up in a chickadee's clip. In Review, mark that frame with 🏷 (or `Alt`+number,
+  or `t` then the number) and type what it shows. The visit keeps its main species (clip name, Last bird), each frame
+  trains as what it shows, and the other species counts in Home Assistant's Today, the species gallery and the kids'
+  page. A frame marked Empty just trains as Empty.
 * **Clips lose their dark start.** The camera wakes dark or washed out for about 1.5 s, so each clip is cut once, in
   place, right after download: a lossless stream copy from the first keyframe at or after `WBS_CLIP_SKIP_SECONDS`
   (default 2; the camera's keyframes are 2 s apart). Clips with no keyframe within 0.5 s after that, or that would
