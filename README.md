@@ -67,6 +67,10 @@ Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database
   place, right after download: a lossless stream copy from the first keyframe at or after `WBS_CLIP_SKIP_SECONDS`
   (default 2; the camera's keyframes are 2 s apart). Clips with no keyframe within 0.5 s after that, or that would
   drop under 2 s, stay whole. `visits.clip_cut` records the cut.
+* **Empty clips don't pile up.** Once a visit you confirmed as Empty is `WBS_EMPTY_CLIP_DAYS` old (default 14,
+  0 = keep forever; also on the Settings page), its clip is deleted. Frames, thumbnails and the label stay, so
+  training is unaffected. Excluded visits, and labels changed in the last day, are left alone.
+  `visits.clip_removed` records when.
 * Frames come from the full-resolution clip (2304x1296), not the 640x360 snapshot. Each clip is scored at
   2 fps for change against its median frame, motion (a frame must differ from *both* neighbours) and sharpness;
   the best few frames, at least 1.5 s apart, are kept.

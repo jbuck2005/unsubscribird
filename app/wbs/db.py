@@ -118,7 +118,8 @@ class DB:
                              ("rec_guess", "TEXT"), ("rec_at", "REAL"),
                              ("activity", "REAL"), ("quiet", "INTEGER NOT NULL DEFAULT 0"),
                              ("excluded", "INTEGER NOT NULL DEFAULT 0"),
-                             ("clip_cut", "REAL")):   # 0.15.1: seconds cut from the clip's start (NULL = not yet)
+                             ("clip_cut", "REAL"),    # 0.15.1: seconds cut from the clip's start (NULL = not yet)
+                             ("clip_removed", "REAL")):   # 0.22: when retention deleted the clip (Empty visits)
                 if col not in vcols:  # 0.5: live recognition result published to Home Assistant
                     c.execute(f"ALTER TABLE visits ADD COLUMN {col} {typ}")
             if not c.execute("SELECT 1 FROM species LIMIT 1").fetchone():

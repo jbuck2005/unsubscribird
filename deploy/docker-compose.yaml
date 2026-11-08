@@ -33,6 +33,7 @@ services:
       WBS_LAT: ${WBS_LAT:-45.42}
       WBS_LON: ${WBS_LON:--75.70}
       WBS_CLIP_SKIP_SECONDS: ${WBS_CLIP_SKIP_SECONDS:-2}
+      WBS_EMPTY_CLIP_DAYS: ${WBS_EMPTY_CLIP_DAYS:-14}
       WBS_SITE_NAME: ${WBS_SITE_NAME:-un-subscribird}
       WBS_HA_ID: ${WBS_HA_ID:-unsubscribird}
       WBS_HA_TOPIC: ${WBS_HA_TOPIC:-unsubscribird}

@@ -74,6 +74,8 @@ class Settings:
     # first keyframe at or after this many seconds (no re-encode; the camera's keyframes are 2 s apart).
     # 0 turns cutting off for new clips.
     clip_skip_s: float = field(default_factory=lambda: float(_env("WBS_CLIP_SKIP_SECONDS", "2")))
+    # Delete the clip (only the clip) of a visit a person confirmed as Empty, this many days after the visit. 0 = keep.
+    empty_clip_days: int = field(default_factory=lambda: int(_env("WBS_EMPTY_CLIP_DAYS", "14")))
 
     @property
     def db_path(self) -> Path:

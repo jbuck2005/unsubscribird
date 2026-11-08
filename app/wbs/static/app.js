@@ -411,6 +411,7 @@ async function statusPage() {
     ["To review", v.prelabelled || 0], ["Waiting for frames/model", (v.new || 0) + (v.frames || 0)], ["Failed", v.failed || 0],
     ["MQTT", s.collector.mqtt, true], ["Clips fetched", s.collector.clips],
     ["LM Studio", s.prelabel.lmstudio, true], ["Seconds per frame", s.prelabel.seconds_per_frame ?? "–"],
+    ["Empty clips deleted", s.retention.empty_clip_days ? `${s.retention.clips_removed} (after ${s.retention.empty_clip_days} days)` : "off", true],
     ["NAS free", s.disk ? `${s.disk.free_gb} GB` : "–"],
   ].map(([k, val, small]) => `<div class="card"><div class="k">${k}</div><div class="v ${small ? "small" : ""}">${esc(val)}</div></div>`).join("");
   $("#raw").textContent = JSON.stringify(s, null, 2);

@@ -32,6 +32,7 @@ from .embed import EmbedWorker, Embedder
 from .prefs import Prefs
 from .prelabel import Prelabeler, consensus
 from .recognition import Recognizer
+from .retention import Retention
 from .train import Trainer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -46,6 +47,7 @@ embedder = Embedder(threads=settings.embed_threads)
 embed_worker = EmbedWorker(settings, db, embedder, detector=Detector() if settings.detect_enabled else None)
 trainer = Trainer(db, embed_worker, settings.data_dir / "models")
 recognizer = Recognizer(settings, db, collector.publish, canonical=lambda n: canonical(n, species_index()))
+retention = Retention(settings, db)
 bakeoff = Bakeoff(db, prelabeler.lm, prelabeler, settings.image_dir, lambda n: canonical(n, species_index()))
 if settings.ha_publish:
     collector.on_connected = recognizer.publish_discovery
@@ -58,6 +60,7 @@ async def lifespan(app: FastAPI):
     collector.start()
     trim_existing_clips()
     prelabeler.start()
+    retention.start()
     if settings.embed_enabled:
         embed_worker.start()
     if settings.ha_publish:
@@ -70,6 +73,7 @@ async def lifespan(app: FastAPI):
     prelabeler.stop.set()
     embed_worker.stop.set()
     recognizer.stop.set()
+    retention.stop.set()
 
 
 app = FastAPI(title="un-subscribird", version=__version__, lifespan=lifespan)
@@ -687,4 +691,4 @@ def api_stats():
             "vlm_agreement": (round(agree["ok"] / agree["n"], 3) if agree["n"] else None),
             "collector": collector.stats, "prelabel": {**prelabeler.stats, "lmstudio": prelabeler.lm.status},
             "recognition": recognizer.stats if settings.ha_publish else "disabled",
-            "disk": disk}
+            "retention": retention.stats(), "disk": disk}

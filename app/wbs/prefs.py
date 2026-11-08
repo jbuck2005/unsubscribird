@@ -36,6 +36,10 @@ PREFS = (
     Pref("clip_skip_s", "Clips and frames", "Cut from the start of each clip",
          "Removes the camera's dark wake-up, at the first keyframe at or after this time (keyframes are 2 s apart). "
          "New clips only: clips already cut stay as they are. 0 = no cut.", "float", 0, 10, unit="s"),
+    Pref("empty_clip_days", "Clips and frames", "Delete Empty clips after",
+         "Clips of visits you confirmed as Empty are deleted this many days after the visit (checked hourly). "
+         "Their frames and labels stay, so training isn't affected. Excluded visits are kept. 0 = keep forever.",
+         "int", 0, 3650, unit="days"),
     Pref("frames_per_visit", "Clips and frames", "Frames kept per visit", "New visits only.", "int", 1, 6),
     Pref("prelabel_paused", "Clips and frames", "Pause AI pre-labels",
          "Stops using LM Studio, to free the GPU. Clips, recognition and the kids' page keep working. New visits "
