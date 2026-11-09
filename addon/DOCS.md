@@ -35,9 +35,18 @@ Settings on that port. Port 8095 is plain HTTP: keep it on your own network and 
   backups of the add-on.
 * Clips and frames are in `/media/unsubscribird`, so they can grow without making every add-on backup bigger.
 
-Nothing leaves your network except what the camera already sends to the Vicohome cloud, and the model downloads.
+Nothing leaves your network except what the camera already sends to the Vicohome cloud, the model downloads, and
+frames sent to LM Studio if you point it outside your network (see below).
 
 ## AI label suggestions (optional)
 
-Point **LM Studio address** at [LM Studio](https://lmstudio.ai/) with a vision model on any computer. Its
-suggestions are only suggestions: only labels a person confirms become training data.
+Point **LM Studio address** at [LM Studio](https://lmstudio.ai/) with a vision model, to have it suggest labels
+for you to confirm. Without it everything still works: you label each visit yourself. Its suggestions are only
+suggestions: only labels a person confirms become training data.
+
+* **Your frames go to that address.** Each visit's best frames (JPEG images, which can show people as well as
+  birds) are sent to it over plain HTTP. Run LM Studio on a computer on your own network. If you enter an address
+  anywhere else, your frames go there too.
+* **It runs on another computer**, not in this add-on. A vision model needs a capable GPU or Apple Silicon.
+* **It's separate software.** LM Studio and the models you load in it have their own licences and terms. This
+  project has no connection with LM Studio.

@@ -26,7 +26,9 @@ Vicohome cloud ──> ha-vicohome-bridge (HA add-on) ──MQTT + MP4 clips─�
 
 * A Vicohome-based bird feeder camera, and Home Assistant with ha-vicohome-bridge and an MQTT broker
 * A computer running Docker. Everything runs on its CPU; the first start downloads the models
-* Optional: [LM Studio](https://lmstudio.ai/) with a vision model on any computer, to suggest labels for you to confirm
+* Optional: [LM Studio](https://lmstudio.ai/) with a vision model on a computer with a capable GPU (or Apple Silicon),
+  to suggest labels for you to confirm. Without it, you label each visit yourself. LM Studio and its models are
+  separate software with their own licences and terms; this project has no connection with LM Studio
 
 ## Install
 
@@ -89,6 +91,9 @@ Home Assistant Green, use Docker on another computer instead.
   the best few frames, at least 1.5 s apart, are kept.
 * Pre-labelling uses whichever vision model LM Studio already has loaded (it never makes LM Studio load or swap
   models unless `WBS_LMSTUDIO_REQUIRE_LOADED=false`). About 3 s per frame on an RTX 5090.
+* **Frames sent to LM Studio leave this computer.** Each visit's best frames (JPEGs, which can show people as well
+  as birds) go to `WBS_AI_HOST` or `WBS_LMSTUDIO_URL` over plain HTTP. Keep LM Studio on your own network: any
+  address you set there receives your frames.
 
 ## Web
 
