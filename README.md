@@ -62,11 +62,12 @@ Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database
 
 ## Or as a Home Assistant add-on
 
-If Home Assistant runs on an x86 computer with 8 GB of RAM or more (HA OS or Supervised), it can run
+If Home Assistant (HA OS or Supervised) runs on a 64-bit x86 or ARM computer with 8 GB of RAM or more, it can run
 un-subscribird itself. In Home Assistant, go to Settings > Add-ons > Add-on store > ⋮ > Repositories, add
 `https://github.com/jbuck2005/unsubscribird`, and install **un-subscribird**. It opens in the sidebar with your
 Home Assistant login, finds the Mosquitto broker by itself and keeps clips in `/media/unsubscribird`. Its
-Documentation tab has the rest. On a Raspberry Pi or Home Assistant Green, use Docker on another computer instead.
+Documentation tab has the rest. It's quicker on an x86 mini PC than on a Raspberry Pi; on a 4 GB board such as the
+Home Assistant Green, use Docker on another computer instead.
 
 ## How it works
 

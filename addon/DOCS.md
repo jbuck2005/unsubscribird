@@ -5,10 +5,10 @@ Assistant computer, instead of a monthly subscription for AI bird ID.
 
 ## Before you install
 
-* **Hardware.** Recognition and the nightly retrain run on the CPU. Use an x86 mini PC (Intel N100 or better)
-  with 8 GB of RAM or more. A Raspberry Pi or Home Assistant Green will be slow and may run out of memory. If your
-  Home Assistant computer is small, run un-subscribird with Docker on another computer instead (see the
-  [README](https://github.com/jbuck2005/unsubscribird)).
+* **Hardware.** Runs on 64-bit x86 or ARM (aarch64) with 8 GB of RAM or more. Recognition and the nightly
+  retrain run on the CPU, so they're quicker on an x86 mini PC (Intel N100 or better) than on a Raspberry Pi.
+  A 4 GB board such as the Home Assistant Green is likely too small. If your Home Assistant computer is, run
+  un-subscribird with Docker on another computer instead (see the [README](https://github.com/jbuck2005/unsubscribird)).
 * **Disk.** The image is about 2.5 GB (it includes PyTorch), and the first start downloads BioCLIP 2 and
   OWL-ViT on top of that. Clips come after.
 * **[ha-vicohome-bridge](https://github.com/jbuck2005/ha-vicohome-bridge)** brings the camera's visits and clips
