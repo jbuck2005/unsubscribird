@@ -2,7 +2,7 @@
 # version must match app/wbs/__init__.py: tests/test_addon.py checks.
 name: un-subscribird
 description: "Your own bird ID for a Vicohome feeder camera. No Strings. Just Wings."
-version: "0.25.2"
+version: "0.25.3"
 slug: unsubscribird
 url: https://github.com/jbuck2005/unsubscribird
 image: ghcr.io/jbuck2005/{arch}-unsubscribird

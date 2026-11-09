@@ -26,7 +26,10 @@ from .config import Settings
 from .db import DB
 
 LOG = logging.getLogger("wbs.collector")
-MAX_CLIP_ATTEMPTS = 8
+# When to try each clip download, in seconds after the visit arrived. The gaps grow so a Home Assistant restart
+# or reboot (the clip is served by Home Assistant) is waited out: the last try is 15 minutes in.
+CLIP_RETRY_AT_S = (0, 10, 20, 40, 80, 160, 300, 480, 660, 900)
+MAX_CLIP_ATTEMPTS = len(CLIP_RETRY_AT_S)
 NO_CLIP_GRACE_S = 30 * 60
 MAX_CLIP_BYTES = 200 * 1024 * 1024
 # MQTT is input, not truth: a trace id becomes a folder name and a clip_url is appended to Home Assistant's address.
@@ -58,6 +61,12 @@ def save_capped(src, path: Path) -> None:
             if size > MAX_CLIP_BYTES:
                 raise RuntimeError(f"clip is over {MAX_CLIP_BYTES} bytes")
             fh.write(chunk)
+
+
+def clip_due(v, now: float) -> bool:
+    """True when the next clip download try for visit row v is due (see CLIP_RETRY_AT_S)."""
+    attempts = v["attempts"]
+    return attempts < MAX_CLIP_ATTEMPTS and now >= v["created"] + CLIP_RETRY_AT_S[attempts]
 
 
 def record_from_recent(serial: str, r: dict[str, Any]) -> dict[str, Any] | None:
@@ -184,10 +193,11 @@ class Collector:
     def process_pending(self) -> None:
         now = time.time()
         rows = self.db.q("""SELECT * FROM visits WHERE status='new' AND attempts < ? AND ts < ?
-                            ORDER BY ts DESC LIMIT 20""", MAX_CLIP_ATTEMPTS, now - 20)
+                            ORDER BY ts DESC LIMIT 200""", MAX_CLIP_ATTEMPTS, now - 20)
         for v in rows:
             if v["clip_url"]:
-                self.fetch_clip(v)
+                if clip_due(v, now):
+                    self.fetch_clip(v)
             elif now - v["ts"] > NO_CLIP_GRACE_S:
                 # No clip ever appeared: keep the visit with just its snapshot.
                 self.db.set_visit(v["trace_id"], status="frames" if v["snapshot"] else "failed",

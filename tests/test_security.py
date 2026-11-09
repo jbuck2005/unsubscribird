@@ -211,3 +211,32 @@ def test_a_stored_bad_trace_id_doesnt_stop_the_queue():
     v = clip_visit("../stored", "/local/vicohome/x.mp4")
     collector_with(FakeResponse(200)).fetch_clip(v)
     assert "bad trace id" in stored("../stored")["error"]
+
+
+# ---- clip retries wait out a Home Assistant restart ---------------------------------------
+def test_clip_retries_back_off_for_15_minutes():
+    assert col.CLIP_RETRY_AT_S[-1] == 15 * 60
+    assert list(col.CLIP_RETRY_AT_S) == sorted(col.CLIP_RETRY_AT_S)
+    v = {"attempts": 0, "created": 1000.0}
+    assert col.clip_due(v, 1000)
+    v["attempts"] = 3   # 4th try is due 40 s in
+    assert not col.clip_due(v, 1039) and col.clip_due(v, 1040)
+    v["attempts"] = col.MAX_CLIP_ATTEMPTS - 1   # last try at 15 min
+    assert not col.clip_due(v, 1000 + 899) and col.clip_due(v, 1000 + 900)
+    v["attempts"] = col.MAX_CLIP_ATTEMPTS
+    assert not col.clip_due(v, 10**9)
+
+
+def test_a_failed_clip_waits_for_its_next_try_then_gives_up_after_the_last():
+    clip_visit("haoffline1", "/local/vicohome/haoffline1.mp4")
+    c = collector_with(FakeResponse(502))
+    mine = lambda: sum(url.endswith("/haoffline1.mp4") for url, _ in c.http.calls)   # other tests leave visits too
+    c.process_pending()
+    assert mine() == 1 and stored("haoffline1")["status"] == "new"
+    c.process_pending()   # next try is 10 s after the visit arrived: not yet
+    assert mine() == 1
+    main.db.set_visit("haoffline1", created=time.time() - 15 * 60)   # 15 minutes later, HA still down
+    for _ in range(col.MAX_CLIP_ATTEMPTS + 2):
+        c.process_pending()
+    assert mine() == col.MAX_CLIP_ATTEMPTS
+    assert stored("haoffline1")["status"] == "failed"   # no snapshot either

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.3
+
+* Rides out a Home Assistant restart: a clip that can't be downloaded is tried again with growing gaps for
+  15 minutes (was about 80 seconds), so a visit during a restart or reboot keeps its clip.
+
 ## 0.25.2
 
 * Warns in the log at start when the computer has less than 8 GB of memory. On a 4 GB Raspberry Pi 4 running
