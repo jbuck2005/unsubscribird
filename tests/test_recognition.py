@@ -259,7 +259,6 @@ def test_sighting_event_species_typed_and_no_empty():
     r.run_once()
     sightings = [json.loads(p)["event_type"] for t, p, _ in sink.msgs if t == "unsubscribird/sighting"]
     assert sightings == ["Blue Jay", "Snowy Owl"]
-    topics = [t for t, _, _ in sink.msgs]
     owl_cfg_i = max(i for i, (t, p, _) in enumerate(sink.msgs)
                     if t.endswith("/sighting/config") and "Snowy Owl" in json.loads(p)["event_types"])
     owl_evt_i = max(i for i, (t, p, _) in enumerate(sink.msgs) if t == "unsubscribird/sighting")

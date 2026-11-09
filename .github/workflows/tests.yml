@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      # Errors only (syntax, undefined names, unused imports/variables), not style.
+      - run: ruff check --select E9,F --output-format github app tests deploy
+
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"   # same as the Docker image
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      # torch and BioCLIP are imported lazily and the tests use a fake embedder, so the ML requirements are skipped.
+      - run: pip install -r app/requirements.txt pytest httpx
+      - run: pytest -q
