@@ -12,6 +12,9 @@ import requests
 
 OPTIONS = Path("/data/options.json")
 IMAGES = "/media/unsubscribird"     # clips and frames: in HA's media folder, out of the add-on's own backup
+# CPU priority as an add-on (0 normal, 19 lowest). Home Assistant shares the computer and comes first: embedding,
+# training and ffmpeg (which inherits it) only get the CPU it leaves free.
+NICE = 15
 LOG = logging.getLogger("wbs.start")
 
 # add-on option -> setting. Empty options are left out, so the defaults in config.py apply.
@@ -26,6 +29,7 @@ OPTION_ENV = {
     "bridge_topic": "WBS_BRIDGE_TOPIC",
     "ha_id": "WBS_HA_ID",
     "embed_threads": "WBS_EMBED_THREADS",
+    "detect": "WBS_DETECT",
     "mqtt_host": "WBS_MQTT_HOST",
     "mqtt_port": "WBS_MQTT_PORT",
     "mqtt_user": "WBS_MQTT_USER",
@@ -42,7 +46,9 @@ def environment(options: dict, mqtt: dict) -> dict[str, str]:
                 "WBS_MQTT_USER": str(mqtt.get("username", "")), "WBS_MQTT_PASSWORD": str(mqtt.get("password", ""))}
     for option, name in OPTION_ENV.items():
         value = options.get(option)
-        if value not in (None, ""):
+        if isinstance(value, bool):
+            env[name] = "true" if value else "false"
+        elif value not in (None, ""):
             env[name] = str(value)
     return env
 
@@ -64,6 +70,7 @@ def main() -> None:
         LOG.info("Home Assistant add-on; MQTT broker %s", "from the Supervisor" if mqtt else "from the options")
         os.environ.update(environment(json.loads(OPTIONS.read_text()), mqtt))
         Path(IMAGES).mkdir(parents=True, exist_ok=True)
+        os.nice(NICE)
     os.execvp("uvicorn", ["uvicorn", "wbs.main:app", "--host", "0.0.0.0", "--port", "8095", "--proxy-headers"])
 
 

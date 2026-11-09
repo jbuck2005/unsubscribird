@@ -9,6 +9,11 @@ Assistant computer, instead of a monthly subscription for AI bird ID.
   retrain run on the CPU, so they're quicker on an x86 mini PC (Intel N100 or better) than on a Raspberry Pi.
   A 4 GB board such as the Home Assistant Green is likely too small. If your Home Assistant computer is, run
   un-subscribird with Docker on another computer instead (see the [README](https://github.com/jbuck2005/unsubscribird)).
+* **Sharing the computer.** The add-on runs at low CPU priority, so Home Assistant comes first. After you install
+  it, or bring in old clips, it works through every visit's frames, which can take hours on a Raspberry Pi; after
+  that it's a few visits a day. If Home Assistant still feels slow, set **CPU threads** to 1 and turn off
+  **Find the bird with OWL-ViT** (frames are then not cropped to the bird, so recognition is less accurate,
+  mostly for small birds).
 * **Disk.** The image is about 2.5 GB (it includes PyTorch), and the first start downloads BioCLIP 2 and
   OWL-ViT on top of that. Clips come after.
 * **[ha-vicohome-bridge](https://github.com/jbuck2005/ha-vicohome-bridge)** brings the camera's visits and clips

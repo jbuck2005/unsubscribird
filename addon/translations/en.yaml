@@ -28,7 +28,10 @@ configuration:
     description: Home Assistant's id for the device. Pick once; changing it makes new entities.
   embed_threads:
     name: CPU threads
-    description: Threads for bird recognition. Fewer leaves more for Home Assistant.
+    description: Threads for bird recognition. Fewer leaves more for Home Assistant; 1 on a Raspberry Pi if it still feels slow.
+  detect:
+    name: Find the bird with OWL-ViT
+    description: Crops each frame to the bird before recognition. Off saves memory and CPU (good on a Raspberry Pi) but is less accurate, mostly for small birds.
   mqtt_host:
     name: MQTT broker
     description: Only if you don't use the Mosquitto add-on.

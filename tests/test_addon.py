@@ -67,6 +67,35 @@ def test_an_mqtt_option_beats_the_supervisor_broker():
     assert (env["WBS_MQTT_HOST"], env["WBS_MQTT_PORT"]) == ("192.0.2.40", "8883")
 
 
+def test_switches_become_true_or_false():
+    assert start.environment({"detect": False}, {})["WBS_DETECT"] == "false"
+    assert start.environment({"detect": True}, {})["WBS_DETECT"] == "true"
+
+
+def test_the_add_on_gives_way_to_home_assistant(tmp_path, monkeypatch):
+    options = tmp_path / "options.json"
+    options.write_text('{"site_name": "un-subscribird", "detect": false}')
+    calls = []
+    monkeypatch.setattr(start, "OPTIONS", options)
+    monkeypatch.setattr(start, "IMAGES", str(tmp_path / "media"))
+    monkeypatch.setattr(start, "mqtt_service", lambda token: {})
+    monkeypatch.setattr(start.os, "environ", {"SUPERVISOR_TOKEN": "t"})
+    monkeypatch.setattr(start.os, "nice", lambda n: calls.append(("nice", n)), raising=False)
+    monkeypatch.setattr(start.os, "execvp", lambda f, args: calls.append(("exec", f)))
+    start.main()
+    assert calls == [("nice", start.NICE), ("exec", "uvicorn")] and start.NICE >= 10
+    assert start.os.environ["WBS_DETECT"] == "false"
+
+
+def test_outside_an_add_on_nothing_changes(monkeypatch):
+    calls = []
+    monkeypatch.setattr(start.os, "environ", {})
+    monkeypatch.setattr(start.os, "nice", lambda n: calls.append("nice"), raising=False)
+    monkeypatch.setattr(start.os, "execvp", lambda f, args: calls.append(f))
+    start.main()
+    assert calls == ["uvicorn"] and start.os.environ == {}
+
+
 def test_every_option_has_a_setting_and_a_label():
     config = (ROOT / "addon/config.yaml").read_text()
     schema = re.search(r"^schema:\n((?:  .*\n)+)", config, re.M).group(1)
