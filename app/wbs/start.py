@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from pathlib import Path
 
 import requests
@@ -15,6 +16,8 @@ IMAGES = "/media/unsubscribird"     # clips and frames: in HA's media folder, ou
 # CPU priority as an add-on (0 normal, 19 lowest). Home Assistant shares the computer and comes first: embedding,
 # training and ffmpeg (which inherits it) only get the CPU it leaves free.
 NICE = 15
+MEMINFO = Path("/proc/meminfo")
+MIN_MEMORY_GIB = 7
 LOG = logging.getLogger("wbs.start")
 
 # add-on option -> setting. Empty options are left out, so the defaults in config.py apply.
@@ -62,10 +65,29 @@ def mqtt_service(token: str) -> dict:
         return {}
 
 
+def low_memory(meminfo: str) -> str | None:
+    """A warning when the computer has less memory than the models need alongside Home Assistant, else None.
+    8 GB computers report about 7.6 GiB; a 4 GB Raspberry Pi running Home Assistant ran out at 12:39 on 2026-11-09,
+    with this app at 1.6 GB."""
+    m = re.search(r"^MemTotal:\s+(\d+) kB", meminfo, re.M)
+    gib = int(m.group(1)) / 2**20 if m else None
+    if gib is None or gib >= MIN_MEMORY_GIB:
+        return None
+    return (f"This computer has {gib:.1f} GiB of memory; un-subscribird needs 8 GB. BioCLIP 2 and OWL-ViT use "
+            "1.5 GB or more on top of everything else, so the computer may slow to a crawl or run out of memory. "
+            "Use a computer with 8 GB or more; with Docker, Home Assistant can stay where it is (see the README).")
+
+
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    try:
+        warning = low_memory(MEMINFO.read_text())
+    except OSError:
+        warning = None
+    if warning:
+        LOG.warning(warning)
     token = os.environ.get("SUPERVISOR_TOKEN")
     if token and OPTIONS.exists():
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
         mqtt = mqtt_service(token)
         LOG.info("Home Assistant add-on; MQTT broker %s", "from the Supervisor" if mqtt else "from the options")
         os.environ.update(environment(json.loads(OPTIONS.read_text()), mqtt))

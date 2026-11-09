@@ -72,10 +72,32 @@ def test_switches_become_true_or_false():
     assert start.environment({"detect": True}, {})["WBS_DETECT"] == "true"
 
 
+PI_4GB = "MemTotal:        3884332 kB\nMemFree:          760000 kB\n"
+PC_8GB = "MemTotal:        7995684 kB\nMemFree:         4000000 kB\n"
+
+
+def test_too_little_memory_gets_a_warning():
+    warning = start.low_memory(PI_4GB)
+    assert warning and "3.7 GiB" in warning and "8 GB" in warning
+    assert start.low_memory(PC_8GB) is None
+    assert start.low_memory("") is None       # can't tell: say nothing
+
+
+def test_the_warning_reaches_the_log(tmp_path, monkeypatch, caplog):
+    meminfo = tmp_path / "meminfo"
+    meminfo.write_text(PI_4GB)
+    monkeypatch.setattr(start, "MEMINFO", meminfo)
+    monkeypatch.setattr(start.os, "environ", {})
+    monkeypatch.setattr(start.os, "execvp", lambda f, args: None)
+    start.main()
+    assert any(r.levelname == "WARNING" and "GiB of memory" in r.message for r in caplog.records)
+
+
 def test_the_add_on_gives_way_to_home_assistant(tmp_path, monkeypatch):
     options = tmp_path / "options.json"
     options.write_text('{"site_name": "un-subscribird", "detect": false}')
     calls = []
+    monkeypatch.setattr(start, "MEMINFO", tmp_path / "missing")
     monkeypatch.setattr(start, "OPTIONS", options)
     monkeypatch.setattr(start, "IMAGES", str(tmp_path / "media"))
     monkeypatch.setattr(start, "mqtt_service", lambda token: {})
@@ -87,8 +109,9 @@ def test_the_add_on_gives_way_to_home_assistant(tmp_path, monkeypatch):
     assert start.os.environ["WBS_DETECT"] == "false"
 
 
-def test_outside_an_add_on_nothing_changes(monkeypatch):
+def test_outside_an_add_on_nothing_changes(tmp_path, monkeypatch):
     calls = []
+    monkeypatch.setattr(start, "MEMINFO", tmp_path / "missing")
     monkeypatch.setattr(start.os, "environ", {})
     monkeypatch.setattr(start.os, "nice", lambda n: calls.append("nice"), raising=False)
     monkeypatch.setattr(start.os, "execvp", lambda f, args: calls.append(f))

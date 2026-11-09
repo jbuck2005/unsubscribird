@@ -7,8 +7,10 @@ Assistant computer, instead of a monthly subscription for AI bird ID.
 
 * **Hardware.** Runs on 64-bit x86 or ARM (aarch64) with 8 GB of RAM or more. Recognition and the nightly
   retrain run on the CPU, so they're quicker on an x86 mini PC (Intel N100 or better) than on a Raspberry Pi.
-  A 4 GB board such as the Home Assistant Green is likely too small. If your Home Assistant computer is, run
-  un-subscribird with Docker on another computer instead (see the [README](https://github.com/jbuck2005/unsubscribird)).
+  A 4 GB board is too small: on a 4 GB Raspberry Pi 4 the models pushed Home Assistant into swap until the computer
+  ran out of memory, and the add-on's log warns at start when there's less than 8 GB. If your Home Assistant
+  computer is that small, run un-subscribird with Docker on another computer instead (see the
+  [README](https://github.com/jbuck2005/unsubscribird)).
 * **Sharing the computer.** The add-on runs at low CPU priority, so Home Assistant comes first. After you install
   it, or bring in old clips, it works through every visit's frames, which can take hours on a Raspberry Pi; after
   that it's a few visits a day. If Home Assistant still feels slow, set **CPU threads** to 1 and turn off

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.2
+
+* Warns in the log at start when the computer has less than 8 GB of memory. On a 4 GB Raspberry Pi 4 running
+  Home Assistant, the add-on ran out of memory.
+
 ## 0.25.1
 
 * Easier on a shared computer: runs at low CPU priority, so Home Assistant always comes first.
