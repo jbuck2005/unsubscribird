@@ -60,6 +60,14 @@ docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
 
 Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database and clips are in your own folders.
 
+## Or as a Home Assistant add-on
+
+If Home Assistant runs on an x86 computer with 8 GB of RAM or more (HA OS or Supervised), it can run
+un-subscribird itself. In Home Assistant, go to Settings > Add-ons > Add-on store > ⋮ > Repositories, add
+`https://github.com/jbuck2005/unsubscribird`, and install **un-subscribird**. It opens in the sidebar with your
+Home Assistant login, finds the Mosquitto broker by itself and keeps clips in `/media/unsubscribird`. Its
+Documentation tab has the rest. On a Raspberry Pi or Home Assistant Green, use Docker on another computer instead.
+
 ## How it works
 
 * **Only labels a person confirms become training data.** Model suggestions never train anything by themselves.
@@ -142,6 +150,9 @@ share is fine; use `WBS_EXTRA_GID` if the share needs a group, and `WBS_IMAGE_PR
 docker run --rm -v "$PWD":/src:ro python:3.12-slim sh -c 'apt-get -qq update && apt-get -qq install -y ffmpeg >/dev/null;
   pip install -q -r /src/app/requirements.txt pytest httpx; cp -r /src /w && cd /w && python -m pytest -q tests'
 ```
+
+GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. Pushing a tag
+like `v0.25.0` (the version in `app/wbs/__init__.py` and `addon/config.yaml`) publishes the images to GHCR.
 
 ## Roadmap
 

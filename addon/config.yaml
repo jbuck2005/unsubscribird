@@ -1,0 +1,47 @@
+# The add-on runs the same image as docker compose (built from app/ by .github/workflows/release.yml).
+# version must match app/wbs/__init__.py: tests/test_addon.py checks.
+name: un-subscribird
+description: "Your own bird ID for a Vicohome feeder camera. No Strings. Just Wings."
+version: "0.25.0"
+slug: unsubscribird
+url: https://github.com/jbuck2005/unsubscribird
+image: ghcr.io/jbuck2005/{arch}-unsubscribird
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8095
+panel_icon: mdi:bird
+panel_title: un-subscribird
+# The kids' page without a Home Assistant login. Off until you give it a port; then keep it on your own network.
+ports:
+  8095/tcp: null
+ports_description:
+  8095/tcp: Kids' page and Settings without Home Assistant (optional)
+services:
+  - mqtt:want
+map:
+  - type: media
+    read_only: false
+options:
+  site_name: un-subscribird
+  bridge_topic: vicohome_mqtt
+  ha_id: unsubscribird
+  embed_threads: 4
+schema:
+  site_name: str
+  admin_password: password?
+  host: str?
+  public_url: url?
+  allowed_hosts: str?
+  lmstudio_url: url?
+  lmstudio_model: str?
+  bridge_topic: str
+  ha_id: match(^[a-z0-9_]+$)
+  embed_threads: int(1,16)
+  mqtt_host: str?
+  mqtt_port: port?
+  mqtt_user: str?
+  mqtt_password: password?

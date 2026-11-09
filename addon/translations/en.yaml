@@ -1,0 +1,42 @@
+configuration:
+  site_name:
+    name: Site name
+    description: The name on every page.
+  admin_password:
+    name: Settings password
+    description: Only for the optional port 8095. In the Home Assistant sidebar your HA login is enough.
+  host:
+    name: This computer's address
+    description: The name or IP people type to reach port 8095. Only needed if you give the add-on that port.
+  public_url:
+    name: Public address
+    description: The link in Home Assistant notifications, e.g. http://homeassistant.local:8095. Empty = built from the address above.
+  allowed_hosts:
+    name: More host names
+    description: Comma separated. Other names the app answers to on port 8095.
+  lmstudio_url:
+    name: LM Studio address
+    description: e.g. http://192.168.1.30:1234 for AI label suggestions. Empty = no suggestions.
+  lmstudio_model:
+    name: LM Studio model
+    description: Empty = whichever vision model is loaded.
+  bridge_topic:
+    name: Bridge MQTT topic
+    description: The topic ha-vicohome-bridge publishes on.
+  ha_id:
+    name: Device id
+    description: Home Assistant's id for the device. Pick once; changing it makes new entities.
+  embed_threads:
+    name: CPU threads
+    description: Threads for bird recognition. Fewer leaves more for Home Assistant.
+  mqtt_host:
+    name: MQTT broker
+    description: Only if you don't use the Mosquitto add-on.
+  mqtt_port:
+    name: MQTT port
+  mqtt_user:
+    name: MQTT user
+  mqtt_password:
+    name: MQTT password
+network:
+  8095/tcp: Kids' page and Settings without Home Assistant (optional)

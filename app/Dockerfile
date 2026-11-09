@@ -11,4 +11,5 @@ RUN pip install -r requirements.txt \
 COPY wbs/ wbs/
 
 EXPOSE 8095
-CMD ["uvicorn", "wbs.main:app", "--host", "0.0.0.0", "--port", "8095", "--proxy-headers"]
+# Same as uvicorn wbs.main:app on port 8095; as a Home Assistant add-on it reads the add-on options first.
+CMD ["python", "-m", "wbs.start"]

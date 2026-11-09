@@ -1,0 +1,88 @@
+name: Release
+
+# Push a tag like v0.25.0 (the version in app/wbs/__init__.py and addon/config.yaml) to publish the images:
+#   ghcr.io/<owner>/amd64-unsubscribird and aarch64-unsubscribird   (the add-on pulls these)
+#   ghcr.io/<owner>/unsubscribird                                    (both, for docker compose)
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: v
+        name: The tag matches the app and the add-on
+        run: |
+          app=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' app/wbs/__init__.py)
+          addon=$(sed -n 's/^version: "\(.*\)"/\1/p' addon/config.yaml)
+          tag=${GITHUB_REF_NAME#v}
+          echo "tag $tag, app $app, add-on $addon"
+          [ "$tag" = "$app" ] && [ "$tag" = "$addon" ]
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: app
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-unsubscribird:${{ needs.version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-unsubscribird:latest
+          labels: |
+            io.hass.type=addon
+            io.hass.arch=${{ matrix.arch }}
+            io.hass.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+  manifest:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: One image for both architectures
+        env:
+          OWNER: ${{ github.repository_owner }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          r=ghcr.io/${OWNER,,}
+          for tag in "$VERSION" latest; do
+            docker buildx imagetools create -t "$r/unsubscribird:$tag" \
+              "$r/amd64-unsubscribird:$VERSION" "$r/aarch64-unsubscribird:$VERSION"
+          done

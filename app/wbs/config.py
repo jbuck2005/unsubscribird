@@ -54,6 +54,9 @@ class Settings:
     # More host names the web app answers to (comma list), besides WBS_HOST, public_url's and localhost.
     # Others get a 400.
     extra_hosts: str = field(default_factory=lambda: _env("WBS_ALLOWED_HOSTS"))
+    # Running as a Home Assistant add-on (set by start.py): the HA sidebar (Ingress) opens every page, with HA's
+    # own login, for requests from the Supervisor only.
+    ingress: bool = field(default_factory=lambda: _env("WBS_INGRESS", "false").lower() in ("1", "true", "yes"))
     # Clips whose best activity score is below this had nothing move in them: no LM Studio, suggested Empty.
     # Measured 2026-11-05 on 55 clips: birds >= 0.061, 18 of 24 empty visits < 0.03.
     quiet_activity: float = field(default_factory=lambda: float(_env("WBS_QUIET_ACTIVITY", "0.025")))

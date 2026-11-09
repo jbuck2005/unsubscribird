@@ -81,15 +81,36 @@ auth = Auth(settings.data_dir)
 PREFIX = re.compile(r"(/[A-Za-z0-9_-]+)+")
 
 
+INGRESS_PEER = "172.30.32.2"   # Home Assistant's Supervisor: the only sender of Ingress requests
+
+
+def from_ingress(scope) -> bool:
+    """Opened from the Home Assistant sidebar, where HA has logged the person in already. The peer address is
+    the TCP connection's (uvicorn only trusts X-Forwarded-For from itself), so a header can't fake it."""
+    return settings.ingress and (scope.get("client") or ("",))[0] == INGRESS_PEER
+
+
 def base_path(request: Request) -> str:
-    """The prefix a reverse proxy serves us under (X-Forwarded-Prefix: /birds), or "" when reached directly.
-    The proxy strips it, so routes never see it: only links, redirects and the cookie path use this."""
-    prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+    """The prefix a reverse proxy serves us under (X-Forwarded-Prefix: /birds, or Ingress's X-Ingress-Path),
+    or "" when reached directly. The proxy strips it, so routes never see it: only links, redirects and the
+    cookie path use this."""
+    header = "x-ingress-path" if from_ingress(request.scope) else "x-forwarded-prefix"
+    prefix = request.headers.get(header, "").rstrip("/")
     return prefix if PREFIX.fullmatch(prefix) else ""
 
 
 def logged_in(request: Request) -> bool:
-    return not auth.enabled or auth.valid(request.cookies.get(COOKIE))
+    return not auth.enabled or from_ingress(request.scope) or auth.valid(request.cookies.get(COOKIE))
+
+
+class HostCheck(TrustedHostMiddleware):
+    """Refuses unknown Host headers, except through Ingress: those carry whatever name the person uses for
+    Home Assistant, and only the Supervisor can send them."""
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] in ("http", "websocket") and from_ingress(scope):
+            return await self.app(scope, receive, send)
+        await super().__call__(scope, receive, send)
 
 
 @app.middleware("http")
@@ -105,7 +126,7 @@ async def require_login(request: Request, call_next):
     return RedirectResponse(f"{base_path(request)}/login?next={quote(target)}", status_code=303)
 
 
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)   # outermost: runs before the login
+app.add_middleware(HostCheck, allowed_hosts=settings.allowed_hosts)   # outermost: runs before the login
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates",
                             context_processors=[lambda request: {"base": base_path(request)}])
