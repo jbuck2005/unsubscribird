@@ -9,8 +9,6 @@ image: ghcr.io/jbuck2005/{arch}-unsubscribird
 arch:
   - amd64
   - aarch64
-startup: application
-boot: auto
 ingress: true
 ingress_port: 8095
 panel_icon: mdi:bird
