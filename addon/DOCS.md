@@ -19,7 +19,9 @@ Assistant computer, instead of a monthly subscription for AI bird ID.
 * **Disk.** The image is about 2.5 GB (it includes PyTorch), and the first start downloads BioCLIP 2 and
   OWL-ViT on top of that. Clips come after.
 * **[ha-vicohome-bridge](https://github.com/jbuck2005/ha-vicohome-bridge)** brings the camera's visits and clips
-  into Home Assistant.
+  into Home Assistant. It's an add-on too:
+  [add its repository](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fjbuck2005%2Fha-vicohome-bridge)
+  and install it from the add-on store.
 * **An MQTT broker.** The Mosquitto add-on is found by itself. Any other broker goes in the MQTT options.
 
 ## Using it

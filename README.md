@@ -65,8 +65,17 @@ Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database
 ## Or as a Home Assistant add-on
 
 If Home Assistant (HA OS or Supervised) runs on a 64-bit x86 or ARM computer with 8 GB of RAM or more, it can run
-un-subscribird itself. In Home Assistant, go to Settings > Add-ons > Add-on store > ⋮ > Repositories, add
-`https://github.com/jbuck2005/unsubscribird`, and install **un-subscribird**. It opens in the sidebar with your
+un-subscribird itself. Add both repositories to your Home Assistant (the camera bridge first, if you don't have it
+yet), then install **ha-vicohome-bridge** and **un-subscribird** from the add-on store:
+
+[![Add ha-vicohome-bridge to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fjbuck2005%2Fha-vicohome-bridge)
+ha-vicohome-bridge
+
+[![Add un-subscribird to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fjbuck2005%2Funsubscribird)
+un-subscribird
+
+Or by hand: Settings > Add-ons > Add-on store > ⋮ > Repositories, and add `https://github.com/jbuck2005/unsubscribird`
+(and `https://github.com/jbuck2005/ha-vicohome-bridge`). un-subscribird opens in the sidebar with your
 Home Assistant login, finds the Mosquitto broker by itself and keeps clips in `/media/unsubscribird`. Its
 Documentation tab has the rest. It's quicker on an x86 mini PC than on a Raspberry Pi; on a 4 GB board such as the
 Home Assistant Green, use Docker on another computer instead.
