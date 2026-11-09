@@ -1,5 +1,5 @@
 # BioCLIP 2 feature extraction (CPU). torch comes from the CPU-only index (see Dockerfile).
-torch==2.5.1
-torchvision==0.20.1
-open_clip_torch==2.29.0
-transformers==4.47.1
+torch==2.15.0
+torchvision==0.29.2
+open_clip_torch==4.2.1
+transformers==5.22.2
