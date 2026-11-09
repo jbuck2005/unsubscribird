@@ -171,6 +171,64 @@ like `v0.25.0` (the version in `app/wbs/__init__.py` and `addon/config.yaml`) pu
 5. ~~Kids' home page, Settings login~~
 6. Coral/edge model export (later)
 
+## Models and credits
+
+un-subscribird stands on two open models. Both are downloaded from Hugging Face on first start, not shipped in the
+image, and run entirely on your computer: nothing is sent to them over the network.
+
+* **[BioCLIP 2](https://huggingface.co/imageomics/bioclip-2)** (MIT), by the Imageomics Institute, turns each frame
+  into the features your species classifier trains on. Loaded with [OpenCLIP](https://github.com/mlfoundations/open_clip).
+  Gu, J., Stevens, S., Campolongo, E., Thompson, M., Zhang, N., Wu, J., Kopanev, A., Mai, Z., White, A., Balhoff, J.,
+  Dahdul, W., Rubenstein, D., Lapp, H., Berger-Wolf, T., Chao, W.-L. and Su, Y. "BioCLIP 2: Emergent Properties from
+  Scaling Hierarchical Contrastive Learning." *Advances in Neural Information Processing Systems* 38 (2025).
+  Model: [doi:10.57967/hf/5765](https://doi.org/10.57967/hf/5765).
+* **[OWL-ViT](https://huggingface.co/google/owlvit-base-patch32)** (`google/owlvit-base-patch32`, Apache 2.0), by
+  Google Research, finds the bird in each frame. Minderer, M., Gritsenko, A., Stone, A., Neumann, M., Weissenborn,
+  D., Dosovitskiy, A., Mahendran, A., Arnab, A., Dehghani, M., Shen, Z., Wang, X., Zhai, X., Kipf, T. and Houlsby, N.
+  "Simple Open-Vocabulary Object Detection with Vision Transformers." [arXiv:2205.06230](https://arxiv.org/abs/2205.06230) (2022).
+
+<details><summary>BibTeX, from the model cards</summary>
+
+```bibtex
+@software{Gu_BioCLIP_2_model,
+  author = {Jianyang Gu and Samuel Stevens and Elizabeth G Campolongo and Matthew J Thompson and Net Zhang and Jiaman Wu and Andrei Kopanev and Zheda Mai and Alexander E. White and James Balhoff and Wasila M Dahdul and Daniel Rubenstein and Hilmar Lapp and Tanya Berger-Wolf and Wei-Lun Chao and Yu Su},
+  license = {MIT},
+  title = {{BioCLIP 2}},
+  url = {https://huggingface.co/imageomics/bioclip-2},
+  version = {1.0.0},
+  doi = {10.57967/hf/5765},
+  publisher = {Hugging Face},
+  year = {2025}
+}
+
+@inproceedings{NEURIPS2025_94da80cb,
+  author = {Gu, Jianyang and Stevens, Sam and Campolongo, Elizabeth and Thompson, Matthew and Zhang, Net and Wu, Jiaman and Kopanev, Andrei and Mai, Zheda and White, Alexander and Balhoff, James and Dahdul, Wasila and Rubenstein, Daniel and Lapp, Hilmar and Berger-Wolf, Tanya and Chao, Wei-Lun (Harry) and Su, Yu},
+  booktitle = {Advances in Neural Information Processing Systems},
+  editor = {D. Belgrave and C. Zhang and H. Lin and R. Pascanu and P. Koniusz and M. Ghassemi and N. Chen},
+  pages = {102778--102811},
+  publisher = {Curran Associates, Inc.},
+  title = {BioCLIP 2: Emergent Properties from Scaling Hierarchical Contrastive Learning},
+  url = {https://proceedings.neurips.cc/paper_files/paper/2025/file/94da80cbfe870c1db958c88a8a27018c-Paper-Conference.pdf},
+  volume = {38},
+  year = {2025}
+}
+
+@software{ilharco_gabriel_2021_5143773,
+  author = {Ilharco, Gabriel and Wortsman, Mitchell and Wightman, Ross and Gordon, Cade and Carlini, Nicholas and Taori, Rohan and Dave, Achal and Shankar, Vaishaal and Namkoong, Hongseok and Miller, John and Hajishirzi, Hannaneh and Farhadi, Ali and Schmidt, Ludwig},
+  title = {OpenCLIP},
+  year = {2021},
+  doi = {10.5281/zenodo.5143773}
+}
+
+@article{minderer2022simple,
+  title = {Simple Open-Vocabulary Object Detection with Vision Transformers},
+  author = {Matthias Minderer and Alexey Gritsenko and Austin Stone and Maxim Neumann and Dirk Weissenborn and Alexey Dosovitskiy and Aravindh Mahendran and Anurag Arnab and Mostafa Dehghani and Zhuoran Shen and Xiao Wang and Xiaohua Zhai and Thomas Kipf and Neil Houlsby},
+  journal = {arXiv preprint arXiv:2205.06230},
+  year = {2022}
+}
+```
+</details>
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE). The models it downloads have their own licences: BioCLIP 2 (MIT) and OWL-ViT (Apache 2.0).

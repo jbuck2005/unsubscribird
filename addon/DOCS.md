@@ -38,6 +38,17 @@ Settings on that port. Port 8095 is plain HTTP: keep it on your own network and 
 Nothing leaves your network except what the camera already sends to the Vicohome cloud, the model downloads, and
 frames sent to LM Studio if you point it outside your network (see below).
 
+## The models
+
+Recognition uses two open models, downloaded from Hugging Face on first start and run entirely on this computer:
+
+* [BioCLIP 2](https://huggingface.co/imageomics/bioclip-2) (MIT) by the Imageomics Institute: Gu et al., "BioCLIP 2:
+  Emergent Properties from Scaling Hierarchical Contrastive Learning", NeurIPS 2025.
+* [OWL-ViT](https://huggingface.co/google/owlvit-base-patch32) (Apache 2.0) by Google Research: Minderer et al.,
+  "Simple Open-Vocabulary Object Detection with Vision Transformers", arXiv:2205.06230, 2022.
+
+Full citations and BibTeX are in the [README](https://github.com/jbuck2005/unsubscribird#models-and-credits).
+
 ## AI label suggestions (optional)
 
 Point **LM Studio address** at [LM Studio](https://lmstudio.ai/) with a vision model, to have it suggest labels
