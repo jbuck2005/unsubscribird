@@ -166,8 +166,9 @@ docker run --rm -v "$PWD":/src:ro python:3.12-slim sh -c 'apt-get -qq update && 
   pip install -q -r /src/app/requirements.txt pytest httpx; cp -r /src /w && cd /w && python -m pytest -q tests'
 ```
 
-GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. Pushing a tag
-like `v0.25.0` (the version in `app/wbs/__init__.py` and `addon/config.yaml`) publishes the images to GHCR.
+GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. To release,
+change the version in both `app/wbs/__init__.py` and `addon/config.yaml`: once the tests pass on `main`, GitHub
+publishes the images to GHCR and tags the commit (`v0.25.3`). Pushing a tag yourself publishes that version again.
 
 ## Roadmap
 

@@ -1,35 +1,65 @@
 name: Release
 
-# Push a tag like v0.25.0 (the version in app/wbs/__init__.py and addon/config.yaml) to publish the images:
+# Publishes the images for the version in app/wbs/__init__.py and addon/config.yaml:
 #   ghcr.io/<owner>/amd64-unsubscribird and aarch64-unsubscribird   (the add-on pulls these)
 #   ghcr.io/<owner>/unsubscribird                                    (both, for docker compose)
+# Automatically: once Tests pass on main with a version that has no v<version> tag yet; the release then adds
+# the tag. Home Assistant offers an update as soon as main's addon/config.yaml changes, so it mustn't wait.
+# By hand: push a tag like v0.25.3 (it must match both files), e.g. to publish again.
 on:
   push:
     tags: ["v*"]
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   version:
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      release: ${{ steps.v.outputs.release }}
+      sha: ${{ steps.v.outputs.sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - id: v
-        name: The tag matches the app and the add-on
+        name: Which version, and is it new?
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           app=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' app/wbs/__init__.py)
           addon=$(sed -n 's/^version: "\(.*\)"/\1/p' addon/config.yaml)
-          tag=${GITHUB_REF_NAME#v}
-          echo "tag $tag, app $app, add-on $addon"
-          [ "$tag" = "$app" ] && [ "$tag" = "$addon" ]
-          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "app $app, add-on $addon"
+          [ "$app" = "$addon" ]
+          echo "version=$app" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" = push ]; then
+            [ "${GITHUB_REF_NAME#v}" = "$app" ]
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$app" --silent 2>/dev/null; then
+            echo "v$app is already released"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$app is new: releasing"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
     needs: version
+    if: needs.version.outputs.release == 'true'
     strategy:
       matrix:
         include:
@@ -42,6 +72,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.version.outputs.sha }}
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -86,3 +118,18 @@ jobs:
             docker buildx imagetools create -t "$r/unsubscribird:$tag" \
               "$r/amd64-unsubscribird:$VERSION" "$r/aarch64-unsubscribird:$VERSION"
           done
+
+  tag:
+    # Only after every image is up, so a v<version> tag always means a complete release. A tag made with the
+    # workflow's token doesn't start this workflow again.
+    needs: [version, manifest]
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/v$VERSION" -f "sha=$SHA"
