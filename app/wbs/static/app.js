@@ -222,13 +222,13 @@ const Review = {
     return chosen.length ? chosen : v.frames.map((f) => f.id);
   },
 
-  // The species box starts with the best guess for an unlabelled visit: LM Studio's consensus, then what Home
-  // Assistant was told, then the trained model, then BioCLIP. Waiting visits have no consensus yet. Only names in
-  // the species list, so Confirm all never saves free text.
+  // The species box starts with the best guess for an unlabelled visit: the combined guess (the model and LM Studio
+  // together, as Home Assistant gets it), then LM Studio's consensus, what Home Assistant was told, the trained
+  // model and BioCLIP. Only names in the species list, so Confirm all never saves free text.
   bestGuess(v) {
     const known = new Map(this.species.map((s) => [s.name.toLowerCase(), s.name]));
     const rec = v.rec_species === "Uncertain" ? v.rec_guess : v.rec_species;
-    for (const name of [v.consensus?.species, rec, v.model?.species, v.bioclip?.species]) {
+    for (const name of [v.best?.species, v.consensus?.species, rec, v.model?.species, v.bioclip?.species]) {
       const hit = name && known.get(String(name).toLowerCase());
       if (hit) return hit;
     }
@@ -274,10 +274,13 @@ const Review = {
       (v.rec_species ? `<span class="chip ${v.rec_source === "uncertain" ? "unknown" : "alt"}" title="Sent to Home Assistant">HA: ${esc(v.rec_species)}${v.rec_guess ? " (" + esc(v.rec_guess) + "?)" : ""}</span>` : "");
     const consChip = cons ? `<span class="chip sugg ${cons.known ? "" : "unknown"}" title="${cons.known ? "" : "Not in the species list"}">
         Suggested: ${esc(cons.species)} · ${Math.round(cons.confidence * 100)}% · ${cons.votes}/${cons.frames} frames</span>` : "";
+    const from = { model: "trained model", lmstudio: "LM Studio", uncertain: "uncertain", motion: "nothing moved" };
+    const bestChip = v.best && !v.label ? `<span class="chip ${v.best.source === "uncertain" ? "unknown" : "sugg"}"
+        title="The model and LM Studio combined, as Home Assistant gets it">Best guess: ${esc(v.best.species)} · ${esc(from[v.best.source] || v.best.source)}${v.best.confidence != null ? " " + Math.round(v.best.confidence * 100) + "%" : ""}</span>` : "";
     el.innerHTML = `
       <div class="vhead"><span class="time">${esc(fmtTime(v.time))}</span>
         ${v.disagree && !v.label ? `<span class="chip unknown" title="The trained model and LM Studio name different things: look before confirming">⚠ disagree</span>` : ""}
-        ${consChip}${altChips}
+        ${bestChip}${consChip}${altChips}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
         ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}

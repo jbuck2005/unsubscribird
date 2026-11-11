@@ -43,6 +43,18 @@ def test_review_queue_and_confirm():
     assert st["labelled_visits"] == 1 and st["labelled_frames"] == 2 and st["vlm_agreement"] == 1.0
 
 
+def test_review_starts_with_the_combined_guess():
+    """The species box starts with what Home Assistant would get: a confident model beats LM Studio."""
+    ids = seed_visit("trace0003", "Blue Jay")
+    c = client()
+    best = lambda: c.get("/api/visits/trace0003").json()["best"]   # noqa: E731
+    assert best()["species"] == "Blue Jay"                         # LM Studio alone
+    main.db.add_suggestion("trace0003", None, "model", "v1", {"species": "black-capped chickadee", "confidence": 0.9}, "")
+    assert best() == {"species": "Black-capped Chickadee", "source": "model", "confidence": 0.9}
+    c.post("/api/visits/trace0003/label", json={"species": "Blue Jay", "frame_ids": ids})
+    assert best() is None                                          # labelled: the label is what shows
+
+
 def test_correction_and_validation():
     ids = seed_visit("trace0002", "Blue Jay")
     c = client()

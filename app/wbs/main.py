@@ -220,6 +220,19 @@ def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
                        "also": json.loads(label["also"] or "[]")} if label else None)}
 
 
+def review_json(v, index: dict[str, str]) -> dict[str, Any]:
+    """visit_json plus "best": the combined guess Home Assistant would get now (model and LM Studio together,
+    see recognition.decide), worked out live for an unlabelled visit. When that is Uncertain, its likelier half."""
+    out = visit_json(v, index)
+    best = None
+    if not out["label"]:
+        d = recognizer.decide_visit(v["trace_id"])[0]
+        name = canonical(d["guess"] if d["source"] == "uncertain" else d["species"], index)
+        if name:
+            best = {"species": name, "source": d["source"], "confidence": d["confidence"]}
+    return {**out, "best": best}
+
+
 # ---- pages ----------------------------------------------------------------------
 def _page(request: Request, template: str, page: str):
     return templates.TemplateResponse(request, template, {"version": __version__, "page": page})
@@ -404,13 +417,13 @@ def api_visits(queue: str = "review", limit: int = 20, offset: int = 0, species:
                if visit_disagrees(r["trace_id"], index)]
         page = ids[offset:offset + min(limit, 100)]
         rows = [db.one("SELECT * FROM visits WHERE trace_id=?", t) for t in page]
-        return {"total": len(ids), "visits": [visit_json(v, index) for v in rows if v]}
+        return {"total": len(ids), "visits": [review_json(v, index) for v in rows if v]}
     total = db.one(f"SELECT COUNT(*) n FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}",
                    *args)["n"]
     order = "c.p_label ASC, v.ts DESC" if queue == "check" else "(v.rec_source='uncertain') DESC, v.ts DESC"
     rows = db.q(f"""SELECT v.* FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}
                     ORDER BY {order} LIMIT ? OFFSET ?""", *args, min(limit, 100), offset)
-    return {"total": total, "visits": [visit_json(v, index) for v in rows]}
+    return {"total": total, "visits": [review_json(v, index) for v in rows]}
 
 
 @app.get("/api/visits/{trace_id}")
@@ -418,7 +431,7 @@ def api_visit(trace_id: str):
     v = db.one("SELECT * FROM visits WHERE trace_id=?", trace_id)
     if not v:
         raise HTTPException(404)
-    return visit_json(v, species_index())
+    return review_json(v, species_index())
 
 
 class LabelIn(BaseModel):
