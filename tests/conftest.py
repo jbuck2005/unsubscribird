@@ -11,5 +11,6 @@ os.environ.setdefault("WBS_IMAGE_DIR", f"{_tmp}/images")
 os.environ.setdefault("WBS_HOST", "192.0.2.10")
 os.environ.setdefault("WBS_MQTT_HOST", "127.0.0.1")
 os.environ.setdefault("WBS_LMSTUDIO_URL", "http://127.0.0.1:9")
+os.environ.setdefault("WBS_DETECT", "false")   # OWL-ViT would download a model; tests use fakes
 os.environ.setdefault("WBS_AUTH", "off")   # test_auth.py switches it on
 os.environ.setdefault("WBS_ALLOWED_HOSTS", "testserver")   # TestClient's host

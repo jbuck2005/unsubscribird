@@ -45,6 +45,7 @@ collector = Collector(settings, db)
 prelabeler = Prelabeler(settings, db)
 embedder = Embedder(threads=settings.embed_threads)
 embed_worker = EmbedWorker(settings, db, embedder, detector=Detector() if settings.detect_enabled else None)
+collector.detector = embed_worker.detector
 trainer = Trainer(db, embed_worker, settings.data_dir / "models")
 recognizer = Recognizer(settings, db, collector.publish, canonical=lambda n: canonical(n, species_index()))
 retention = Retention(settings, db)

@@ -31,6 +31,9 @@ LOG = logging.getLogger("wbs.collector")
 CLIP_RETRY_AT_S = (0, 10, 20, 40, 80, 160, 300, 480, 660, 900)
 MAX_CLIP_ATTEMPTS = len(CLIP_RETRY_AT_S)
 NO_CLIP_GRACE_S = 30 * 60
+# A bird that sits still barely changes the clip, so a quiet clip's best frame goes to OWL-ViT first. On real
+# feeder clips it found the bird in every quiet clip that had one (0.36-0.76) and nothing in the empty ones.
+STILL_BIRD_SCORE = 0.3
 MAX_CLIP_BYTES = 200 * 1024 * 1024
 # MQTT is input, not truth: a trace id becomes a folder name and a clip_url is appended to Home Assistant's address.
 TRACE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -87,6 +90,24 @@ class Collector:
         self.http = requests.Session()
         self.client = None
         self.on_connected = None        # callable() run after every (re)connect, e.g. HA discovery
+        self.detector = None            # OWL-ViT (detect.Detector), when enabled: overrules "nothing moved"
+
+    def still_animal(self, trace: str) -> dict[str, Any] | None:
+        """OWL-ViT's bird or squirrel in the visit's best clip frame, if it is sure enough; None otherwise."""
+        if self.detector is None:
+            return None
+        f = self.db.one("""SELECT path FROM frames WHERE trace_id=? AND kind='clip' AND rejected=0
+                           ORDER BY score DESC LIMIT 1""", trace)
+        if not f:
+            return None
+        try:
+            from PIL import Image
+            with Image.open(self.s.image_dir / f["path"]) as img:
+                det = self.detector.owl(img.convert("RGB"))
+        except Exception as err:   # no verdict: fall back to the motion score alone
+            LOG.warning("Visit %s: OWL-ViT check failed: %s", trace, err)
+            return None
+        return det if det and det["score"] >= STILL_BIRD_SCORE else None
 
     # ---- MQTT -----------------------------------------------------------
     def start(self) -> None:
@@ -235,7 +256,11 @@ class Collector:
                 self.db.add_frame(trace, "clip", rel(self.s, f["path"]), rel(self.s, f["thumb"]), f["t"],
                                   f["score"], f["width"], f["height"], f.get("motion_box"))
             activity = info.get("activity", 1.0)
-            if activity < self.s.quiet_activity:
+            if activity < self.s.quiet_activity and (seen := self.still_animal(trace)):
+                LOG.info("Visit %s: little movement (activity %.3f) but OWL-ViT sees a %s (%.2f)",
+                         trace, activity, seen["label"], seen["score"])
+                self.db.set_visit(trace, clip=rel(self.s, clip), status="frames", error=None, activity=activity)
+            elif activity < self.s.quiet_activity:
                 # Nothing moved: skip LM Studio (and features until confirmed); suggest Empty for one-key review.
                 self.db.add_suggestion(trace, None, "motion", "frame-picker", {
                     "bird_present": False, "species": "Empty", "confidence": 0.9,
