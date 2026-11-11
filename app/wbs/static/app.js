@@ -222,6 +222,19 @@ const Review = {
     return chosen.length ? chosen : v.frames.map((f) => f.id);
   },
 
+  // The species box starts with the best guess for an unlabelled visit: LM Studio's consensus, then what Home
+  // Assistant was told, then the trained model, then BioCLIP. Waiting visits have no consensus yet. Only names in
+  // the species list, so Confirm all never saves free text.
+  bestGuess(v) {
+    const known = new Map(this.species.map((s) => [s.name.toLowerCase(), s.name]));
+    const rec = v.rec_species === "Uncertain" ? v.rec_guess : v.rec_species;
+    for (const name of [v.consensus?.species, rec, v.model?.species, v.bioclip?.species]) {
+      const hit = name && known.get(String(name).toLowerCase());
+      if (hit) return hit;
+    }
+    return "";
+  },
+
   card(v, i) {
     // Vicohome's own snapshot is a 640x360 thumbnail: only show it when the visit has no clip frames.
     if (v.frames.some((f) => f.kind === "clip")) v.frames = v.frames.filter((f) => f.kind === "clip");
@@ -230,7 +243,7 @@ const Review = {
     el.tabIndex = 0;
     el.dataset.i = i;
     const cons = v.consensus;
-    const initial = v._preset?.species ?? (v.label?.species || (cons && cons.known ? cons.species : ""));
+    const initial = v._preset?.species ?? (v.label?.species || this.bestGuess(v));
     v._species = initial;
     v._frames = v._preset?.frames ?? new Set(v.label ? v.label.frame_ids : this.defaultFrames(v, initial));
     // Mixed visits: frame id -> the species that frame shows instead of the visit's species.
