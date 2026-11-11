@@ -31,7 +31,7 @@ jobs:
       release: ${{ steps.v.outputs.release }}
       sha: ${{ steps.v.outputs.sha }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - id: v
@@ -71,7 +71,7 @@ jobs:
             platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.version.outputs.sha }}
       - uses: docker/setup-buildx-action@v3
