@@ -16,7 +16,7 @@
     <span id="batch-msg" class="msg"></span>
   </div>
   <details class="keys"><summary>Keys</summary>
-    <kbd>/</kbd> type species · <kbd>e</kbd> Empty · <kbd>s</kbd> Squirrel · <kbd>u</kbd> Unknown bird
+    <kbd>/</kbd> type species (<kbd>↑</kbd>/<kbd>↓</kbd> pick, <kbd>Enter</kbd> or <kbd>Tab</kbd> takes the highlighted one) · <kbd>e</kbd> Empty · <kbd>s</kbd> Squirrel · <kbd>u</kbd> Unknown bird
     (these only change the visit and move on) · <kbd>1</kbd>–<kbd>6</kbd> toggle frame · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd> blurry: grab another frame · <kbd>j</kbd>/<kbd>k</kbd> next/prev ·
     <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>6</kbd> (or <kbd>t</kbd> then <kbd>1</kbd>–<kbd>6</kbd>) or 🏷: that frame shows another species (a squirrel in a chickadee visit) ·
     <kbd>z</kbd> zoom · <kbd>Enter</kbd> confirm this visit · <kbd>Shift</kbd>+<kbd>A</kbd> confirm all ·
@@ -25,7 +25,6 @@
 </div>
 <p class="hint">Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species.
 Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).</p>
-<datalist id="species-list"></datalist>
 <div id="visits"></div>
 <div class="pager"><button id="more" hidden>Load more</button></div>
 {% endblock %}

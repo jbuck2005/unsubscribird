@@ -104,6 +104,19 @@ table.cm td.off { color: var(--bad); font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
 .actions input { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
   background: var(--bg); color: var(--text); min-width: 240px; }
+/* Species autocomplete (app.js): fixed, so a card's edges never clip it. */
+.ac { position: fixed; z-index: 20; margin: 0; padding: 4px 0; list-style: none; max-height: 300px; overflow-y: auto;
+  max-width: min(440px, calc(100vw - 32px)); background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.18); font-size: 14px; }
+.ac[hidden] { display: none; }
+.ac li { display: flex; align-items: baseline; gap: 8px; padding: 5px 10px; cursor: pointer; }
+.ac li i { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac li small { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; padding-left: 8px; }
+.ac li b { color: var(--accent); }
+.ac li:hover { background: var(--chip); }
+.ac li.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--focus); }
+.ac li.unlikely span { opacity: .7; }
+.ac li.none { color: var(--muted); cursor: default; }
 button.btn { font: inherit; border-radius: 6px; border: 1px solid var(--line); background: var(--chip);
   color: var(--text); padding: 6px 12px; cursor: pointer; }
 button.btn:hover:not(:disabled) { border-color: var(--hover); }
