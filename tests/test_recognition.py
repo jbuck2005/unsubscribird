@@ -272,3 +272,38 @@ def test_day_colours_unique_per_species_in_order_of_first_sighting():
     from wbs.recognition import day_colours
     c = day_colours(["Blue Jay", "Black-capped Chickadee", "Blue Jay", "Uncertain", "Northern Cardinal"])
     assert c == {"Blue Jay": "🔵", "Black-capped Chickadee": "🟢", "Uncertain": "❔", "Northern Cardinal": "🟠"}
+
+
+def test_a_sure_model_skips_the_wait_and_lmstudio_corrects_it_later(monkeypatch):
+    from wbs.prelabel import Prelabeler
+    with main.db.tx() as c:
+        c.execute("DELETE FROM models")
+        c.execute("INSERT INTO models(created, embedder, kind, classes, n_visits, n_frames, metrics, path, active) "
+                  "VALUES (?,?,?,?,?,?,?,?,1)", (time.time(), "x", "logreg", '["Blue Jay", "Empty"]', 0, 0, "{}",
+                                                    "/nonexistent"))
+        c.execute("UPDATE visits SET rec_at=0")            # ignore visits from other tests
+    sink = Sink()
+    r = recognizer(sink)
+    rec = lambda t: tuple(main.db.one("SELECT rec_species, rec_source FROM visits WHERE trace_id=?", t))  # noqa: E731
+    visit("rc101", model=("Blue Jay", 0.99))               # LM Studio not done, only just created: no need to wait
+    visit("rc102", model=("Blue Jay", 0.97))               # not sure enough: waits as before
+    monkeypatch.setattr(settings, "ha_model_instant", 1.0)
+    assert r.run_once() == 0                               # 1 = always wait
+    monkeypatch.setattr(settings, "ha_model_instant", 0.98)
+    assert r.run_once() == 1
+    assert rec("rc101") == ("Blue Jay", "model") and rec("rc102") == (None, None)
+
+    # LM Studio answers later with a species the model has never learned: Home Assistant is told the new answer.
+    class FakeLM:
+        def ask(self, model, jpeg):
+            return {"bird_present": True, "species": "Northern Cardinal", "confidence": 0.95}, ""
+    p = Prelabeler(settings, main.db)
+    p.lm, p.after_visit = FakeLM(), r.refresh
+    with main.db.tx() as c:
+        c.execute("UPDATE visits SET status='done-elsewhere' WHERE status='frames' AND trace_id != 'rc101'")
+    try:
+        assert p.run_once("m") == 1
+    finally:
+        with main.db.tx() as c:
+            c.execute("UPDATE visits SET status='frames' WHERE status='done-elsewhere'")
+    assert rec("rc101") == ("Northern Cardinal", "lmstudio")

@@ -4,7 +4,8 @@ Decision per visit (thresholds in config):
   1. the active trained model, if it is confident enough (it only knows species with 3+ confirmed visits);
   2. otherwise the LM Studio suggestion (consensus over frames), if confident enough (covers new species);
   3. otherwise "Uncertain" (best guess kept as an attribute); such visits go to the top of the review queue.
-A visit is decided once the model has seen it AND LM Studio has (or `ha_wait_vlm_s` passed without it).
+A visit is decided once the model has seen it AND LM Studio has (or `ha_wait_vlm_s` passed without it), or at once
+when the model is at least `ha_model_instant` sure. A later LM Studio answer re-decides it (see refresh).
 """
 
 from __future__ import annotations
@@ -190,11 +191,13 @@ class Recognizer:
     def ready(self, v, has_model: bool) -> bool:
         embedded = self.db.one("""SELECT COUNT(*) n FROM frames f LEFT JOIN embeddings e ON e.frame_id=f.id
                                   WHERE f.trace_id=? AND f.rejected=0 AND e.frame_id IS NULL""", v["trace_id"])["n"] == 0
-        model_done = (not has_model) or v["quiet"] or (embedded and self.db.one(
-            "SELECT 1 FROM suggestions WHERE trace_id=? AND source='model'", v["trace_id"]) is not None)
+        model = self.db.one("SELECT confidence FROM suggestions WHERE trace_id=? AND source='model' ORDER BY id DESC",
+                            v["trace_id"])
+        model_done = (not has_model) or v["quiet"] or (embedded and model is not None)
         vlm_done = v["status"] == "prelabelled"
         waited = time.time() - v["created"] > self.s.ha_wait_vlm_s
-        return model_done and (vlm_done or waited)
+        sure = bool(embedded and model and (model["confidence"] or 0) >= self.s.ha_model_instant)
+        return model_done and (vlm_done or waited or sure)
 
     def run_once(self) -> int:
         has_model = self.db.one("SELECT 1 FROM models WHERE active=1") is not None

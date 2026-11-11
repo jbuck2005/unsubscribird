@@ -53,6 +53,7 @@ bakeoff = Bakeoff(db, prelabeler.lm, prelabeler, settings.image_dir, lambda n: c
 if settings.ha_publish:
     collector.on_connected = recognizer.publish_discovery
     trainer.after_predict = lambda: recognizer.refresh()
+prelabeler.after_visit = recognizer.refresh   # Home Assistant may have heard before LM Studio answered
 
 
 @asynccontextmanager

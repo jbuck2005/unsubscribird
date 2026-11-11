@@ -48,6 +48,7 @@ class Settings:
     ha_model_confidence: float = field(default_factory=lambda: float(_env("WBS_HA_MODEL_CONFIDENCE", "0.75")))
     ha_vlm_confidence: float = field(default_factory=lambda: float(_env("WBS_HA_VLM_CONFIDENCE", "0.8")))
     ha_wait_vlm_s: int = field(default_factory=lambda: int(_env("WBS_HA_WAIT_VLM_S", "600")))
+    ha_model_instant: float = field(default_factory=lambda: float(_env("WBS_HA_MODEL_INSTANT", "0.98")))
     ha_max_age_h: float = field(default_factory=lambda: float(_env("WBS_HA_MAX_AGE_H", "6")))
     public_url: str = field(default_factory=lambda: (
         _env("WBS_PUBLIC_URL") or f"http://{_env('WBS_HOST', 'localhost')}:{_env('WBS_PORT', '8095')}").rstrip("/"))

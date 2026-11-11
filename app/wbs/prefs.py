@@ -52,6 +52,9 @@ PREFS = (
     Pref("ha_vlm_confidence", "Recognition", "Trust LM Studio from",
          "For species the model doesn't know yet.", "float", 0, 1),
     Pref("ha_wait_vlm_s", "Recognition", "Wait for LM Studio", "Then decide without it.", "int", 0, 86400, unit="s"),
+    Pref("ha_model_instant", "Recognition", "Don't wait when the model is",
+         "At least this sure, Home Assistant hears at once instead of after LM Studio. Its later answer still "
+         "corrects the visit. 1 = always wait.", "float", 0, 1),
     Pref("ha_max_age_h", "Recognition", "Ignore visits older than",
          "Older visits aren't sent to Home Assistant.", "float", 1, 168, unit="h"),
     Pref("auto_train", "Training", "Retrain every night", "Activates the new model only if it isn't worse.", "bool"),

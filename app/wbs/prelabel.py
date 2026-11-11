@@ -120,6 +120,7 @@ class Prelabeler:
         self.stats = {"done": 0, "last_error": "", "seconds_per_frame": None}
         self.stop = threading.Event()
         self.paused = False             # set while a model comparison uses LM Studio
+        self.after_visit = None         # callable(trace_id) once LM Studio has seen a visit, e.g. re-decide it
 
     def start(self) -> None:
         threading.Thread(target=self._loop, name="prelabel", daemon=True).start()
@@ -174,4 +175,9 @@ class Prelabeler:
                 self.stats["seconds_per_frame"] = round(time.time() - t, 1)
             self.db.set_visit(v["trace_id"], status="prelabelled")
             self.stats["done"] += 1
+            if self.after_visit:
+                try:
+                    self.after_visit(v["trace_id"])
+                except Exception:   # the suggestion is saved; Home Assistant catches up on the next refresh
+                    LOG.exception("After-prelabel hook failed for %s", v["trace_id"])
         return len(visits)
