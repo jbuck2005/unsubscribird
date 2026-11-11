@@ -144,3 +144,23 @@ def test_ha_today_gallery_and_kids_page_count_the_second_species():
     assert got["mxha"]["poster"] == tile["posters"]["Squirrel"]
     g = c.get("/api/gallery?species=Squirrel").json()
     assert "mxha" in [v["trace_id"] for v in g["visits"]] and g["counts"]["Squirrel"] >= 1
+
+
+def test_also_seen_names_a_species_without_its_own_frame():
+    """Two birds in one frame: the second is 'also seen', shown everywhere `also` is, but never training data."""
+    from test_api import seed_visit
+    ids = seed_visit("trace0700", "Black-capped Chickadee")
+    c = TestClient(main.app)
+    r = c.post("/api/visits/trace0700/label", json={"species": "Black-capped Chickadee", "frame_ids": ids[:2],
+               "also_seen": ["white-breasted nuthatch", "Black-capped Chickadee", "Empty"]}).json()
+    assert r["also_seen"] == ["White-breasted Nuthatch"] and r["also"] == ["White-breasted Nuthatch"]
+    lab = c.get("/api/visits/trace0700").json()["label"]
+    assert lab["also_seen"] == ["White-breasted Nuthatch"] and lab["also"] == ["White-breasted Nuthatch"]
+    assert lab["frame_species"] == {}                      # no frame was given the nuthatch
+    main.db.set_label_frames("trace0700", ids[:1], {})     # a frame swap keeps it
+    assert json.loads(main.db.one("SELECT also FROM labels WHERE trace_id='trace0700'")["also"]) == ["White-breasted Nuthatch"]
+    bad = c.post("/api/visits/trace0700/label", json={"species": "Black-capped Chickadee", "frame_ids": ids[:1],
+                 "also_seen": ["Dodo"]})
+    assert bad.status_code == 400 and "also seen" in bad.json()["detail"]
+    r = c.post("/api/visits/trace0700/label", json={"species": "Black-capped Chickadee", "frame_ids": ids[:1]}).json()
+    assert r["also"] == [] and r["also_seen"] == []         # saving without it removes it

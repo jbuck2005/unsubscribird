@@ -104,7 +104,9 @@ class DB:
                 c.execute("ALTER TABLE labels ADD COLUMN checked REAL")
             # 0.24: mixed visits. frame_species = {"<frame id>": species} for frames that show something other than
             # the visit's main species; also = the other species seen (JSON list, no Empty), kept for SQL.
-            for col in ("frame_species", "also"):
+            # 0.28: also_seen = species a person saw in the visit without a frame of their own (two birds in one
+            # frame); never training data. also includes them.
+            for col in ("frame_species", "also", "also_seen"):
                 if col not in lcols:
                     c.execute(f"ALTER TABLE labels ADD COLUMN {col} TEXT")
             # Cross-validated (out-of-fold) check of every confirmed visit, per trained model.
@@ -201,27 +203,32 @@ class DB:
                        result.get("confidence"), result.get("other_animal"), result.get("notes"), raw, time.time()))
 
     def set_label(self, trace_id: str, species: str, frame_ids: list[int], count: int | None,
-                  source: str, frame_species: dict[int, str] | None = None) -> None:
-        """frame_species: frames (from frame_ids) that show a different species than `species`."""
+                  source: str, frame_species: dict[int, str] | None = None, also_seen: list[str] | None = None) -> None:
+        """frame_species: frames (from frame_ids) that show a different species than `species`.
+        also_seen: other species in the visit that have no frame of their own."""
         now = time.time()
         fs = {str(f): s for f, s in (frame_species or {}).items() if f in frame_ids and s != species}
-        also = sorted({s for s in fs.values() if s != "Empty"})
+        seen = sorted({s for s in also_seen or [] if s not in (species, "Empty")})
+        also = sorted({s for s in fs.values() if s != "Empty"} | set(seen))
         with self.tx() as c:   # a person just confirmed it, so it also counts as checked now
             c.execute("""INSERT INTO labels(trace_id, species, count, frame_ids, source, created, updated, checked,
-                                            frame_species, also)
-                         VALUES (?,?,?,?,?,?,?,?,?,?)
+                                            frame_species, also, also_seen)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?)
                          ON CONFLICT(trace_id) DO UPDATE SET species=excluded.species, count=excluded.count,
                          frame_ids=excluded.frame_ids, source=excluded.source, updated=excluded.updated,
-                         checked=excluded.checked, frame_species=excluded.frame_species, also=excluded.also""",
+                         checked=excluded.checked, frame_species=excluded.frame_species, also=excluded.also,
+                         also_seen=excluded.also_seen""",
                       (trace_id, species, count, json.dumps(frame_ids), source, now, now, now,
-                       json.dumps(fs) if fs else None, json.dumps(also) if also else None))
+                       json.dumps(fs) if fs else None, json.dumps(also) if also else None,
+                       json.dumps(seen) if seen else None))
 
     def set_label_frames(self, trace_id: str, frame_ids: list[int], frame_species: dict[str, str] | None,
                          touch: bool = True) -> None:
         """Change which frames a label uses (a frame swapped or re-picked), keeping its species.
         touch=False also keeps its `updated` time."""
         fs = {k: s for k, s in (frame_species or {}).items() if int(k) in frame_ids}
-        also = sorted({s for s in fs.values() if s != "Empty"})
+        row = self.one("SELECT also_seen FROM labels WHERE trace_id=?", trace_id)
+        also = sorted({s for s in fs.values() if s != "Empty"} | set(json.loads((row and row["also_seen"]) or "[]")))
         with self.tx() as c:
             c.execute("UPDATE labels SET frame_ids=?, frame_species=?, also=?, updated=CASE WHEN ? THEN ? ELSE updated END "
                       "WHERE trace_id=?",

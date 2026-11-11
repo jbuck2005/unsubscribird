@@ -219,7 +219,8 @@ def visit_json(v, index: dict[str, str]) -> dict[str, Any]:
             "disagree": disagreement(model_sugg, cons),
             "label": ({**dict(label), "frame_ids": json.loads(label["frame_ids"]),
                        "frame_species": json.loads(label["frame_species"] or "{}"),
-                       "also": json.loads(label["also"] or "[]")} if label else None)}
+                       "also": json.loads(label["also"] or "[]"),
+                       "also_seen": json.loads(label["also_seen"] or "[]")} if label else None)}
 
 
 def review_json(v, index: dict[str, str]) -> dict[str, Any]:
@@ -442,6 +443,8 @@ class LabelIn(BaseModel):
     count: int | None = None
     # Mixed visits: frames (from frame_ids) showing something other than `species`, e.g. {123: "Squirrel"}.
     frame_species: dict[int, str] = {}
+    # Other species in the visit without a frame of their own (two birds in one frame). Not training data.
+    also_seen: list[str] = []
 
 
 def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str, Any]:
@@ -467,11 +470,19 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
             per_frame[fid] = other
     if per_frame and len(per_frame) == len(frame_ids):
         raise HTTPException(400, f"every frame is set to another species: none shows {name}")
+    seen = set()
+    for sp in body.also_seen:
+        other = canonical(sp, index)
+        if not other or other.lower() not in index:
+            raise HTTPException(400, f"also seen: '{sp}' is not in the species list")
+        if other not in (name, "Empty"):
+            seen.add(other)
     cons = visit_json(v, index)["consensus"]
     source = "confirmed" if cons and cons["species"] == name else "corrected"
-    db.set_label(trace_id, name, frame_ids, body.count, source, per_frame)
-    also = sorted({s for s in per_frame.values() if s != "Empty"})
-    return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also}
+    db.set_label(trace_id, name, frame_ids, body.count, source, per_frame, sorted(seen))
+    also = sorted({s for s in per_frame.values() if s != "Empty"} | seen)
+    return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also,
+            "also_seen": sorted(seen)}
 
 
 def ha_refresh(trace_id: str) -> None:

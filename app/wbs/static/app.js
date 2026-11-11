@@ -249,6 +249,8 @@ const Review = {
     // Mixed visits: frame id -> the species that frame shows instead of the visit's species.
     v._fs = v._preset?.fs ?? new Map(Object.entries(v.label?.frame_species || {}).map(([k, s]) => [+k, s]));
     v._edited = !!v._preset?.edited;
+    // Other species seen in the visit without a frame of their own (two birds in one frame). Not training data.
+    v._also = new Set(v._preset?.also ?? v.label?.also_seen ?? []);
     const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const frames = v.frames.map((f, n) => {
       const s = byFrame[f.id];
@@ -289,6 +291,8 @@ const Review = {
       <div class="frames">${frames || '<span class="msg">No frames yet.</span>'}</div>
       <div class="actions">
         <input placeholder="Species…" value="${esc(initial)}" aria-label="Species">
+        <span class="alsoseen" title="Another species in the visit with no frame of its own, e.g. two birds in one frame. Not used for training.">
+          <span class="also-chips"></span><input class="alsoin" placeholder="+ Also seen…" aria-label="Also seen"></span>
         <button class="btn primary" data-a="confirm">${v.label ? "Update" : "Confirm"} ⏎</button>
         <button class="btn" data-a="Empty" title="Set to Empty (confirm later)">Empty (e)</button>
         <button class="btn" data-a="Squirrel">Squirrel (s)</button>
@@ -317,6 +321,15 @@ const Review = {
     input.addEventListener("change", () => this.pickSpecies(v, el, input.value));
     input.addEventListener("input", () => { v._species = input.value; this.markEdited(v, el); });
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); this.pickSpecies(v, el, input.value); this.save(v, el); } });
+    const alsoIn = $(".alsoin", el);
+    Autocomplete.attach(alsoIn, { species: () => this.species,
+      hints: () => [v.model?.species, v.bioclip?.species, ...v.suggestions.map((s) => s.species)],
+      pick: (name) => { alsoIn.value = ""; if (!v._also.has(name)) { v._also.add(name); this.renderAlso(v, el); this.markEdited(v, el); } } });
+    $(".also-chips", el).addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-s]");
+      if (b) { v._also.delete(b.dataset.s); this.renderAlso(v, el); this.markEdited(v, el); }
+    });
+    this.renderAlso(v, el);
     $$("button[data-a]", el).forEach((b) => b.addEventListener("click", () => {
       const a = b.dataset.a;
       if (a === "confirm") this.save(v, el);
@@ -327,6 +340,11 @@ const Review = {
     }));
     el.addEventListener("focus", () => this.setFocus(i, false));
     return el;
+  },
+
+  renderAlso(v, el) {
+    $(".also-chips", el).innerHTML = [...v._also].map((s) =>
+      `<button type="button" class="chip also" data-s="${esc(s)}" title="Remove ${esc(s)}">+ ${esc(s)} ×</button>`).join("");
   },
 
   toggle(v, el, id) {
@@ -410,7 +428,7 @@ const Review = {
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
       const fs = new Map(v._fs);
       if (fs.has(fid)) { fs.set(r.frame.id, fs.get(fid)); fs.delete(fid); }
-      nv._preset = { species: $(".actions input", el).value, frames, fs, edited: v._edited };
+      nv._preset = { species: $(".actions input", el).value, frames, fs, also: v._also, edited: v._edited };
       const i = this.visits.indexOf(v);
       this.visits[i] = nv;
       const ne = this.card(nv, i);
@@ -459,7 +477,8 @@ const Review = {
       const species = ($(".actions input", el).value || "").trim();
       if (this.held(v)) { held.push(el); continue; }
       if (!species || !known.has(species.toLowerCase()) || !v._frames.size) { skipped.push(el); continue; }
-      items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), _v: v, _el: el });
+      items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v),
+                   also_seen: [...v._also], _v: v, _el: el });
     }
     const unsaved = this.unsaved().map(({ el }) => el);
     const mark = (els, text) => els.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err"; m.textContent = text; });
@@ -486,11 +505,13 @@ const Review = {
     const btn = $("#confirm-all"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const r = await api("/api/labels/batch", { method: "POST",
-        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species }) => ({ trace_id, species, frame_ids, frame_species }))) });
+        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species, also_seen }) =>
+          ({ trace_id, species, frame_ids, frame_species, also_seen }))) });
       r.results.forEach((res, n) => {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
-        if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also }; el.classList.add("done");
+        if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also,
+                                  also_seen: res.also_seen }; el.classList.add("done");
           v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
           m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}).`; }
         else { el.classList.add("skipped"); m.className = "msg err"; m.textContent = res.error; }
@@ -520,8 +541,8 @@ const Review = {
     if (!species) { msg.className = "msg err"; msg.textContent = "Type or pick a species first."; return; }
     try {
       const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
-        body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v) }) });
-      v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also };
+        body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), also_seen: [...v._also] }) });
+      v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen };
       v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
       el.classList.add("done"); el.classList.remove("skipped");
       msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}).`;
