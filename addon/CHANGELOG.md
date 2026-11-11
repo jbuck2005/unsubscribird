@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.26.0
+
+* Faster labelling on the Review page: the species box autocompletes. Type part of a name (`chick`), the
+  initials (`bcc`) or the scientific name, then Enter or Tab takes the highlighted match. Frame tags (🏷) too.
+* The species box starts with the best guess: the trained model and LM Studio combined, as Home Assistant
+  gets it, with a "Best guess" chip saying where it came from. Waiting visits get one too.
+* The "changed" badge only shows on visits you have changed.
+
 ## 0.25.3
 
 * Rides out a Home Assistant restart: a clip that can't be downloaded is tried again with growing gaps for
