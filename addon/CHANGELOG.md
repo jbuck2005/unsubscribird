@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.0
+
+* Home Assistant hears about a visit at once when the trained model is very sure, instead of waiting up to
+  10 minutes for LM Studio. New setting under Recognition: **Don't wait when the model is** (default 98%;
+  1 = always wait).
+* A late LM Studio answer now updates the visit, so a species the model hasn't learned yet still reaches
+  Home Assistant.
+
 ## 0.26.1
 
 * A bird that sits still no longer gets marked "nothing moved": before calling a clip empty, OWL-ViT checks
