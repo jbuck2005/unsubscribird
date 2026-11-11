@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.26.1
+
+* A bird that sits still no longer gets marked "nothing moved": before calling a clip empty, OWL-ViT checks
+  its best frame, and a bird or squirrel sends the visit to LM Studio as usual. Needs **Find the bird with
+  OWL-ViT** on.
+* The home page shows the version at the bottom.
+
 ## 0.26.0
 
 * Faster labelling on the Review page: the species box autocompletes. Type part of a name (`chick`), the
