@@ -56,6 +56,7 @@ body { transition: background-color .6s ease, color .6s ease; }
 .tile .label .time { color: var(--muted); font-weight: 600; font-size: 15px; white-space: nowrap; }
 .tile .play { position: absolute; top: 10px; right: 12px; background: rgba(0,0,0,.45); color: #fff; border-radius: 999px;
   width: 34px; height: 34px; display: grid; place-items: center; font-size: 14px; pointer-events: none; }
+.kids-foot { text-align: center; color: var(--muted); font-size: 12px; padding: 0 16px 20px; }
 .empty { text-align: center; color: var(--muted); font-size: 22px; padding: 50px 16px; }
 .empty[hidden] { display: none; }
 .empty-bird { font-size: 64px; display: inline-block; animation: peck 3s ease-in-out infinite; }

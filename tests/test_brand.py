@@ -36,6 +36,11 @@ def test_default_name_is_the_three_tone_wordmark_and_custom_names_stay_plain():
         main.settings.site_name = "un-subscribird"
 
 
+def test_home_page_shows_the_version():
+    from wbs import __version__
+    assert f'<footer class="kids-foot">v{__version__}</footer>' in TestClient(main.app).get("/").text
+
+
 def test_no_third_party_requests_in_pages_or_styles():
     external = re.compile(r"""(?:src|href)\s*=\s*["']?(?:https?:)?//|url\(\s*["']?(?:https?:)?//|@import""", re.I)
     for f in [*TEMPLATES.glob("*.html"), *STATIC.glob("*.css")]:
