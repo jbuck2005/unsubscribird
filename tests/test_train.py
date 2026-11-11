@@ -274,3 +274,22 @@ def test_species_families():
     assert (sp["Downy Woodpecker"]["family"], sp["Downy Woodpecker"]["family_name"]) == ("Picidae", "Woodpeckers")
     assert sp["Squirrel"]["family"] == "Sciuridae" and sp["Empty"]["family"] is None
     assert all(s["family"] for s in sp.values() if s["kind"] == "bird" and s["name"] in __import__("wbs.species", fromlist=["SEASON"]).SEASON)
+
+
+def test_retrain_every_n_days(tmp_path, monkeypatch):
+    """Due at the retrain hour once the setting's days have passed since the last model, whoever trained it."""
+    from types import SimpleNamespace
+    t = Trainer(main.db, main.embed_worker, tmp_path)
+    at = lambda days_ago, hour: time.mktime((2026, 11, 20 - days_ago, hour, 10, 0, 0, 0, -1))  # noqa: E731
+    now = at(0, 2)
+    with main.db.tx() as c:
+        c.execute("UPDATE models SET created=? WHERE 1", (at(3, 2),))      # every model: last trained 3 days ago
+        if not c.execute("SELECT 1 FROM models").fetchone():
+            c.execute("INSERT INTO models(created, embedder, kind, classes, n_visits, n_frames, metrics, path) "
+                      "VALUES (?,?,?,?,?,?,?,?)", (at(3, 2), "x", "logreg", "[]", 0, 0, "{}", ""))
+    s = lambda **kw: SimpleNamespace(**{"auto_train": True, "auto_train_hour": 2, "auto_train_days": 1, **kw})  # noqa: E731
+    assert t.retrain_due(s(), now)                         # nightly: due
+    assert t.retrain_due(s(auto_train_days=3), now)        # 3 days: exactly due, at the same hour
+    assert not t.retrain_due(s(auto_train_days=4), now)    # 4 days: not yet
+    assert not t.retrain_due(s(), at(0, 3))                # wrong hour
+    assert not t.retrain_due(s(auto_train=False), now)     # turned off

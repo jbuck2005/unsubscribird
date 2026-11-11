@@ -47,6 +47,7 @@ services:
       WBS_HA_MAX_AGE_H: ${WBS_HA_MAX_AGE_H:-6}
       WBS_AUTO_TRAIN: ${WBS_AUTO_TRAIN:-true}
       WBS_AUTO_TRAIN_HOUR: ${WBS_AUTO_TRAIN_HOUR:-2}
+      WBS_AUTO_TRAIN_DAYS: ${WBS_AUTO_TRAIN_DAYS:-1}
       WBS_AUTO_TRAIN_MIN_NEW: ${WBS_AUTO_TRAIN_MIN_NEW:-5}
       # Settings (/admin) login; without it the Settings area stays locked
       WBS_ADMIN_PASSWORD: ${WBS_ADMIN_PASSWORD:-}

@@ -120,10 +120,10 @@ and per-bird chips. Empty visits never appear. A new visit appears by itself onc
 * **Gallery** (`/admin/gallery`), **Dataset** (`/admin/dataset`: species colour coded by season, sortable),
   **Model** (`/admin/model`: training, accuracy, LM Studio bake-off), **Status** (`/admin/status`).
 * **Settings** (`/admin/settings`): long-term preferences: clip order and theme, the clip cut, frames per visit,
-  recognition confidence, the nightly retrain, location. Saved in the database, so they survive redeploys and are in
-  the nightly backup, and they apply as soon as you save. A saved value beats `.env`, which beats the default in
-  `config.py`, so `.env` is the starting value and the fallback ("↺ default", or a lost database); the page doesn't
-  write to it. Passwords and server addresses are only in `.env`.
+  recognition confidence, the automatic retrain (how often, at what hour), location. Saved in the database, so they
+  survive redeploys and are in the nightly backup, and they apply as soon as you save. A saved value beats `.env`,
+  which beats the default in `config.py`, so `.env` is the starting value and the fallback ("↺ default", or a lost
+  database); the page doesn't write to it. Passwords and server addresses are only in `.env`.
 
 Everything that changes data needs the login. Clips, frames and `/api/public/*` are public only for visits the kids' page shows; excluded and unconfirmed ones need the login. The app answers only to `WBS_HOST`, `WBS_PUBLIC_URL`'s host, localhost and `WBS_ALLOWED_HOSTS`. Old links redirect
 (`/?visit=` to `/admin?visit=`, `/gallery` to the kids' page, `/dataset` and so on to `/admin/...`).

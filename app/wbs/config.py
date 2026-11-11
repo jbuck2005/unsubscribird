@@ -63,6 +63,7 @@ class Settings:
     quiet_activity: float = field(default_factory=lambda: float(_env("WBS_QUIET_ACTIVITY", "0.025")))
     auto_train: bool = field(default_factory=lambda: _env("WBS_AUTO_TRAIN", "true").lower() in ("1", "true", "yes"))
     auto_train_hour: int = field(default_factory=lambda: int(_env("WBS_AUTO_TRAIN_HOUR", "2")))
+    auto_train_days: int = field(default_factory=lambda: int(_env("WBS_AUTO_TRAIN_DAYS", "1")))
     auto_train_min_new: int = field(default_factory=lambda: int(_env("WBS_AUTO_TRAIN_MIN_NEW", "5")))
     detect_enabled: bool = field(default_factory=lambda: _env("WBS_DETECT", "true").lower() in ("1", "true", "yes"))
     region: str = field(default_factory=lambda: _env("WBS_REGION", "Ottawa, Ontario, Canada"))

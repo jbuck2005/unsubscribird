@@ -327,13 +327,22 @@ class Trainer:
         LOG.info("Auto-retrain: candidate v%d %s (%s)", cand["model_id"], decision["decision"], why)
         return {**decision, "model_id": cand["model_id"]}
 
+    def retrain_due(self, settings, now: float | None = None) -> bool:
+        """At the retrain hour, once `auto_train_days` have passed since the last model was trained. Counted from
+        the models table, so a restart doesn't reset it; half a day of slack keeps it at the same hour each time."""
+        now = time.time() if now is None else now
+        if not settings.auto_train or time.localtime(now).tm_hour != settings.auto_train_hour:
+            return False
+        last = self.db.one("SELECT MAX(created) t FROM models")["t"]
+        return last is None or now - last >= (max(1, settings.auto_train_days) - 0.5) * 86400
+
     def start_scheduler(self, settings) -> None:
-        """Nightly retrain. Reads the settings each time round, so changes on the Settings page apply at once."""
+        """Automatic retrain. Reads the settings each time round, so changes on the Settings page apply at once."""
         def loop():
             last_day = None
             while True:
                 now = time.localtime()
-                if (settings.auto_train and now.tm_hour == settings.auto_train_hour and last_day != now.tm_yday
+                if (last_day != now.tm_yday and self.retrain_due(settings)
                         and self._lock.acquire(blocking=False)):
                     last_day = now.tm_yday
                     try:
