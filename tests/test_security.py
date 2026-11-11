@@ -69,7 +69,9 @@ def test_login_check_ignores_the_host_header_on_its_own():
     scope = {"type": "http", "method": "GET", "path": "/api/stats", "raw_path": b"/api/stats", "query_string": b"",
              "headers": [(b"host", b"x/static/?")], "server": ("192.0.2.10", 8095), "scheme": "http"}
     request = Request(scope)
-    assert request.url.path == "/static/"                # what made this exploitable
+    # Starlette before 1.x rebuilt request.url from this Host header, giving "/static/": what made this exploitable.
+    # Newer versions ignore a malformed Host, but the login check must not rely on that.
+    assert request.url.path in ("/static/", "/api/stats")
 
     async def nxt(_):
         return PlainTextResponse("reached the route")
