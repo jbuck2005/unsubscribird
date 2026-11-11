@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
       # Builds the image (including torch and the ML requirements) without publishing it.
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: app
           push: false
