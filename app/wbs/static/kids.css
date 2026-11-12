@@ -97,10 +97,10 @@ a.sticker:hover, a.sticker:focus-visible { transform: translateY(-3px) rotate(-1
 .v-flag input { font: inherit; font-size: 15px; padding: 6px 10px; border-radius: 8px; border: 0; margin-left: 6px; width: 14em; }
 .v-flag-msg { color: #fff; text-align: center; margin: 8px 0 0; }
 /* The bird's card: a trading card in the brand colours. */
-.bird-card { flex: 0 0 300px; background: linear-gradient(160deg, #1b2b40, #142132 60%); color: #e6eef6; border-radius: 20px;
+.bird-card { flex: 0 0 clamp(320px, 28vw, 420px); background: linear-gradient(160deg, #1b2b40, #142132 60%); color: #e6eef6; border-radius: 20px;
   border: 6px solid var(--cta); box-shadow: 0 10px 30px rgba(0,0,0,.5); padding: 14px 14px 16px; max-height: 86vh; overflow-y: auto; }
 .bird-card[hidden] { display: none; }
-.bc-top img, .bc-q { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #22354d; }
+.bc-top img, .bc-q { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: #22354d; }
 .bc-q { display: grid; place-items: center; font: 800 64px "Montserrat", "Inter", sans-serif; color: #9fb1c3; }
 .bc-name { font: 800 22px/1.15 "Montserrat", "Inter", sans-serif; margin-top: 10px; text-transform: uppercase; letter-spacing: .4px; }
 .bc-sci { font-style: italic; color: #9fb1c3; font-size: 14px; }
@@ -120,7 +120,7 @@ a.sticker:hover, a.sticker:focus-visible { transform: translateY(-3px) rotate(-1
 .bc-links a { color: #75D6F9; font-weight: 700; }
 @media (max-width: 800px) {
   .v-body { flex-direction: column; justify-content: flex-start; overflow-y: auto; max-height: 92vh; }
-  .bird-card { flex: none; width: min(340px, 86vw); max-height: none; }
+  .bird-card { flex: none; width: min(420px, 86vw); max-height: none; }
 }
 .viewer video { width: 100%; max-height: 80vh; border-radius: 16px; background: #000; display: block; }
 .viewer figcaption { color: #fff; text-align: center; font-size: 22px; font-weight: 700; margin-top: 12px; }
