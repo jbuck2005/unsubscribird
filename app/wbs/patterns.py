@@ -90,9 +90,18 @@ def by_temperature(db: DB, days: int, now: float | None = None) -> dict[str, Any
             b = bands.setdefault(int(samples[i]["temp"] // BAND) * BAND, {"hours": 0.0, "visits": 0})
             b["visits"] += 1
     return {"unit": samples[-1]["unit"] or "°", "band": BAND, "busy_hours": sorted(busy),
+            "samples": len(samples), "latest": {"temp": samples[-1]["temp"], "ts": samples[-1]["ts"]},
             "bands": [{"from": k, "to": k + BAND, "hours": round(v["hours"], 1), "visits": int(v["visits"]),
                        "per_hour": round(v["visits"] / v["hours"], 2) if v["hours"] >= 1 else None}
                       for k, v in sorted(bands.items())]}
+
+
+def current(db: DB, now: float | None = None) -> dict[str, Any] | None:
+    """The latest outdoor temperature, if it is fresh (within three samples), for the home page."""
+    r = db.one("SELECT ts, temp, unit FROM weather ORDER BY ts DESC LIMIT 1")
+    if not r or (now or time.time()) - r["ts"] > 3 * SAMPLE_S:
+        return None
+    return {"temp": round(r["temp"]), "unit": r["unit"] or "°", "ts": r["ts"]}
 
 
 def _nearest(stamps: list[float], ts: float) -> int:

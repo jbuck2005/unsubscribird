@@ -408,6 +408,7 @@ def api_public_day(day: str | None = None, species: str | None = None):
                     "clip": f"/clips/{r['trace_id']}/{clip}", "poster": posters.get(tile), "posters": posters})
     out.reverse()   # newest first
     return {"day": d.isoformat(), "today": d == datetime.now().date(), "species": species,
+            "weather": patterns.current(db) if d == datetime.now().date() else None,
             "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out, "about": about_links(counts),
             "dots": {("Mystery bird" if s in ("Uncertain", "Unknown bird") else s): c for s, c in colours.items()}}
 

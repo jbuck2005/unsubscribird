@@ -43,9 +43,17 @@ def test_birds_per_hour_by_temperature():
     visit("ptt3", d.replace(hour=14), "Blue Jay")                          # 3 °C
     t = patterns.by_temperature(main.db, 1, d.timestamp() + 86400)
     bands = {b["from"]: b for b in t["bands"]}
-    assert t["unit"] == "°C" and t["busy_hours"] == [8, 14]
+    assert t["unit"] == "°C" and t["busy_hours"] == [8, 14] and t["samples"] == 144 and t["latest"]["temp"] == 3.0
     assert (bands[-15]["visits"], bands[-15]["hours"]) == (2, 1.0) and bands[0]["visits"] == 1
     assert patterns.by_temperature(main.db, 1, NOW - 86400 * 300) is None   # no samples then
+
+
+def test_current_temperature_only_while_fresh():
+    t0 = datetime(2025, 7, 1, 12, 0).timestamp()                         # away from the other tests' samples
+    with main.db.tx() as c:
+        c.execute("INSERT INTO weather(ts, temp, unit) VALUES (?,?,?)", (t0, 21.6, "°C"))
+    assert patterns.current(main.db, t0 + 600) == {"temp": 22, "unit": "°C", "ts": t0}
+    assert patterns.current(main.db, t0 + 3 * 3600) is None               # sensor stopped: show nothing
 
 
 def test_feeder_quiet_when_a_busy_time_goes_silent():

@@ -46,6 +46,12 @@ async function load(keepPlaying = false) {
     posters: Object.fromEntries(Object.entries(v.posters || {}).map(([s, p]) => [s, p && BASE + p])) }));
   state.counts = data.counts;
   state.dots = data.dots || {};
+  const w = data.weather;   // outdoor temperature now (today only, and only while the sensor is reporting)
+  $("#temp-now").hidden = !w;
+  if (w) {
+    $("#temp-now").textContent = `🌡️ ${w.temp} ${w.unit}`;
+    $("#temp-now").title = `Outside now (${new Date(w.ts * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })})`;
+  }
   state.about = data.about || {};
   render(keepPlaying);
 }

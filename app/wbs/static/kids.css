@@ -38,6 +38,8 @@ body { transition: background-color .6s ease, color .6s ease; }
 .kids-bar button:disabled { opacity: .35; cursor: default; }
 .day { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
 .sort { display: flex; gap: 8px; flex-wrap: wrap; }
+.temp-now { font-weight: 700; font-size: 18px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+.temp-now[hidden] { display: none; }
 .sort button.on { background: var(--accent); color: var(--on-accent); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 24px 4px; }

@@ -997,13 +997,17 @@ async function patterns(days) {
       : ts.error ? `Can't read ${esc(ts.entity)}: ${esc(ts.error)}` : `Collecting ${esc(ts.entity)} every 10 minutes; check back in a day or two.`}</p>`;
     return;
   }
-  const bands = t.bands.filter((b) => b.per_hour !== null), top = Math.max(0.01, ...bands.map((b) => b.per_hour));
+  // A band is drawn once it has an hour of readings at busy times; until then it says so, so the page never sits blank.
+  const ready = t.bands.filter((b) => b.per_hour !== null), top = Math.max(0.01, ...ready.map((b) => b.per_hour));
   const busy = t.busy_hours.length ? `${hourName(t.busy_hours[0])} to ${hourName((t.busy_hours.at(-1) + 1) % 24)}` : "none yet";
+  const when = new Date(t.latest.ts * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   $("#pat-temp").innerHTML = `<p class="hint">Bird visits per hour at each outdoor temperature, counting only the hours birds usually
-      come (${esc(busy)}), so cold nights don't count.</p>
-    <table class="bars"><tbody>${bands.map((b) => `<tr><th>${b.from} to ${b.to} ${esc(t.unit)}</th>
-      <td><span class="bar" style="width:${(100 * b.per_hour / top).toFixed(1)}%"></span></td>
-      <td class="n">${b.per_hour} / h <span class="msg">(${b.visits} in ${b.hours} h)</span></td></tr>`).join("")}</tbody></table>`;
+      come (${esc(busy)}), so cold nights don't count. ${t.samples} reading${t.samples === 1 ? "" : "s"} from ${esc(ts.entity)} so far;
+      the latest is ${esc(t.latest.temp)} ${esc(t.unit)} at ${esc(when)}.${ready.length ? "" : " Each temperature gets its bar once it has an hour of readings."}</p>
+    <table class="bars"><tbody>${t.bands.map((b) => `<tr><th>${b.from} to ${b.to} ${esc(t.unit)}</th>
+      ${b.per_hour === null ? `<td><span class="msg">collecting…</span></td><td class="n msg">${b.hours} of 1 h</td>`
+        : `<td><span class="bar" style="width:${(100 * b.per_hour / top).toFixed(1)}%"></span></td>
+      <td class="n">${b.per_hour} / h <span class="msg">(${b.visits} in ${b.hours} h)</span></td>`}</tr>`).join("")}</tbody></table>`;
 }
 function patternsPage() {
   const y = new Date(); y.setDate(y.getDate() - 1);

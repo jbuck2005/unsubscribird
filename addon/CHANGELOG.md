@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Home page: the **outdoor temperature now** next to Today, from the temperature sensor named in Settings
+  (Patterns). Hidden when the sensor hasn't reported for half an hour.
+* Patterns: while temperatures are still coming in, the chart says how many readings it has and the latest one,
+  and each temperature shows "collecting…" until it has an hour of readings, instead of an empty space.
 * Home page: **Ctrl-click** a clip (Cmd-click on a Mac), or press **🃏 Card** in the player, for the bird's trading
   card: its picture, visits today, this week, this year and all time, first seen, favourite time, most at once,
   rank this year, days in a row, two or three **fun facts**, and links to read about it. Counted from the clips
