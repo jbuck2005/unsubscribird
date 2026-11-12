@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* Home page: **Ctrl-click** a clip (Cmd-click on a Mac), or press **🃏 Card** in the player, for the bird's trading
+  card: its picture, visits today, this week, this year and all time, first seen, favourite time, most at once,
+  rank this year, days in a row, and links to read about it. Counted from the clips the home page shows.
+* Home page: **⚑ Wrong bird?** in the player, with an optional "What do you think it is?". The visit goes to a new
+  **Flagged** queue on the Review page; saving its label there answers the flag.
 * Settings in `.env` are now named `UNSUB_...` instead of `WBS_...`. The old names still work, through the app and
   the compose file, and the log says which ones to rename. Add-on users have nothing to do.
 

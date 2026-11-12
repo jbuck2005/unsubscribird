@@ -51,10 +51,22 @@
   <div id="viewer" class="viewer" hidden>
     <button class="close" id="v-close" aria-label="Close">✕</button>
     <button class="nav prev" id="v-prev" aria-label="Previous clip">◀</button>
-    <figure>
-      <video id="v-video" controls playsinline autoplay></video>
-      <figcaption><span id="v-name"></span> <span id="v-time"></span> <span id="v-count"></span></figcaption>
-    </figure>
+    <div class="v-body">
+      <figure>
+        <video id="v-video" controls playsinline autoplay></video>
+        <figcaption><span id="v-name"></span> <span id="v-time"></span> <span id="v-count"></span></figcaption>
+        <div class="v-tools">
+          <button id="v-card-btn" title="The bird's card (or Ctrl-click a clip)">🃏 Card</button>
+          <button id="v-flag-btn" title="Tell a grown-up this isn't the right bird">⚑ Wrong bird?</button>
+        </div>
+        <form id="v-flag" class="v-flag" hidden>
+          <label>What do you think it is? <input id="v-flag-note" maxlength="80" placeholder="Optional"></label>
+          <button type="submit">Send</button> <button type="button" id="v-flag-cancel">Cancel</button>
+        </form>
+        <p id="v-flag-msg" class="v-flag-msg" hidden></p>
+      </figure>
+      <aside id="v-card" class="bird-card" hidden aria-live="polite"></aside>
+    </div>
     <button class="nav next" id="v-next" aria-label="Next clip">▶</button>
   </div>
   <script src="{{ base }}/static/kids.js?v={{ version }}"></script>

@@ -180,7 +180,7 @@ const Review = {
   },
 
   async counts() {
-    for (const q of ["review", "uncertain", "disagree", "check", "waiting", "labelled", "failed", "excluded"]) {
+    for (const q of ["review", "uncertain", "disagree", "check", "flagged", "waiting", "labelled", "failed", "excluded"]) {
       const r = await api(`/api/visits?queue=${q}&limit=0`);
       $(`[data-count="${q}"]`).textContent = r.total;
     }
@@ -282,6 +282,7 @@ const Review = {
     el.innerHTML = `
       <div class="vhead"><span class="time">${esc(fmtTime(v.time))}</span>
         ${v.disagree && !v.label ? `<span class="chip unknown" title="The trained model and LM Studio name different things: look before confirming">⚠ disagree</span>` : ""}
+        ${v.flagged ? `<span class="chip unknown" title="Someone pressed Wrong bird? on the home page. Saving a label answers it.">⚑ flagged${v.flag_note ? `: “${esc(v.flag_note)}”` : ""}</span>` : ""}
         ${bestChip}${consChip}${altChips}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}

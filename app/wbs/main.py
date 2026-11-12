@@ -450,6 +450,73 @@ def api_public_collection(year: int | None = None):
             "to_find": sorted(n for n, r in birds.items() if r["active"] and n not in found)}
 
 
+class FlagIn(BaseModel):
+    note: str = ""
+
+
+@app.post("/api/public/flag/{trace_id}")
+def api_public_flag(trace_id: str, body: FlagIn):
+    """"Wrong bird?" from the home page: the visit goes into Review's Flagged queue until someone labels it.
+    Only visits the home page shows; the note is plain text, kept short."""
+    if not public_visit(trace_id):
+        raise HTTPException(404, "not found")
+    note = " ".join(body.note.split())[:80]
+    db.set_visit(trace_id, flagged=time.time(), flag_note=note or None)
+    return {"ok": True}
+
+
+@app.get("/api/public/species-card")
+def api_public_species_card(species: str):
+    """The trading card for a species on the home page: its stats from public visits only (the same visits the
+    home page shows), its best portrait, and where to read about it."""
+    from collections import Counter
+    from datetime import datetime, timedelta
+    sp = db.one("SELECT name, scientific, kind, note FROM species WHERE name=?", species)
+    if not sp or sp["name"] in ("Empty", "Uncertain", "Unknown bird", "Other animal"):
+        raise HTTPException(404, "not found")
+    rows = db.q(f"""SELECT v.trace_id, v.ts, v.rec_conf, COALESCE(l.species, v.rec_species) shown, l.species labelled,
+                           l.count, l.also FROM visits v LEFT JOIN labels l USING(trace_id)
+                    WHERE {PUBLIC_VISIT} ORDER BY v.ts""")
+    mine = [r for r in rows if r["shown"] == species or species in json.loads(r["also"] or "[]")]
+    now = datetime.now()
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
+    this_year = [r for r in mine if r["ts"] >= year_start]
+    days = {datetime.fromtimestamp(r["ts"]).date() for r in mine}
+    streak, d = 0, midnight.date()
+    if d not in days:            # no visit yet today: a streak up to yesterday still counts
+        d -= timedelta(days=1)
+    while d in days:
+        streak, d = streak + 1, d - timedelta(days=1)
+    hours = Counter(datetime.fromtimestamp(r["ts"]).hour for r in mine if r["ts"] >= now.timestamp() - 90 * 86400)
+    most = max([r["count"] or 1 for r in mine if r["shown"] == species] or [0])
+    vlm = db.one(f"""SELECT MAX(s.count) n FROM suggestions s JOIN visits v USING(trace_id) LEFT JOIN labels l USING(trace_id)
+                     WHERE {PUBLIC_VISIT} AND s.source='vlm' AND s.bird_present=1 AND LOWER(s.species)=LOWER(?)
+                       AND l.count IS NULL""", species)
+    most = max(most, min(vlm["n"] or 0, 20))
+    totals = Counter()
+    for r in rows:
+        if r["ts"] >= year_start:
+            for s in {r["shown"], *json.loads(r["also"] or "[]")}:
+                totals[s] += 1
+    birds = {n["name"] for n in db.q("SELECT name FROM species WHERE kind=?", sp["kind"])}
+    ranked = [s for s, _ in totals.most_common() if s in birds]
+    best = max(mine, key=lambda r: (r["shown"] == species, r["labelled"] is not None, r["rec_conf"] or 0, r["ts"]),
+               default=None)
+    stat = lambda rs: len(rs)   # noqa: E731
+    return {"species": species, "scientific": sp["scientific"] or "", "kind": sp["kind"], "note": sp["note"] or "",
+            "portrait": f"/api/public/portrait/{quote(best['trace_id'])}?species={quote(species)}" if best else None,
+            "about": about_links([species]).get(species, {}),
+            "today": stat([r for r in mine if r["ts"] >= midnight.timestamp()]),
+            "week": stat([r for r in mine if r["ts"] >= now.timestamp() - 7 * 86400]),
+            "year": stat(this_year), "all_time": stat(mine),
+            "first_seen": mine[0]["ts"] if mine else None, "last_seen": mine[-1]["ts"] if mine else None,
+            "days_this_year": len({datetime.fromtimestamp(r["ts"]).date() for r in this_year}),
+            "streak": streak, "busiest_hour": hours.most_common(1)[0][0] if hours else None,
+            "most_at_once": most or None,
+            "rank": ranked.index(species) + 1 if species in ranked else None, "ranked": len(ranked)}
+
+
 @lru_cache(maxsize=128)   # ~60 kB each
 def _portrait(trace_id: str, species: str) -> bytes | None:
     return recognizer.portrait(trace_id, species)
@@ -484,6 +551,8 @@ QUEUES = {
     "waiting": "v.status IN ('new','frames') AND l.trace_id IS NULL AND v.excluded=0",
     "labelled": "l.trace_id IS NOT NULL AND v.excluded=0",
     "excluded": "v.excluded=1",
+    # Someone on the home page said "Wrong bird?". Labelled visits too: a confirmed label can be wrong.
+    "flagged": "v.flagged IS NOT NULL AND v.excluded=0",
     "failed": "v.status='failed' AND v.excluded=0",
     "all": "1=1",
 }
@@ -510,7 +579,8 @@ def api_visits(queue: str = "review", limit: int = 20, offset: int = 0, species:
         return {"total": len(ids), "visits": [review_json(v, index) for v in rows if v]}
     total = db.one(f"SELECT COUNT(*) n FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}",
                    *args)["n"]
-    order = "c.p_label ASC, v.ts DESC" if queue == "check" else "(v.rec_source='uncertain') DESC, v.ts DESC"
+    order = ("c.p_label ASC, v.ts DESC" if queue == "check" else "v.flagged DESC" if queue == "flagged"
+             else "(v.rec_source='uncertain') DESC, v.ts DESC")
     rows = db.q(f"""SELECT v.* FROM visits v LEFT JOIN labels l USING(trace_id) {CHECK_JOIN} WHERE {where}
                     ORDER BY {order} LIMIT ? OFFSET ?""", *args, min(limit, 100), offset)
     return {"total": total, "visits": [review_json(v, index) for v in rows]}
@@ -569,6 +639,7 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
     cons = visit_json(v, index)["consensus"]
     source = "confirmed" if cons and cons["species"] == name else "corrected"
     db.set_label(trace_id, name, frame_ids, body.count, source, per_frame, sorted(seen))
+    db.set_visit(trace_id, flagged=None, flag_note=None)     # a person has looked: the flag is answered
     also = sorted({s for s in per_frame.values() if s != "Empty"} | seen)
     vj = visit_json(v, index)   # the clip's name follows the new label
     return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also,
