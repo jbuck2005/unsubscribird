@@ -9,6 +9,7 @@ Standing rules for AI assistants working in this repository.
 - Stage files by name. Never `git add -A` or `git add .`.
 - Never force-push `main`.
 - Name branches `dev/<topic>`. Never put "claude" in a branch name: merging copies it into the history of `main`.
+- Pull requests go into `edge`, not `main`. Each push to `edge` that passes the tests republishes the `:edge` images (`.github/workflows/edge.yml`); no version bump or tag for that. `edge` merges into `main` only as a release, with the version bumped. Dependabot targets `edge` too. Never force-push `edge` either.
 - Keep "claude" and "anthropic" out of commit messages and PR titles, including for changes to this file (write "project rules"). Deployment refuses commits that contain them.
 
 ## Privacy

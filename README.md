@@ -65,6 +65,30 @@ the names to rename (`WBS_HOST` becomes `UNSUB_HOST`, and so on).
 
 Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database and clips are in your own folders.
 
+### Published images
+
+Instead of building the image, set `UNSUB_IMAGE` in `deploy/.env` to one that GitHub builds, for amd64 and arm64:
+
+* `ghcr.io/jbuck2005/unsubscribird:latest`: the latest release
+* `ghcr.io/jbuck2005/unsubscribird:edge`: every change merged to the `edge` branch, a few minutes after its tests
+  pass, before it's released. Newest, and the least tried
+
+Then update with a pull instead of a build:
+
+```sh
+docker compose -f deploy/docker-compose.yaml --env-file deploy/.env pull
+docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
+```
+
+`up -d` only restarts the container if the image changed. To follow `:edge` without thinking about it, run those two
+lines from cron, say every hour (`crontab -e`, with the path to your checkout):
+
+```sh
+0 * * * * cd /path/to/unsubscribird && docker compose -f deploy/docker-compose.yaml --env-file deploy/.env pull -q && docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
+```
+
+Old images stay on disk; `docker image prune` removes them.
+
 ## Or as a Home Assistant add-on
 
 If Home Assistant (HA OS or Supervised) runs on a 64-bit x86 or ARM computer with 8 GB of RAM or more, it can run
@@ -175,9 +199,11 @@ docker run --rm -v "$PWD":/src:ro python:3.12-slim sh -c 'apt-get -qq update && 
   pip install -q -r /src/app/requirements.txt pytest httpx; cp -r /src /w && cd /w && python -m pytest -q tests'
 ```
 
-GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. To release,
-change the version in both `app/wbs/__init__.py` and `addon/config.yaml`: once the tests pass on `main`, GitHub
-publishes the images to GHCR and tags the commit (`v0.25.3`). Pushing a tag yourself publishes that version again.
+GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. Pull requests go
+into `edge`; each push there that passes the tests publishes the `:edge` images, overwriting the last ones. `edge`
+reaches `main` only as a release: change the version in both `app/wbs/__init__.py` and `addon/config.yaml`, and once
+the tests pass on `main`, GitHub publishes the images to GHCR and tags the commit (`v0.25.3`). Pushing a tag yourself
+publishes that version again.
 
 ## Roadmap
 

@@ -1,5 +1,10 @@
 # Copy .env.example to .env and fill it in. Everything specific to your home goes there, not here.
-# Build the image first:  docker build -t unsubscribird:latest app
+# The image (UNSUB_IMAGE in .env), one of:
+#   unsubscribird:latest                    build it yourself first:  docker build -t unsubscribird:latest app
+#   ghcr.io/jbuck2005/unsubscribird:latest  the latest release
+#   ghcr.io/jbuck2005/unsubscribird:edge    every change merged to the edge branch, before it is released
+# To update to a newer published image:  docker compose pull && docker compose up -d   (with the -f and --env-file
+# you started it with)
 services:
   unsubscribird:
     image: ${UNSUB_IMAGE:-${WBS_IMAGE:-unsubscribird:latest}}

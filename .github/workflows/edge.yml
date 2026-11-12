@@ -1,0 +1,80 @@
+name: Edge images
+
+# Publishes the latest commit on edge, once its tests pass, under one moving tag:
+#   ghcr.io/<owner>/amd64-unsubscribird:edge and aarch64-unsubscribird:edge
+#   ghcr.io/<owner>/unsubscribird:edge                                    (both, for docker compose)
+# Each push overwrites them. No version tags, no git tags: releases still come from main (release.yml).
+# The tests run inside this workflow rather than through workflow_run, which only fires for workflows on the
+# default branch, and edge reaches main only as a release.
+on:
+  push:
+    branches: [edge]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: edge-images
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  build:
+    needs: tests
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: echo "version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' app/wbs/__init__.py)-edge" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: app
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: false
+          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-unsubscribird:edge
+          labels: |
+            io.hass.type=addon
+            io.hass.arch=${{ matrix.arch }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.v.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: One image for both architectures
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          r=ghcr.io/${OWNER,,}
+          docker buildx imagetools create -t "$r/unsubscribird:edge" \
+            "$r/amd64-unsubscribird:edge" "$r/aarch64-unsubscribird:edge"

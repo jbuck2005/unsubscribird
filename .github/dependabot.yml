@@ -2,10 +2,12 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    target-branch: edge
     schedule:
       interval: monthly
   - package-ecosystem: pip
     directory: /app
+    target-branch: edge
     schedule:
       interval: monthly
     groups:
@@ -13,5 +15,6 @@ updates:
         patterns: ["*"]
   - package-ecosystem: docker
     directory: /app
+    target-branch: edge
     schedule:
       interval: monthly

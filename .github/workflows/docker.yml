@@ -2,7 +2,7 @@ name: Docker build
 
 on:
   push:
-    branches: [main]
+    branches: [main, edge]
     paths: [app/**, .github/workflows/docker.yml]
   pull_request:
     paths: [app/**, .github/workflows/docker.yml]
