@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block main %}
+<h2>Patterns</h2>
+
+<section id="fw">
+  <h3>Project FeederWatch count</h3>
+  <p class="hint">FeederWatch (November to April) asks, for each species, the most birds you saw <b>at once</b> over two
+    days in a row. Pick the first day; the table is your entry. Nothing is sent anywhere: copy it into FeederWatch
+    yourself. A count typed on the Review page wins over LM Studio's, so check the big ones.</p>
+  <div class="row" style="align-items:center">
+    <label>First day <input type="date" id="fw-start"></label>
+    <button class="btn" id="fw-csv">Download CSV</button>
+  </div>
+  <div id="fw-out"></div>
+</section>
+{% endblock %}

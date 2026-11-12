@@ -21,7 +21,7 @@ def teardown_function(_):
 def test_settings_need_login_but_the_kids_page_does_not():
     secure()
     c = TestClient(main.app, follow_redirects=False)
-    for path in ("/admin", "/admin/dataset", "/admin/model", "/admin/gallery", "/admin/status"):
+    for path in ("/admin", "/admin/dataset", "/admin/model", "/admin/patterns", "/admin/gallery", "/admin/status"):
         r = c.get(path)
         assert r.status_code == 303 and r.headers["location"].startswith("/login?next=")
     assert c.get("/api/visits").status_code == 401

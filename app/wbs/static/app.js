@@ -293,6 +293,8 @@ const Review = {
         <input placeholder="Species…" value="${esc(initial)}" aria-label="Species">
         <span class="alsoseen" title="Another species in the visit with no frame of its own, e.g. two birds in one frame. Not used for training.">
           <span class="also-chips"></span><input class="alsoin" placeholder="+ Also seen…" aria-label="Also seen"></span>
+        <input class="countin" type="number" min="1" max="99" placeholder="How many?" value="${esc(v._preset?.count ?? v.label?.count ?? "")}" aria-label="How many at once"
+          title="The most birds of this species at once, for a FeederWatch count. Leave empty for one, or LM Studio's count.">
         <button class="btn primary" data-a="confirm">${v.label ? "Update" : "Confirm"} ⏎</button>
         <button class="btn" data-a="Empty" title="Set to Empty (confirm later)">Empty (e)</button>
         <button class="btn" data-a="Squirrel">Squirrel (s)</button>
@@ -436,7 +438,7 @@ const Review = {
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
       const fs = new Map(v._fs);
       if (fs.has(fid)) { fs.set(r.frame.id, fs.get(fid)); fs.delete(fid); }
-      nv._preset = { species: $(".actions input", el).value, frames, fs, also: v._also, edited: v._edited };
+      nv._preset = { species: $(".actions input", el).value, frames, fs, also: v._also, count: $(".countin", el)?.value, edited: v._edited };
       const i = this.visits.indexOf(v);
       this.visits[i] = nv;
       const ne = this.card(nv, i);
@@ -486,7 +488,7 @@ const Review = {
       if (this.held(v)) { held.push(el); continue; }
       if (!species || !known.has(species.toLowerCase()) || !v._frames.size) { skipped.push(el); continue; }
       items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v),
-                   also_seen: [...v._also], _v: v, _el: el });
+                   also_seen: [...v._also], count: this.count(el), _v: v, _el: el });
     }
     const unsaved = this.unsaved().map(({ el }) => el);
     const mark = (els, text) => els.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err"; m.textContent = text; });
@@ -513,12 +515,12 @@ const Review = {
     const btn = $("#confirm-all"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const r = await api("/api/labels/batch", { method: "POST",
-        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species, also_seen }) =>
-          ({ trace_id, species, frame_ids, frame_species, also_seen }))) });
+        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species, also_seen, count }) =>
+          ({ trace_id, species, frame_ids, frame_species, also_seen, count }))) });
       r.results.forEach((res, n) => {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
-        if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also,
+        if (res.ok) { v.label = { count: items[n].count, species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also,
                                   also_seen: res.also_seen };
           this.setClip(v, el, res); el.classList.add("done");
           v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
@@ -544,14 +546,17 @@ const Review = {
     }
   },
 
+  count(el) { const n = parseInt($(".countin", el)?.value, 10); return n >= 1 ? Math.min(n, 99) : null; },
+
   async save(v, el) {
     const msg = $(".msg", el);
     const species = ($(".actions input", el).value || "").trim();
     if (!species) { msg.className = "msg err"; msg.textContent = "Type or pick a species first."; return; }
     try {
       const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
-        body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), also_seen: [...v._also] }) });
-      v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen };
+        body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), also_seen: [...v._also],
+                               count: this.count(el) }) });
+      v.label = { count: this.count(el), species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen };
       this.setClip(v, el, r);
       v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
       el.classList.add("done"); el.classList.remove("skipped");
@@ -932,3 +937,31 @@ async function settingsPage() {
   prefs = (await api("/api/settings")).prefs;
   draw();
 }
+
+// ---- Patterns page ----------------------------------------------------------------
+const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+async function feederWatch() {
+  const start = $("#fw-start").value;
+  const r = await api(`/api/feederwatch?start=${start}`);
+  const day = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const from = { you: "your count", "LM Studio": "LM Studio's count", "one bird": "one bird (no count)" };
+  const eff = r.effort.map((e) => `<li><b>${esc(day(e.day))}</b>: ${e.bird_visits} bird visits${e.first ? `, ${esc(e.first)} to ${esc(e.last)}
+    (${e.am} morning, ${e.pm} afternoon)` : ""}</li>`).join("");
+  $("#fw-out").innerHTML = r.species.length ? `<table><thead><tr><th>Species</th><th class="n">Most at once</th>
+      ${r.days.map((d) => `<th class="n">${esc(day(d))}</th>`).join("")}<th class="n">Visits</th><th>Count from</th></tr></thead><tbody>
+      ${r.species.map((s) => `<tr><td>${esc(s.species)}</td><td class="n"><b>${s.max}</b></td>
+        ${r.days.map((d) => `<td class="n">${s.days[d] || "–"}</td>`).join("")}<td class="n">${s.visits}</td>
+        <td><a href="${BASE}/admin?visit=${encodeURIComponent(s.trace_id)}">${esc(from[s.source] || s.source)}</a></td></tr>`).join("")}
+      </tbody></table><p class="hint">Effort: the camera watches all day, so pick FeederWatch's longest watching time for each
+      half-day it ran. When it saw birds:</p><ul>${eff}</ul>`
+    : '<p class="msg">No birds on those days.</p>';
+}
+function patternsPage() {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  $("#fw-start").value = isoDay(y);
+  $("#fw-start").max = isoDay(y);
+  $("#fw-start").addEventListener("change", feederWatch);
+  $("#fw-csv").addEventListener("click", () => { location.href = `${BASE}/api/feederwatch?start=${$("#fw-start").value}&format=csv`; });
+  feederWatch();
+}
+if (page === "patterns") patternsPage();

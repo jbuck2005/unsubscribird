@@ -130,6 +130,7 @@ table.cm .cm-cell:hover, table.cm .cm-cell:focus-visible, table.cm .cm-cell.on {
 .ac li.none { color: var(--muted); cursor: default; }
 .alsoseen { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .alsoseen .alsoin { min-width: 0; width: 150px; padding: 4px 8px; font-size: 13.5px; }
+.actions .countin { min-width: 0; width: 8.5em; padding: 4px 8px; font-size: 13.5px; }
 .chip.also { border: 0; font: inherit; font-size: 13px; cursor: pointer; color: var(--text); }
 .chip.also:hover, .chip.also:focus-visible { background: var(--accent-soft); color: var(--accent); }
 button.btn { font: inherit; border-radius: 6px; border: 1px solid var(--line); background: var(--chip);

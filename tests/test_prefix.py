@@ -10,7 +10,8 @@ from wbs import main
 
 STATIC = Path(main.HERE) / "static"
 BIRDS = {"X-Forwarded-Prefix": "/birds"}
-PAGES = ["/", "/login", "/admin", "/admin/dataset", "/admin/model", "/admin/gallery", "/admin/status", "/admin/settings"]
+PAGES = ["/", "/login", "/admin", "/admin/dataset", "/admin/model", "/admin/patterns", "/admin/gallery", "/admin/status",
+         "/admin/settings"]
 LINK = re.compile(r'(?:href|src|action)="(/[^"]*)"')
 
 

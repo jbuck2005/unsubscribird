@@ -14,13 +14,14 @@ import re
 from urllib.parse import quote
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
+from . import feederwatch
 from . import frames as framelib
 from .collector import Collector
 from .config import settings
@@ -311,6 +312,11 @@ def api_settings_save(changes: dict[str, Any]):
     return {"prefs": prefs.describe()}
 
 
+@app.get("/admin/patterns", response_class=HTMLResponse)
+def page_patterns(request: Request):
+    return _page(request, "patterns.html", "patterns")
+
+
 @app.get("/admin/status", response_class=HTMLResponse)
 def page_status(request: Request):
     return _page(request, "status.html", "status")
@@ -471,6 +477,8 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
     name = canonical(body.species, index)
     if not name or name.lower() not in index:
         raise HTTPException(400, f"'{body.species}' is not in the species list (add it on the Dataset page first)")
+    if body.count is not None and not 1 <= body.count <= 99:
+        raise HTTPException(400, "how many must be 1 to 99")
     valid = {r["id"] for r in db.q("SELECT id FROM frames WHERE trace_id=? AND rejected=0", trace_id)}
     frame_ids = [i for i in body.frame_ids if i in valid]
     if not frame_ids:
@@ -793,6 +801,21 @@ def api_gallery(day: str | None = None, species: str | None = None):
                        "frame_species": (vj["label"] or {}).get("frame_species", {})})
     return {"day": d.isoformat(), "species": species, "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
             "visits": visits}
+
+
+@app.get("/api/feederwatch")
+def api_feederwatch(start: str | None = None, format: str = "json"):
+    """A Project FeederWatch count: two days from `start` (default yesterday), most of each species at once."""
+    from datetime import date, timedelta
+    try:
+        first = date.fromisoformat(start) if start else date.today() - timedelta(days=1)
+    except ValueError:
+        raise HTTPException(400, "start must be YYYY-MM-DD")
+    result = feederwatch.count(db, first)
+    if format == "csv":
+        return PlainTextResponse(feederwatch.to_csv(result), media_type="text/csv", headers={
+            "Content-Disposition": f'attachment; filename="feederwatch_{result["days"][0]}_{result["days"][-1]}.csv"'})
+    return result
 
 
 @app.get("/api/stats")
