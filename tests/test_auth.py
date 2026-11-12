@@ -90,6 +90,10 @@ def test_public_day_lists_bird_clips_newest_first():
     assert [v["trace_id"] for v in mine] == ["kid2", "kid1"]             # newest first, no Empty
     assert mine[0]["species"] == "Mystery bird" and mine[1]["clip"].endswith("_blue-jay.mp4")
     assert mine[1]["poster"] == "/img/visits/kid1/f_thumb.jpg" and mine[1]["dot"]
+    # Somewhere to read about each species; none for a mystery bird.
+    assert d["about"]["Blue Jay"] == {"Wikipedia": "https://en.wikipedia.org/wiki/Cyanocitta_cristata",
+                                      "All About Birds": "https://www.allaboutbirds.org/guide/Blue_Jay"}
+    assert "Mystery bird" not in d["about"]
 
 
 def test_pages_carry_the_theme_script_and_location():

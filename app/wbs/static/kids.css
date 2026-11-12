@@ -45,6 +45,8 @@ body { transition: background-color .6s ease, color .6s ease; }
   padding: 6px 14px; box-shadow: var(--shadow); }
 .chip.on { outline: 3px solid var(--accent); }
 .chip b { margin-left: 4px; color: var(--accent); }
+.about { margin: 8px 24px 0; color: var(--muted); }
+.about a { color: var(--accent); font-weight: 700; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; padding: 14px 24px 40px; }
 .tile { position: relative; border-radius: 22px; overflow: hidden; background: var(--panel); box-shadow: var(--shadow);
@@ -76,6 +78,7 @@ body { transition: background-color .6s ease, color .6s ease; }
 .viewer .nav:disabled { opacity: .25; cursor: default; }
 .viewer .close { position: absolute; top: 16px; right: 16px; width: 48px; height: 48px; font-size: 20px; }
 @media (max-width: 640px) {
+  .about { margin-left: 16px; margin-right: 16px; }
   .kids-head, .kids-bar, .chips, .grid { padding-left: 16px; padding-right: 16px; }
   .grid { grid-template-columns: 1fr; }
   .viewer .nav { position: absolute; bottom: 18px; width: 52px; height: 52px; }

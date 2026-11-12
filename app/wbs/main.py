@@ -146,6 +146,22 @@ def canonical(name: str | None, index: dict[str, str]) -> str | None:
     return index.get(name.strip().lower(), name.strip())
 
 
+def about_links(names) -> dict[str, dict[str, str]]:
+    """Where to read about each species: Wikipedia by scientific name (it redirects to the article), and Cornell's
+    All About Birds for birds. Plain links: nothing is fetched from those sites until someone clicks."""
+    rows = {r["name"]: r for r in db.q("SELECT name, scientific, kind FROM species WHERE scientific != ''")}
+    out = {}
+    for n in names:
+        r = rows.get(n)
+        if not r or r["name"] == "Unknown bird":
+            continue
+        links = {"Wikipedia": f"https://en.wikipedia.org/wiki/{quote(r['scientific'].replace(' ', '_'))}"}
+        if r["kind"] == "bird":
+            links["All About Birds"] = f"https://www.allaboutbirds.org/guide/{quote(n.replace(' ', '_'))}"
+        out[n] = links
+    return out
+
+
 # What anyone on the network may see (visits v LEFT JOIN labels l). Unreviewed visits only with a named species
 # from the list: nothing filters people, so Uncertain, catch-alls and free text wait for a human.
 PUBLIC_VISIT = """v.clip IS NOT NULL AND v.excluded=0 AND COALESCE(l.species, v.rec_species) != 'Empty'
@@ -378,7 +394,7 @@ def api_public_day(day: str | None = None, species: str | None = None):
                     "clip": f"/clips/{r['trace_id']}/{clip}", "poster": posters.get(tile), "posters": posters})
     out.reverse()   # newest first
     return {"day": d.isoformat(), "today": d == datetime.now().date(), "species": species,
-            "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out,
+            "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out, "about": about_links(counts),
             "dots": {("Mystery bird" if s in ("Uncertain", "Unknown bird") else s): c for s, c in colours.items()}}
 
 

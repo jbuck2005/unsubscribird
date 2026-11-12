@@ -43,6 +43,7 @@ async function load(keepPlaying = false) {
     posters: Object.fromEntries(Object.entries(v.posters || {}).map(([s, p]) => [s, p && BASE + p])) }));
   state.counts = data.counts;
   state.dots = data.dots || {};
+  state.about = data.about || {};
   render(keepPlaying);
 }
 
@@ -59,6 +60,12 @@ function render(keepPlaying) {
       Object.entries(state.counts).map(([sp, n]) =>
         `<button class="chip ${sp === state.species ? "on" : ""}" data-sp="${esc(sp)}">${esc(dots[sp] || "")} ${esc(sp)}<b>${n}</b></button>`).join("")
     : "";
+  const about = state.about[state.species];
+  $("#about").hidden = !about;
+  $("#about").replaceChildren(...(about ? [`Learn about the ${state.species}: `, ...Object.entries(about).flatMap(([site, url], i) => {
+    const a = Object.assign(document.createElement("a"), { href: url, target: "_blank", rel: "noopener noreferrer", textContent: site });
+    return i ? [" · ", a] : [a];   // outside sites: full URLs, so no BASE
+  })] : []));
   $$("#chips .chip").forEach((c) => c.addEventListener("click", () => { state.species = c.dataset.sp; setUrl(); render(); }));
 
   // A visit with two species (say a jay and a squirrel) is under both chips, named by the chip it was found by.
