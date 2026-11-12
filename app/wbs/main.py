@@ -504,7 +504,9 @@ def api_public_species_card(species: str):
     best = max(mine, key=lambda r: (r["shown"] == species, r["labelled"] is not None, r["rec_conf"] or 0, r["ts"]),
                default=None)
     stat = lambda rs: len(rs)   # noqa: E731
+    from .facts import FACTS
     return {"species": species, "scientific": sp["scientific"] or "", "kind": sp["kind"], "note": sp["note"] or "",
+            "facts": FACTS.get(species, []),
             "portrait": f"/api/public/portrait/{quote(best['trace_id'])}?species={quote(species)}" if best else None,
             "about": about_links([species]).get(species, {}),
             "today": stat([r for r in mine if r["ts"] >= midnight.timestamp()]),

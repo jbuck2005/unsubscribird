@@ -32,8 +32,16 @@ def test_species_card_stats_come_from_public_visits():
     assert c["first_seen"] == (now - timedelta(days=2, hours=1)).timestamp()
     assert c["portrait"] == f"/api/public/portrait/sc2?species={sp.replace(' ', '%20')}"   # the one you labelled
     assert c["about"]["Wikipedia"].endswith("Coccothraustes_vespertinus") and c["rank"] >= 1
+    assert len(c["facts"]) >= 2
     assert TestClient(main.app).get("/api/public/species-card?species=Empty").status_code == 404
     assert TestClient(main.app).get("/api/public/species-card?species=Dodo").status_code == 404
+
+
+def test_every_starting_species_has_fun_facts():
+    from wbs.facts import FACTS
+    from wbs.species import BIRDS
+    assert {n for n, _ in BIRDS} <= set(FACTS)
+    assert all(2 <= len(f) <= 3 and all(len(x) < 160 for x in f) for f in FACTS.values())
 
 
 def test_wrong_bird_flag_goes_to_review_until_labelled():

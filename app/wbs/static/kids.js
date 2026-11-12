@@ -164,6 +164,7 @@ async function showCard() {
     ${c.scientific ? `<div class="bc-sci">${esc(c.scientific)}</div>` : ""}
     <div class="bc-stats">${stat(c.today, "today")}${stat(c.week, "this week")}${stat(c.year, "this year")}${stat(c.all_time, "all time")}</div>
     <dl class="bc-facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${(c.facts || []).length ? `<div class="bc-fun"><b>Fun facts</b><ul>${c.facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
     ${c.note ? `<p class="bc-note">${esc(c.note)}</p>` : ""}
     <div class="bc-links"></div>`;
   $(".bc-links", box).replaceChildren(...Object.entries(c.about || {}).flatMap(([site, url], i) => {
