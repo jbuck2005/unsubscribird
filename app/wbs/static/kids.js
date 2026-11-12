@@ -24,7 +24,9 @@ function dayLabel(day) {
 function sortVisits(visits, how) {
   const v = [...visits];
   if (how === "old") return v.sort((a, b) => a.ts - b.ts);
-  if (how === "bird") return v.sort((a, b) => a.species.localeCompare(b.species) || b.ts - a.ts);
+  // By bird: the rarest visitor of the day first, then the next rarest; each bird's visits newest first.
+  const n = (sp) => state.counts?.[sp] || 0;
+  if (how === "bird") return v.sort((a, b) => n(a.species) - n(b.species) || a.species.localeCompare(b.species) || b.ts - a.ts);
   return v.sort((a, b) => b.ts - a.ts);   // newest first (default)
 }
 

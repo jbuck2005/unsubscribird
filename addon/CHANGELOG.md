@@ -8,6 +8,7 @@
   **Retrain automatically**.
 * Correcting a species renames the clip to match, and links made with the old name lead to the new one.
 * Home page: each tile has the visit time on its own line under the species.
+* Home page: **By bird** lists the day's rarest visitor first.
 * Home page: picking a species shows links to read about it, on Wikipedia and (for birds) All About Birds.
   These are plain links: nothing loads from those sites until you click.
 * Model page: click a red number in the confusion table to see those visits and what the model made of each
