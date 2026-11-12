@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import threading
 import time
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -809,6 +810,39 @@ def api_model():
             "min_visits": 3, "visits_per_species": vcount, "models": models,
             "auto_train": {"enabled": settings.auto_train, "hour": settings.auto_train_hour,
                            "min_new": settings.auto_train_min_new}}
+
+
+class RefetchIn(BaseModel):
+    hours: float = 2
+
+
+refetch_state: dict[str, Any] = {"running": False, "hours": None, "started": None, "finished": None, "result": None}
+
+
+@app.post("/api/clips/refetch")
+def api_clips_refetch(body: RefetchIn):
+    """"Fetch clips again" (Status page): download again every clip from the last hours that Home Assistant now
+    has bigger, in the background. Unlabelled visits get new frames; labelled ones keep theirs."""
+    if not 0 < body.hours <= 48:
+        raise HTTPException(400, "hours must be more than 0 and at most 48")
+    if refetch_state["running"]:
+        raise HTTPException(409, "already fetching clips")
+    refetch_state.update(running=True, hours=body.hours, started=time.time(), finished=None, result=None)
+
+    def run():
+        try:
+            refetch_state["result"] = collector.refetch_recent(body.hours)
+        except Exception as err:   # report, don't kill the thread silently
+            refetch_state["result"] = {"error": str(err)[:200]}
+        finally:
+            refetch_state.update(running=False, finished=time.time())
+    threading.Thread(target=run, name="clip-refetch", daemon=True).start()
+    return {"ok": True}
+
+
+@app.get("/api/clips/refetch")
+def api_clips_refetch_status():
+    return refetch_state
 
 
 @app.post("/api/model/train")

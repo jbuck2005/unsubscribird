@@ -30,6 +30,9 @@ LOG = logging.getLogger("unsub.collector")
 # or reboot (the clip is served by Home Assistant) is waited out: the last try is 15 minutes in.
 CLIP_RETRY_AT_S = (0, 10, 20, 40, 80, 160, 300, 480, 660, 900)
 MAX_CLIP_ATTEMPTS = len(CLIP_RETRY_AT_S)
+RECHECK_EVERY_S = 300        # check recent clips again this often...
+RECHECK_WINDOW_S = 45 * 60   # ...for visits up to this old (the bridge re-saves for 30 minutes)...
+RECHECK_MIN_AGE_S = 120      # ...once the first download had time to happen
 NO_CLIP_GRACE_S = 30 * 60
 # A bird that sits still barely changes the clip, so a quiet clip's best frame goes to OWL-ViT first. On real
 # feeder clips it found the bird in every quiet clip that had one (0.36-0.76) and nothing in the empty ones.
@@ -203,13 +206,83 @@ class Collector:
 
     # ---- clip + frames worker -----------------------------------------------
     def _worker(self) -> None:
+        last_recheck = 0.0
         while not self.stop.is_set():
             try:
                 self.process_pending()
+                if time.time() - last_recheck >= RECHECK_EVERY_S:
+                    last_recheck = time.time()
+                    self.refetch_recent(RECHECK_WINDOW_S / 3600, min_age_s=RECHECK_MIN_AGE_S)
             except Exception as err:
                 self.stats["last_error"] = str(err)[:200]
                 LOG.exception("Collector worker error")
             self.stop.wait(10)
+
+    # ---- clips that grew after download ------------------------------------------------
+    # The camera bridge may save a clip before the cloud has the whole video and replace it later, under the same
+    # name (ha-vicohome-bridge 0.3.5 re-checks for 30 minutes). So recent clips are checked again, and on demand
+    # ("Fetch clips again" on the Status page) any from the last hours.
+    def refresh_clip(self, v) -> str:
+        """Download the visit's clip again if Home Assistant now has a bigger one. Returns what happened:
+        "grew", "same", "gone" (HA no longer has it) or "error: ..."."""
+        trace = v["trace_id"]
+        try:
+            if not v["clip"] or not v["clip_url"] or not CLIP_URL.fullmatch(v["clip_url"]):
+                return "same"
+            clip = self.s.image_dir / v["clip"]
+            r = self.http.get(f"{self.s.ha_url}{v['clip_url']}", timeout=60, stream=True, allow_redirects=False)
+            if r.status_code != 200:
+                r.close()
+                return "gone"
+            have = v["clip_bytes"] or (clip.stat().st_size if clip.exists() else 0)
+            offered = int(r.headers.get("Content-Length") or 0)
+            # Clearly bigger only: an older download's size isn't recorded, and the cut file is a bit smaller.
+            if offered and offered <= have * (1.0 if v["clip_bytes"] else 1.25):
+                r.close()
+                return "same"
+            tmp = clip.with_suffix(".part")
+            try:
+                save_capped(r.raw, tmp)
+                new_len = framelib.probe(tmp)[0]
+                old_len = framelib.probe(clip)[0] + (v["clip_cut"] or 0) if clip.exists() else 0
+                if new_len < old_len + 1:
+                    return "same"
+                size = tmp.stat().st_size
+                tmp.replace(clip)
+            finally:
+                tmp.unlink(missing_ok=True)
+            cut = framelib.trim_start(clip, self.s.clip_skip_s)
+            self.db.set_visit(trace, clip_bytes=size, clip_cut=cut)
+            if not self.db.one("SELECT 1 FROM labels WHERE trace_id=?", trace):
+                self.repick_frames(trace, clip)   # a labelled visit keeps the frames a person chose
+            LOG.info("Visit %s: clip grew to %.1f s, fetched again", trace, new_len)
+            return "grew"
+        except Exception as err:
+            LOG.warning("Visit %s: fetching the clip again failed: %s", trace, err)
+            return f"error: {str(err)[:120]}"
+
+    def repick_frames(self, trace: str, clip) -> None:
+        """New frames from the longer clip; the old clip frames are marked rejected (kept on disk, never used)."""
+        info: dict = {}
+        new_ids = [self.db.add_frame(trace, "clip", rel(self.s, f["path"]), rel(self.s, f["thumb"]), f["t"], f["score"],
+                                     f["width"], f["height"], f.get("motion_box"))
+                   for f in framelib.extract_best(clip, clip.parent, self.s.frames_per_visit, info)]
+        with self.db.tx() as c:
+            c.execute(f"UPDATE frames SET rejected=0 WHERE id IN ({','.join('?' * len(new_ids))})", new_ids)
+            c.execute(f"""UPDATE frames SET rejected=1 WHERE trace_id=? AND kind='clip'
+                          AND id NOT IN ({','.join('?' * len(new_ids))})""", (trace, *new_ids))
+        self.db.set_visit(trace, activity=info.get("activity"))
+
+    def refetch_recent(self, hours: float, min_age_s: float = 0) -> dict:
+        """Check every visit with a clip from the last `hours` hours; returns counts per outcome."""
+        now = time.time()
+        rows = self.db.q("""SELECT * FROM visits WHERE clip IS NOT NULL AND clip_url IS NOT NULL AND ts >= ? AND ts <= ?
+                            ORDER BY ts""", now - hours * 3600, now - min_age_s)
+        counts: dict = {"checked": len(rows), "grew": 0, "same": 0, "gone": 0, "errors": 0}
+        for v in rows:
+            out = self.refresh_clip(v)
+            counts["errors" if out.startswith("error") else out] += 1
+        return counts
 
     def process_pending(self) -> None:
         now = time.time()
@@ -240,7 +313,9 @@ class Collector:
                 try:
                     save_capped(r.raw, tmp)
                     framelib.probe(tmp)   # only a real video becomes clip.mp4
+                    size = tmp.stat().st_size
                     tmp.rename(clip)
+                    self.db.set_visit(trace, clip_bytes=size)
                 finally:
                     tmp.unlink(missing_ok=True)
             row = self.db.one("SELECT clip_cut FROM visits WHERE trace_id=?", trace)

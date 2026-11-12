@@ -2,6 +2,15 @@
 {% block main %}
 <h2>Status</h2>
 <div id="status" class="cards"></div>
+<h3>Fetch clips again</h3>
+<p class="hint">For clips the camera bridge saved before the whole video was uploaded: downloads again each clip from
+  the last hours that Home Assistant now has longer. Visits nobody has labelled get new frames; labelled visits keep
+  the frames you chose. Clips from the last 45 minutes are checked by themselves.</p>
+<div class="row" style="align-items:center">
+  <label>Last <input type="number" id="refetch-hours" min="1" max="48" value="2" style="width:5em"> hours</label>
+  <button class="btn" id="refetch-go">Fetch clips again</button>
+  <span id="refetch-msg" class="msg"></span>
+</div>
 <h3>Raw</h3>
 <pre id="raw"></pre>
 {% endblock %}

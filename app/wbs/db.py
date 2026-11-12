@@ -132,7 +132,8 @@ class DB:
                              ("excluded", "INTEGER NOT NULL DEFAULT 0"),
                              ("clip_cut", "REAL"),    # 0.15.1: seconds cut from the clip's start (NULL = not yet)
                              ("clip_removed", "REAL"),    # 0.22: when retention deleted the clip (Empty visits)
-                             ("flagged", "REAL"), ("flag_note", "TEXT")):   # 0.29: "Wrong bird?" on the home page
+                             ("flagged", "REAL"), ("flag_note", "TEXT"),   # 0.29: "Wrong bird?" on the home page
+                             ("clip_bytes", "INTEGER")):   # 0.29: size of the clip as downloaded, before the cut
                 if col not in vcols:  # 0.5: live recognition result published to Home Assistant
                     c.execute(f"ALTER TABLE visits ADD COLUMN {col} {typ}")
             if not c.execute("SELECT 1 FROM species LIMIT 1").fetchone():

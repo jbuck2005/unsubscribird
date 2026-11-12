@@ -126,6 +126,8 @@ sticker for every bird found this year, and blanks for the ones on your species 
   **Model** (`/admin/model`: training, accuracy, LM Studio bake-off), **Patterns** (`/admin/patterns`: when
   birds come by hour, week and temperature; the quiet-feeder check; Project FeederWatch counts; eBird checklists to
   upload with eBird's Import data), **Status** (`/admin/status`).
+* **Status** (`/admin/status`) also has **Fetch clips again**: downloads again the clips from the last hours that Home
+  Assistant now has longer (the camera bridge may save a clip before the whole video is uploaded).
 * **Settings** (`/admin/settings`): long-term preferences: clip order and theme, the clip cut, frames per visit,
   recognition confidence, the automatic retrain (how often, at what hour), location. Saved in the database, so they
   survive redeploys and are in the nightly backup, and they apply as soon as you save. A saved value beats `.env`,

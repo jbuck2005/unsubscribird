@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Clips that grew after they were downloaded are fetched again: the Vicohome bridge may save a clip before the
+  whole video is uploaded and replace it later (bridge 0.3.5 re-checks for 30 minutes). Clips from the last 45
+  minutes are checked every 5 minutes, and **Fetch clips again** on the Status page does the last hours (up to
+  48) on demand. Visits nobody has labelled get new frames from the longer clip; labelled visits keep theirs.
 * **eBird checklists** (Patterns page): one checklist a day, every bird the camera saw with the most seen at once,
   as a file for eBird's **Import data** (format *eBird Record Format (Extended)*). Uncounted birds go in as X.
   Nothing is sent from here. New settings under **eBird**: location name, province or state, country, and protocol

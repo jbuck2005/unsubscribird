@@ -702,6 +702,25 @@ async function datasetPage() {
 }
 
 // ---- status page ------------------------------------------------------------------
+async function refetchStatus() {
+  const r = await api("/api/clips/refetch");
+  const res = r.result || {};
+  $("#refetch-go").disabled = r.running;
+  $("#refetch-msg").textContent = r.running ? `Checking the last ${r.hours} h…`
+    : res.error ? `Failed: ${res.error}`
+    : r.finished ? `Last ${r.hours} h: ${res.checked} checked, ${res.grew} fetched again (longer), ${res.same} unchanged` +
+      `${res.gone ? `, ${res.gone} no longer in Home Assistant` : ""}${res.errors ? `, ${res.errors} failed (see the log)` : ""}.` : "";
+  return r.running;
+}
+function refetchInit() {
+  refetchStatus();
+  $("#refetch-go").addEventListener("click", async () => {
+    try { await api("/api/clips/refetch", { method: "POST", body: JSON.stringify({ hours: +$("#refetch-hours").value }) }); }
+    catch (err) { $("#refetch-msg").textContent = err.message; return; }
+    const tick = async () => { if (await refetchStatus()) setTimeout(tick, 2000); };
+    tick();
+  });
+}
 async function statusPage() {
   const s = await api("/api/stats");
   const v = s.visits;
@@ -1039,3 +1058,4 @@ function patternsPage() {
   feederWatch();
 }
 if (page === "patterns") patternsPage();
+if (page === "status") refetchInit();
