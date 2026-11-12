@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.28.0
 
 * **Also seen** on the Review page: when a second species shares the clip (a nuthatch beside a chickadee) but has
   no frame of its own, add it there. The visit then shows under both species on the home page.
