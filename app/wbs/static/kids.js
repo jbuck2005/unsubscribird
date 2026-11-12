@@ -10,7 +10,7 @@ const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (
 const params = new URLSearchParams(location.search);
 const localToday = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const state = { day: params.get("day") || localToday(), species: params.get("species") || "",
-                sort: store.get("wbs.kidsSort", document.body.dataset.sort || "new"), visits: [], shown: [], open: -1,
+                sort: store.get("unsub.kidsSort", document.body.dataset.sort || "new"), visits: [], shown: [], open: -1,
                 card: false, flagged: {} };
 
 const fmtTime = (ts) => new Date(ts * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -75,7 +75,9 @@ function render(keepPlaying) {
     const a = Object.assign(document.createElement("a"), { href: url, target: "_blank", rel: "noopener noreferrer", textContent: site });
     return i ? [" · ", a] : [a];   // outside sites: full URLs, so no BASE
   })] : []));
-  $$("#chips .chip").forEach((c) => c.addEventListener("click", () => { state.species = c.dataset.sp; setUrl(); render(); }));
+  // A second click on the chip that is on turns the filter off again.
+  $$("#chips .chip").forEach((c) => c.addEventListener("click", () => {
+    state.species = c.dataset.sp === state.species ? "" : c.dataset.sp; setUrl(); render(); }));
 
   // A visit with two species (say a jay and a squirrel) is under both chips, named by the chip it was found by.
   const list = state.visits.filter((v) => !state.species || v.species === state.species || (v.also || []).includes(state.species))
@@ -230,7 +232,7 @@ viewer.addEventListener("touchend", (e) => {
 
 // ---- controls -----------------------------------------------------------------------
 $$(".sort button").forEach((b) => b.addEventListener("click", () => {
-  state.sort = b.dataset.sort; store.set("wbs.kidsSort", state.sort); render();
+  state.sort = b.dataset.sort; store.set("unsub.kidsSort", state.sort); render();
 }));
 $("#prev-day").addEventListener("click", () => { state.day = shiftDay(state.day, -1); setUrl(); load(); });
 $("#see-yesterday").addEventListener("click", () => { state.day = shiftDay(localToday(), -1); setUrl(); load(); });

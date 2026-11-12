@@ -19,7 +19,7 @@ from .species import NON_BIRD
 
 NON_BIRD_NAMES = {n for n, _, _ in NON_BIRD}
 
-LOG = logging.getLogger("wbs.prelabel")
+LOG = logging.getLogger("unsub.prelabel")
 
 PROMPT = (
     "You are an expert ornithologist. This frame is from a bird-feeder camera in {region}. "

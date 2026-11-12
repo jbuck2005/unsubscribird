@@ -18,7 +18,7 @@ IMAGES = "/media/unsubscribird"     # clips and frames: in HA's media folder, ou
 NICE = 15
 MEMINFO = Path("/proc/meminfo")
 MIN_MEMORY_GIB = 7
-LOG = logging.getLogger("wbs.start")
+LOG = logging.getLogger("unsub.start")
 
 # add-on option -> setting. Empty options are left out, so the defaults in config.py apply.
 OPTION_ENV = {

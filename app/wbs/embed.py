@@ -19,7 +19,7 @@ import numpy as np
 from .config import Settings
 from .db import DB
 
-LOG = logging.getLogger("wbs.embed")
+LOG = logging.getLogger("unsub.embed")
 
 EMBEDDER = "bioclip-2"
 EMB_VERSION = 2          # 2 = adds a 5th view: a square crop around the detected bird (when one is found)

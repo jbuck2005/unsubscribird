@@ -645,14 +645,14 @@ function sortRows(rows, key, dir) {
 }
 const DatasetSort = {
   get() {
-    try { const v = JSON.parse(localStorage.getItem("wbs.datasetSort")); if (v && v.key && !["kind", "family_name"].includes(v.key)) return v; } catch (e) { /* no storage */ }
+    try { const v = JSON.parse(localStorage.getItem("unsub.datasetSort")); if (v && v.key && !["kind", "family_name"].includes(v.key)) return v; } catch (e) { /* no storage */ }
     return { key: "name", dir: "asc" };
   },
   click(key) {
     const cur = this.get();
     const next = cur.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" }
                                  : { key, dir: NUMERIC_COLS.has(key) ? "desc" : "asc" };
-    try { localStorage.setItem("wbs.datasetSort", JSON.stringify(next)); } catch (e) { /* no storage */ }
+    try { localStorage.setItem("unsub.datasetSort", JSON.stringify(next)); } catch (e) { /* no storage */ }
     return next;
   },
 };

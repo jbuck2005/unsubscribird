@@ -11,7 +11,7 @@ import logging
 import threading
 import time
 
-LOG = logging.getLogger("wbs.retention")
+LOG = logging.getLogger("unsub.retention")
 DAY = 86400
 LABEL_GRACE_S = DAY      # a label must be this old before its clip can go
 MAX_PER_DAY = 150        # under the 200 deletions a night that a backup mirror (rsync --max-delete) may allow

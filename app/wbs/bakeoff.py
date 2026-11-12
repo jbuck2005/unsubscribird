@@ -21,7 +21,7 @@ from .db import DB
 from .prelabel import LMStudio, Prelabeler, consensus
 from .species import NON_BIRD
 
-LOG = logging.getLogger("wbs.bakeoff")
+LOG = logging.getLogger("unsub.bakeoff")
 NON_BIRD_NAMES = {n for n, _, _ in NON_BIRD}
 
 SCHEMA = """

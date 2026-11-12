@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Home page: clicking the species chip that is already on turns the filter off again.
+* Log names start with `unsub.` (were `wbs.`), and the browser's saved choices (theme, clip order, Dataset sort)
+  move to `unsub.` keys by themselves.
 * Home page: the **outdoor temperature now** next to Today, from the temperature sensor named in Settings
   (Patterns). Hidden when the sensor hasn't reported for half an hour.
 * Patterns: while temperatures are still coming in, the chart says how many readings it has and the latest one,

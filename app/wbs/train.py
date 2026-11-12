@@ -23,7 +23,7 @@ import numpy as np
 from .db import DB
 from .embed import EMBEDDER, EmbedWorker, frame_feature, from_blob, zero_shot
 
-LOG = logging.getLogger("wbs.train")
+LOG = logging.getLogger("unsub.train")
 MIN_VISITS = 3
 C_GRID = (0.5, 2.0, 8.0)
 

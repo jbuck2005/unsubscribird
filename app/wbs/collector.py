@@ -25,7 +25,7 @@ from . import frames as framelib
 from .config import Settings
 from .db import DB
 
-LOG = logging.getLogger("wbs.collector")
+LOG = logging.getLogger("unsub.collector")
 # When to try each clip download, in seconds after the visit arrived. The gaps grow so a Home Assistant restart
 # or reboot (the clip is served by Home Assistant) is waited out: the last try is 15 minutes in.
 CLIP_RETRY_AT_S = (0, 10, 20, 40, 80, 160, 300, 480, 660, 900)

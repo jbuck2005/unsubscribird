@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Any
 
-LOG = logging.getLogger("wbs.detect")
+LOG = logging.getLogger("unsub.detect")
 OWL_ID = "google/owlvit-base-patch32"
 QUERIES = ["a photo of a bird", "a photo of a squirrel"]
 LABELS = ["bird", "squirrel"]

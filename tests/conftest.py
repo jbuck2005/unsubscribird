@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "app"))
-_tmp = tempfile.mkdtemp(prefix="wbs-test-")
+_tmp = tempfile.mkdtemp(prefix="unsub-test-")
 os.environ.setdefault("UNSUB_DATA_DIR", f"{_tmp}/data")
 os.environ.setdefault("UNSUB_IMAGE_DIR", f"{_tmp}/images")
 os.environ.setdefault("UNSUB_HOST", "192.0.2.10")

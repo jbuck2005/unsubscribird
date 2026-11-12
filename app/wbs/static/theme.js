@@ -4,7 +4,16 @@
 (function () {
   const root = document.documentElement;
   const lat = parseFloat(root.dataset.lat || "45.42"), lon = parseFloat(root.dataset.lon || "-75.70");
-  const KEY = "wbs.theme";
+  // Saved choices were wbs.* before 0.29: move them to unsub.* once, so nobody loses theirs. (This file loads first.)
+  try {
+    for (const k of ["theme", "kidsSort", "datasetSort"]) {
+      const old = localStorage.getItem("wbs." + k);
+      if (old === null) continue;
+      if (localStorage.getItem("unsub." + k) === null) localStorage.setItem("unsub." + k, old);
+      localStorage.removeItem("wbs." + k);
+    }
+  } catch (e) { /* no storage */ }
+  const KEY = "unsub.theme";
   const fallback = root.dataset.themeDefault || "auto";   // from the Settings page
   const get = () => { try { return localStorage.getItem(KEY) || fallback; } catch (e) { return fallback; } };
   const set = (v) => { try { localStorage.setItem(KEY, v); } catch (e) { /* private mode */ } };

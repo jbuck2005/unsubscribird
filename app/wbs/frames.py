@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-LOG = logging.getLogger("wbs.frames")
+LOG = logging.getLogger("unsub.frames")
 
 AW, AH, FPS = 320, 180, 2.0      # analysis size and rate
 OVERLAY_ROWS = 0.12              # the camera's date/time stamp lives in the top strip: ignore it

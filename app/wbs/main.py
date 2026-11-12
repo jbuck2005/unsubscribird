@@ -39,7 +39,7 @@ from .retention import Retention
 from .train import Trainer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-LOG = logging.getLogger("wbs")
+LOG = logging.getLogger("unsub")
 HERE = Path(__file__).parent
 
 db = DB(settings.db_path)

@@ -21,7 +21,7 @@ import requests
 
 from .db import DB
 
-LOG = logging.getLogger("wbs.patterns")
+LOG = logging.getLogger("unsub.patterns")
 NOT_SHOWN = ("Empty", "Uncertain", "Unknown bird", "Other animal")
 SAMPLE_S = 600
 KEEP_WEATHER_DAYS = 400
