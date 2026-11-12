@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+* **Also seen** on the Review page: when a second species shares the clip (a nuthatch beside a chickadee) but has
+  no frame of its own, add it there. The visit then shows under both species on the home page.
+* New setting under Training: **Retrain every** (1 to 60 days; default 1). **Retrain every night** is now
+  **Retrain automatically**.
+* Correcting a species renames the clip to match, and links made with the old name lead to the new one.
+* Home page: each tile has the visit time on its own line under the species.
+* Home page: picking a species shows links to read about it, on Wikipedia and (for birds) All About Birds.
+  These are plain links: nothing loads from those sites until you click.
+* Model page: click a red number in the confusion table to see those visits and what the model made of each
+  frame, to see why it got them wrong. Needs a model trained on this version.
+
 ## 0.27.0
 
 * Home Assistant hears about a visit at once when the trained model is very sure, instead of waiting up to

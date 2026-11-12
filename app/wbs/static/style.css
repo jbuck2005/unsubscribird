@@ -68,6 +68,16 @@ kbd { background: var(--chip); border: 1px solid var(--line); border-radius: 4px
 table.cm td, table.cm th { text-align: center; padding: 4px 6px; font-variant-numeric: tabular-nums; }
 table.cm td.diag { background: var(--accent-soft); font-weight: 600; }
 table.cm td.off { color: var(--bad); font-weight: 600; }
+table.cm .cm-cell { font: inherit; color: inherit; background: none; border: 0; border-radius: 6px; padding: 2px 10px;
+  cursor: pointer; text-decoration: underline dotted; }
+table.cm .cm-cell:hover, table.cm .cm-cell:focus-visible, table.cm .cm-cell.on { background: var(--accent-soft); outline: 2px solid var(--focus); }
+.why { border-top: 1px solid var(--line); padding: 10px 0; }
+.why-frames { display: flex; flex-wrap: wrap; gap: 8px; }
+.why-frames figure { margin: 0; width: 160px; font-size: 12px; }
+.why-frames img, .why-frames .gone { width: 160px; aspect-ratio: 16/9; object-fit: cover; border-radius: 6px; display: block; }
+.why-frames .gone { display: grid; place-items: center; background: var(--accent-soft); }
+.why-frames figure.bad img { outline: 3px solid var(--bad); }
+.why-frames figure.bad figcaption { color: var(--bad); font-weight: 600; }
 .chip[hidden] { display: none; }   /* .chip sets display, which would override the hidden attribute */
 .chip.edited { background: color-mix(in srgb, var(--focus) 18%, transparent); color: var(--focus); font-weight: 600; }
 .visit.skipped { border-color: var(--bad); }

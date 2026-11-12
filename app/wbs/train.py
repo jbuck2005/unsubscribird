@@ -126,7 +126,23 @@ def cross_validate(X, y, groups, classes: list[str], C: float, seed: int = 0) ->
     return {"oof": oof, "n_splits": n_splits}
 
 
-def metrics_from(oof: np.ndarray, X, y, groups, classes: list[str], vlab: np.ndarray | None = None) -> dict[str, Any]:
+def mistakes(oof: np.ndarray, y, groups, classes: list[str], visits, vp, vy, vpred, frame_ids) -> list[dict[str, Any]]:
+    """The visits behind each wrong cell of the confusion table, with what the model made of each frame
+    (out-of-fold), so you can see why: one bad frame outvoting good ones, a second bird, a slip in the label."""
+    out = []
+    for v, lab, pred, p in zip(visits, vy, vpred, vp):
+        if lab == pred:
+            continue
+        idx = np.flatnonzero(groups == v)
+        out.append({"trace_id": str(v), "label": str(lab), "predicted": str(pred), "confidence": round(float(p.max()), 3),
+                    "label_prob": round(float(p[classes.index(lab)]), 3),
+                    "frames": [{"id": int(frame_ids[i]), "label": str(y[i]), "predicted": classes[int(oof[i].argmax())],
+                                "confidence": round(float(oof[i].max()), 3)} for i in idx] if frame_ids is not None else []})
+    return sorted(out, key=lambda m: -m["confidence"])[:200]
+
+
+def metrics_from(oof: np.ndarray, X, y, groups, classes: list[str], vlab: np.ndarray | None = None,
+                 frame_ids=None) -> dict[str, Any]:
     frame_pred = np.array(classes)[oof.argmax(axis=1)]
     visits, vp, vy = visit_level(oof, groups, y if vlab is None else vlab)
     vpred = np.array(classes)[vp.argmax(axis=1)]
@@ -144,7 +160,8 @@ def metrics_from(oof: np.ndarray, X, y, groups, classes: list[str], vlab: np.nda
     return {"frame_accuracy": round(float((frame_pred == y).mean()), 3),
             "visit_accuracy": round(float((vpred == vy).mean()), 3),
             "visits": len(visits), "per_class": per_class, "confusion": confusion,
-            "suspect_labels": sorted(suspects, key=lambda s: -s["confidence"])[:30]}
+            "suspect_labels": sorted(suspects, key=lambda s: -s["confidence"])[:30],
+            "mistakes": mistakes(oof, y, groups, classes, visits, vp, vy, vpred, frame_ids)}
 
 
 def baselines(db: DB, visits: list[str], labels: dict[str, str]) -> dict[str, Any]:
@@ -210,6 +227,7 @@ class Trainer:
                              + ", ".join(f"{c} {n}" for c, n in vcount.most_common()))
         keep = np.isin(y, classes)
         X, y, groups, main = X[keep], y[keep], groups[keep], main[keep]
+        frame_ids = np.array(ds["frame_ids"])[keep]
         vlab = visit_labels(y, main, groups, classes)
 
         self.status["message"] = "cross-validating"
@@ -218,7 +236,7 @@ class Trainer:
             cv = cross_validate(X, y, groups, classes, C)
             if cv is None:
                 break
-            m = metrics_from(cv["oof"], X, y, groups, classes, vlab)
+            m = metrics_from(cv["oof"], X, y, groups, classes, vlab, frame_ids)
             if best is None or m["visit_accuracy"] > best[1]["visit_accuracy"]:
                 best = (C, m, cv["n_splits"], cv["oof"])
         C = best[0] if best else 2.0

@@ -797,7 +797,8 @@ async function modelPage(first = false) {
   const rows = cls.map((c) => { const p = mt.per_class?.[c] || {};
     return `<tr><td>${esc(c)}</td><td class="n">${p.visits ?? "–"}</td><td class="n">${pct(p.precision)}</td><td class="n">${pct(p.recall)}</td></tr>`; }).join("");
   const cm = mt.confusion ? `<table class="cm"><thead><tr><th>true ↓ / predicted →</th>${cls.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
-    mt.confusion.map((r, i) => `<tr><th>${esc(cls[i])}</th>${r.map((n, j) => `<td class="${i === j ? "diag" : n ? "off" : ""}">${n || ""}</td>`).join("")}</tr>`).join("") +
+    mt.confusion.map((r, i) => `<tr><th>${esc(cls[i])}</th>${r.map((n, j) => `<td class="${i === j ? "diag" : n ? "off" : ""}">${
+      i !== j && n && mt.mistakes ? `<button class="cm-cell" data-true="${esc(cls[i])}" data-pred="${esc(cls[j])}" title="Show these visits">${n}</button>` : n || ""}</td>`).join("")}</tr>`).join("") +
     "</tbody></table>" : "";
   const sus = (mt.suspect_labels || []).map((s) => `<li><a href="${BASE}/admin?visit=${esc(s.trace_id)}">${esc(s.trace_id.slice(-10))}</a>: you said <b>${esc(s.label)}</b>, model says <b>${esc(s.predicted)}</b> (${pct(s.confidence)})</li>`).join("");
   const few = Object.entries(mt.too_few || {}).map(([k, n]) => `${esc(k)} (${n})`).join(", ");
@@ -814,8 +815,42 @@ async function modelPage(first = false) {
     <p class="hint">${mt.cv_folds ? `${mt.cv_folds}-fold cross-validation over ${mt.visits} visits, C=${mt.C}.` : esc(mt.note || "")}
       ${few ? ` Not learned yet (need ${m.min_visits}+ visits): ${few}.` : ""}</p>
     <table><thead><tr><th>Species</th><th class="n">Visits</th><th class="n">Precision</th><th class="n">Recall</th></tr></thead><tbody>${rows}</tbody></table>
-    ${cm ? `<h3>Confusion (visits)</h3>${cm}` : ""}
+    ${cm ? `<h3>Confusion (visits)</h3>${cm}<p class="hint">${mt.mistakes ? "Click a red number to see those visits and what the model made of each frame."
+      : "Train a new model to see the visits behind each red number."}</p><div id="cm-why"></div>` : ""}
     ${sus ? `<h3>Labels to double-check</h3><p class="hint">Confirmed visits the model confidently disagrees with (out-of-fold). Usually a slip; sometimes the model is wrong.</p><ul>${sus}</ul>` : ""}`;
+  const cell = (b) => `${latest.id}|${b.dataset.true}|${b.dataset.pred}`;
+  $$(".cm-cell").forEach((b) => {
+    if (cmPick?.key === cell(b)) { b.classList.add("on"); $("#cm-why").innerHTML = cmPick.html; }   // survive the 5 s refresh
+    b.addEventListener("click", () => {
+      $$(".cm-cell").forEach((x) => x.classList.toggle("on", x === b));
+      confusionWhy(cell(b), mt.mistakes.filter((m) => m.label === b.dataset.true && m.predicted === b.dataset.pred));
+    });
+  });
+}
+let cmPick = null;   // the confusion cell open on the Model page, and what it shows
+// Why the model got these visits wrong: each frame it saw, with its out-of-fold guess for that frame.
+async function confusionWhy(key, list) {
+  cmPick = { key, html: '<p class="msg">Loading…</p>' };
+  $("#cm-why").innerHTML = cmPick.html;
+  const visits = await Promise.all(list.map((m) => api(`/api/visits/${encodeURIComponent(m.trace_id)}`).catch(() => null)));
+  if (cmPick.key !== key) return;   // another cell was picked meanwhile
+  cmPick.html = list.map((m, k) => {
+    const v = visits[k], byId = Object.fromEntries((v?.frames || []).map((f) => [f.id, f]));
+    const wrong = m.frames.filter((f) => f.predicted !== f.label).length;
+    const notes = [];
+    if (!v) notes.push("This visit is gone (deleted or cleaned up).");
+    else if (v.label?.species !== m.label) notes.push(`Since relabelled as <b>${esc(v.label?.species || "unlabelled")}</b>: a retrain will count it right.`);
+    if ((v?.label?.also_seen || []).length) notes.push(`Also seen: ${esc(v.label.also_seen.join(", "))}.`);
+    if (m.frames.length && wrong === m.frames.length) notes.push("The model disagreed on every frame: check the label.");
+    else if (wrong) notes.push(`The model got ${wrong} of ${m.frames.length} frames wrong (red), and they decided the visit.`);
+    return `<div class="why"><p>You said <b>${esc(m.label)}</b>, the model said <b>${esc(m.predicted)}</b> (${pct(m.confidence)};
+        ${esc(m.label)} ${pct(m.label_prob)}). <a href="${BASE}/admin?visit=${encodeURIComponent(m.trace_id)}">Open visit</a></p>
+      ${notes.length ? `<p class="hint">${notes.join(" ")}</p>` : ""}
+      <div class="why-frames">${m.frames.map((f) => { const fr = byId[f.id];
+        return `<figure class="${f.predicted === f.label ? "" : "bad"}">${fr ? `<img loading="lazy" src="${BASE}/img/${esc(fr.thumb || fr.path)}" alt="">` : '<div class="gone">no image</div>'}
+          <figcaption>${esc(f.predicted)} ${pct(f.confidence)}${f.label !== m.label ? `<br><span class="msg">frame: ${esc(f.label)}</span>` : ""}</figcaption></figure>`; }).join("")}</div></div>`;
+  }).join("") || '<p class="msg">No visits.</p>';
+  if ($("#cm-why")) $("#cm-why").innerHTML = cmPick.html;
 }
 async function bakeoffPanel(first = false) {
   const b = await api("/api/bakeoff");

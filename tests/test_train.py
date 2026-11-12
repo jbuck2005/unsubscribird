@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from wbs import main
 from wbs.embed import EMBEDDER, make_views, species_text, to_blob, zero_shot
-from wbs.train import Trainer, build_dataset
+from wbs.train import Trainer, build_dataset, metrics_from
 
 DIM = 32
 RNG = np.random.default_rng(1)
@@ -79,6 +79,7 @@ def test_train_cross_validates_by_visit_and_predicts(tmp_path):
     assert metrics["too_few"] == {"Northern Cardinal": 1}
     assert metrics["baselines"]["vlm"]["visit_accuracy"] == 1.0
     assert len(metrics["confusion"]) == 3 and sum(map(sum, metrics["confusion"])) == 18
+    assert len(metrics["mistakes"]) == 18 - sum(metrics["confusion"][i][i] for i in range(3))
 
     s = main.db.one("SELECT * FROM suggestions WHERE trace_id='tu000' AND source='model'")
     assert s["species"] == "Blue Jay" and s["model"] == f"v{out['model_id']}"
@@ -91,6 +92,19 @@ def test_train_cross_validates_by_visit_and_predicts(tmp_path):
     out2 = trainer.train()
     assert c.post(f"/api/models/{out['model_id']}/activate").json()["ok"]
     assert main.db.one("SELECT id FROM models WHERE active=1")["id"] == out["model_id"] != out2["model_id"]
+
+
+def test_confusion_keeps_the_wrong_visits_and_their_frames():
+    """Each wrong cell of the confusion table can show its visits, frame by frame."""
+    classes = ["Blue Jay", "Empty"]
+    groups = np.array(["a", "a", "b", "b", "b"])
+    y = np.array(["Blue Jay", "Blue Jay", "Empty", "Empty", "Blue Jay"])     # b: one frame tagged Blue Jay
+    oof = np.array([[.9, .1], [.8, .2], [.2, .8], [.9, .1], [.95, .05]])     # b's two jay-ish frames outvote it
+    m = metrics_from(oof, None, y, groups, classes, np.array(["Blue Jay"] * 2 + ["Empty"] * 3), [11, 12, 21, 22, 23])
+    assert m["confusion"] == [[1, 0], [1, 0]]
+    (w,) = m["mistakes"]
+    assert (w["trace_id"], w["label"], w["predicted"]) == ("b", "Empty", "Blue Jay") and w["label_prob"] == 0.317
+    assert [(f["id"], f["label"], f["predicted"]) for f in w["frames"]] ==         [(21, "Empty", "Empty"), (22, "Empty", "Blue Jay"), (23, "Blue Jay", "Blue Jay")]
 
 
 def test_train_refuses_with_too_little_data(tmp_path):
