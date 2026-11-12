@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* **eBird checklists** (Patterns page): one checklist a day, every bird the camera saw with the most seen at once,
+  as a file for eBird's **Import data** (format *eBird Record Format (Extended)*). Uncounted birds go in as X.
+  Nothing is sent from here. New settings under **eBird**: location name, province or state, country, and protocol
+  (Stationary or Incidental).
 * Home page: clicking the species chip that is already on turns the filter off again.
 * Log names start with `unsub.` (were `wbs.`), and the browser's saved choices (theme, clip order, Dataset sort)
   move to `unsub.` keys by themselves.

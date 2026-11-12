@@ -58,9 +58,12 @@ def count(db: DB, first_day: date, days: int = 2) -> dict[str, Any]:
                 seen[r["trace_id"]] = r["ts"]
                 n, source = visit_count(db, r["trace_id"], sp, typed)
                 it = species.setdefault(sp, {"species": sp, "max": 0, "visits": 0, "days": {}, "trace_id": None,
-                                             "source": ""})
+                                             "source": "", "day_visits": {}, "counted": {}})
                 it["visits"] += 1
                 it["days"][d.isoformat()] = max(it["days"].get(d.isoformat(), 0), n)
+                it["day_visits"][d.isoformat()] = it["day_visits"].get(d.isoformat(), 0) + 1
+                if source != "one bird":   # a real count (yours or LM Studio's), not the "at least one" fallback
+                    it["counted"][d.isoformat()] = max(it["counted"].get(d.isoformat(), 0), n)
                 if n > it["max"]:
                     it.update(max=n, trace_id=r["trace_id"], source=source)
         local = [datetime.fromtimestamp(t) for t in seen.values()]

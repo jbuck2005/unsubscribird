@@ -69,6 +69,13 @@ PREFS = (
     Pref("feeder_quiet_h", "Patterns", "Feeder quiet after",
          "No birds for this long, when those hours are usually busy, turns on Home Assistant's Feeder quiet "
          "sensor (maybe empty). 0 = off.", "float", 0, 24, unit=" h"),
+    Pref("ebird_location", "eBird", "Location name",
+         "Its name in your eBird account (My eBird, Manage My Locations); eBird offers to match it on import.", "str"),
+    Pref("ebird_state", "eBird", "Province or state", "eBird's code, 1 to 3 letters: ON, QC, NY...", "str"),
+    Pref("ebird_country", "eBird", "Country", "Two letters: CA, US...", "str"),
+    Pref("ebird_protocol", "eBird", "Protocol",
+         "Stationary: a complete, timed count from the first visit to the last. Incidental: just the birds seen.",
+         "choice", choices=(("stationary", "Stationary"), ("incidental", "Incidental"))),
     Pref("region", "Location", "Region", "Told to LM Studio, to help it pick likely species.", "str"),
     Pref("sun_lat", "Location", "Latitude", "For sunrise and sunset.", "float", -90, 90),
     Pref("sun_lon", "Location", "Longitude", "West is negative.", "float", -180, 180),

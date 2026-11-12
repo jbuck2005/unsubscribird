@@ -25,6 +25,20 @@
   <div id="pat-temp"></div>
 </section>
 
+<section id="eb">
+  <h3>eBird checklists</h3>
+  <p class="hint">One checklist a day for eBird (ebird.org, Cornell Lab): every bird the camera saw, with the most seen at once in one clip. A bird nobody counted goes in as
+    X (present, not counted); a number from the Review page's How many? or LM Studio goes in as is. Download the file,
+    then in eBird choose <b>Submit, Import data</b>, format <b>eBird Record Format (Extended)</b>. Nothing is sent from
+    here. Location, region and protocol are on the Settings page (eBird).</p>
+  <div class="row" style="align-items:center">
+    <label>From <input type="date" id="eb-start"></label>
+    <label>to <input type="date" id="eb-end"></label>
+    <button class="btn" id="eb-csv">Download for eBird</button>
+  </div>
+  <div id="eb-out"></div>
+</section>
+
 <section id="fw">
   <h3>Project FeederWatch count</h3>
   <p class="hint">FeederWatch (November to April) asks, for each species, the most birds you saw <b>at once</b> over two

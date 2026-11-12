@@ -953,6 +953,26 @@ def api_patterns(days: int = 30):
             "feeder": patterns.feeder_quiet(db, settings.feeder_quiet_h)}
 
 
+@app.get("/api/ebird")
+def api_ebird(start: str | None = None, end: str | None = None, format: str = "json"):
+    """eBird checklists, one per day from `start` to `end` (default yesterday), as a file to upload to eBird."""
+    from datetime import date, timedelta
+    from . import ebird
+    try:
+        first = date.fromisoformat(start) if start else date.today() - timedelta(days=1)
+        last = date.fromisoformat(end) if end else first
+    except ValueError:
+        raise HTTPException(400, "start and end must be YYYY-MM-DD")
+    if not 0 <= (last - first).days < 92:
+        raise HTTPException(400, "pick up to 92 days, end not before start")
+    lists = ebird.checklists(db, settings, first, last)
+    if format == "csv":
+        return PlainTextResponse(ebird.to_csv(lists, settings), media_type="text/csv", headers={
+            "Content-Disposition": f'attachment; filename="ebird_{first.isoformat()}_{last.isoformat()}.csv"'})
+    return {"checklists": lists, "location": settings.ebird_location, "protocol": settings.ebird_protocol,
+            "region": f"{settings.ebird_state}, {settings.ebird_country}"}
+
+
 @app.get("/api/feederwatch")
 def api_feederwatch(start: str | None = None, format: str = "json"):
     """A Project FeederWatch count: two days from `start` (default yesterday), most of each species at once."""

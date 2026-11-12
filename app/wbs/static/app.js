@@ -1009,11 +1009,28 @@ async function patterns(days) {
         : `<td><span class="bar" style="width:${(100 * b.per_hour / top).toFixed(1)}%"></span></td>
       <td class="n">${b.per_hour} / h <span class="msg">(${b.visits} in ${b.hours} h)</span></td>`}</tr>`).join("")}</tbody></table>`;
 }
+async function eBird() {
+  const r = await api(`/api/ebird?start=${$("#eb-start").value}&end=${$("#eb-end").value}`);
+  const day = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  $("#eb-out").innerHTML = r.checklists.length ? `<p class="hint">${r.checklists.length} checklist${r.checklists.length === 1 ? "" : "s"}
+      at <b>${esc(r.location)}</b> (${esc(r.region)}), ${esc(r.protocol)}.</p>
+    <table><thead><tr><th>Day</th><th>Start</th><th class="n">Minutes</th><th>Birds (most at once)</th></tr></thead><tbody>
+    ${r.checklists.map((c) => `<tr><td>${esc(day(c.day))}</td><td>${esc(c.start)}</td><td class="n">${c.minutes}</td>
+      <td>${c.species.map((s) => `${esc(s.species)} <b>${esc(s.number)}</b>`).join(", ")}</td></tr>`).join("")}</tbody></table>`
+    : '<p class="msg">No birds on those days.</p>';
+}
 function patternsPage() {
   const y = new Date(); y.setDate(y.getDate() - 1);
   $("#fw-start").value = isoDay(y);
   $("#fw-start").max = isoDay(y);
   $("#fw-start").addEventListener("change", feederWatch);
+  $("#eb-start").value = $("#eb-end").value = isoDay(y);
+  $("#eb-start").max = $("#eb-end").max = isoDay(new Date());
+  $("#eb-start").addEventListener("change", () => { if ($("#eb-end").value < $("#eb-start").value) $("#eb-end").value = $("#eb-start").value; eBird(); });
+  $("#eb-end").addEventListener("change", eBird);
+  $("#eb-csv").addEventListener("click", () => {
+    location.href = `${BASE}/api/ebird?start=${$("#eb-start").value}&end=${$("#eb-end").value}&format=csv`; });
+  eBird();
   const days = () => +$(".pat-range .on").dataset.days;
   $$(".pat-range [data-days]").forEach((b) => b.addEventListener("click", () => {
     $$(".pat-range [data-days]").forEach((x) => x.classList.toggle("on", x === b)); patterns(days()); }));

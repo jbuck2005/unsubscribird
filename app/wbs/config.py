@@ -89,6 +89,11 @@ class Settings:
     auto_train_min_new: int = field(default_factory=lambda: int(_env("UNSUB_AUTO_TRAIN_MIN_NEW", "5")))
     detect_enabled: bool = field(default_factory=lambda: _env("UNSUB_DETECT", "true").lower() in ("1", "true", "yes"))
     region: str = field(default_factory=lambda: _env("UNSUB_REGION", "Ottawa, Ontario, Canada"))
+    # eBird checklists (ebird.py): the location's name in your eBird account, eBird's region codes, the protocol.
+    ebird_location: str = field(default_factory=lambda: _env("UNSUB_EBIRD_LOCATION", "Bird feeder"))
+    ebird_state: str = field(default_factory=lambda: _env("UNSUB_EBIRD_STATE", "ON"))
+    ebird_country: str = field(default_factory=lambda: _env("UNSUB_EBIRD_COUNTRY", "CA"))
+    ebird_protocol: str = field(default_factory=lambda: _env("UNSUB_EBIRD_PROTOCOL", "stationary"))
     # The camera wakes up dark (or washed out) for ~1.5 s: clips shown to people skip this many seconds.
     # The original clip.mp4 is kept untouched for the frame picker and training. 0 turns trimming off.
     kids_sort: str = field(default_factory=lambda: _env("UNSUB_KIDS_SORT", "new"))
