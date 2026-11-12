@@ -23,6 +23,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
 from . import feederwatch
+from . import patterns
 from . import frames as framelib
 from .collector import Collector
 from .config import settings
@@ -51,6 +52,7 @@ collector.detector = embed_worker.detector
 trainer = Trainer(db, embed_worker, settings.data_dir / "models")
 recognizer = Recognizer(settings, db, collector.publish, canonical=lambda n: canonical(n, species_index()))
 retention = Retention(settings, db)
+weather = patterns.WeatherSampler(settings, db, settings.ha_api_url, settings.ha_token)
 bakeoff = Bakeoff(db, prelabeler.lm, prelabeler, settings.image_dir, lambda n: canonical(n, species_index()))
 if settings.ha_publish:
     collector.on_connected = recognizer.publish_discovery
@@ -71,6 +73,7 @@ async def lifespan(app: FastAPI):
         recognizer.start()
     if settings.embed_enabled:
         trainer.start_scheduler(settings)
+    weather.start()
     LOG.info("%s %s started (images %s, db %s)", settings.site_name, __version__, settings.image_dir, settings.db_path)
     yield
     collector.stop.set()
@@ -78,6 +81,7 @@ async def lifespan(app: FastAPI):
     embed_worker.stop.set()
     recognizer.stop.set()
     retention.stop.set()
+    weather.stop.set()
 
 
 app = FastAPI(title="un-subscribird", version=__version__, lifespan=lifespan)
@@ -859,6 +863,17 @@ def api_gallery(day: str | None = None, species: str | None = None):
                        "frame_species": (vj["label"] or {}).get("frame_species", {})})
     return {"day": d.isoformat(), "species": species, "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])),
             "visits": visits}
+
+
+@app.get("/api/patterns")
+def api_patterns(days: int = 30):
+    """The Patterns page: visits by hour of day (last `days` days), by week, by temperature; the feeder check."""
+    if not 1 <= days <= 3660:
+        raise HTTPException(400, "days must be 1 to 3660")
+    return {"hours": patterns.by_hour(db, days), "weeks": patterns.by_week(db),
+            "temperature": patterns.by_temperature(db, days),
+            "temp_sensor": {"entity": settings.temp_sensor, "token": bool(settings.ha_token), "error": weather.last_error},
+            "feeder": patterns.feeder_quiet(db, settings.feeder_quiet_h)}
 
 
 @app.get("/api/feederwatch")

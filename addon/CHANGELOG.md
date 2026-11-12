@@ -15,6 +15,12 @@
   own feeder's frames, with the day it first came. Dashed blanks are the birds on your species list still to find.
 * New **Patterns** page, starting with a **Project FeederWatch count**: pick two days and get the most birds of
   each species seen at once, ready to copy into FeederWatch (or download as CSV). Nothing is sent anywhere.
+* Patterns also shows **when birds come** (by hour of the day and by week through the season) and, with a
+  Home Assistant temperature sensor named in Settings, **bird visits per hour at each outdoor temperature**. With
+  Docker the sensor needs a long-lived token in `WBS_HA_TOKEN`; the add-on now asks Home Assistant for API access
+  to read it.
+* New Home Assistant sensor **Feeder quiet** (a problem sensor): on when no birds came for 3 hours (Settings,
+  Patterns) at a time of day that usually brings them. Maybe the feeder is empty.
 * Review page: a **How many?** box for the most birds of the species at once. FeederWatch counts use it first,
   then LM Studio's count.
 * Model page: click a red number in the confusion table to see those visits and what the model made of each

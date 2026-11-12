@@ -49,6 +49,10 @@ services:
       WBS_AUTO_TRAIN_HOUR: ${WBS_AUTO_TRAIN_HOUR:-2}
       WBS_AUTO_TRAIN_DAYS: ${WBS_AUTO_TRAIN_DAYS:-1}
       WBS_AUTO_TRAIN_MIN_NEW: ${WBS_AUTO_TRAIN_MIN_NEW:-5}
+      WBS_TEMP_SENSOR: ${WBS_TEMP_SENSOR:-}
+      WBS_FEEDER_QUIET_H: ${WBS_FEEDER_QUIET_H:-3}
+      # Home Assistant long-lived token, only to read WBS_TEMP_SENSOR
+      WBS_HA_TOKEN: ${WBS_HA_TOKEN:-}
       # Settings (/admin) login; without it the Settings area stays locked
       WBS_ADMIN_PASSWORD: ${WBS_ADMIN_PASSWORD:-}
       WBS_ALLOWED_HOSTS: ${WBS_ALLOWED_HOSTS:-}

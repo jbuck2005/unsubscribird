@@ -20,6 +20,8 @@ ports_description:
   8095/tcp: Kids' page and Settings without Home Assistant (optional)
 services:
   - mqtt:want
+# Reads the temperature sensor named on the Settings page (Patterns), and nothing else.
+homeassistant_api: true
 map:
   - type: media
     read_only: false

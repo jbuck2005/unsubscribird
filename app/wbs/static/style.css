@@ -202,3 +202,28 @@ pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8p
 .pref p.meta { margin: 4px 0 0; }
 .pref .link { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; }
 .prefs-save { position: sticky; bottom: 0; align-items: center; background: var(--bg); padding: 10px 0; }
+
+/* Patterns page. Heat tables: one hue (the accent), five steps toward it from the panel; empty cells stay blank. */
+.pat-range { align-items: center; margin-bottom: 8px; }
+.pat-range .btn.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.feeder-alert { border-left: 4px solid var(--warn); padding: 8px 12px; background: var(--chip); border-radius: 6px; }
+.heatwrap { overflow-x: auto; }
+table.heat { border-collapse: separate; border-spacing: 2px; width: auto; }
+table.heat th { font-weight: 500; font-size: 12px; color: var(--muted); white-space: nowrap; text-align: left; padding: 0 6px 0 0; }
+table.heat thead th { padding: 0; width: 18px; height: 16px; position: relative; }
+table.heat thead th span { position: absolute; left: 0; bottom: 2px; }   /* labels overhang; columns stay even */
+table.heat td { width: 18px; height: 18px; padding: 0; border-radius: 4px; background: var(--chip); }
+table.heat td.n { background: none; font-size: 12px; color: var(--muted); padding-left: 6px; width: auto; }
+.heat .h1, .heat-key .h1 { background: color-mix(in srgb, var(--accent) 20%, var(--panel)); }
+.heat .h2, .heat-key .h2 { background: color-mix(in srgb, var(--accent) 40%, var(--panel)); }
+.heat .h3, .heat-key .h3 { background: color-mix(in srgb, var(--accent) 60%, var(--panel)); }
+.heat .h4, .heat-key .h4 { background: color-mix(in srgb, var(--accent) 80%, var(--panel)); }
+.heat .h5, .heat-key .h5 { background: var(--accent); }
+.heat-key { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 2px; }
+.heat-key span { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+table.bars { width: 100%; max-width: 760px; }
+table.bars th { font-weight: 500; white-space: nowrap; text-align: left; width: 9em; }
+table.bars td:nth-child(2) { width: 55%; }
+table.bars .bar { display: block; height: 12px; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+table.bars td.n { white-space: nowrap; }

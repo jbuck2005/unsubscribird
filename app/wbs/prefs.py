@@ -63,6 +63,12 @@ PREFS = (
          unit=" days"),
     Pref("auto_train_hour", "Training", "Retrain at", "Hour of the day, 0-23.", "int", 0, 23, unit=":00"),
     Pref("auto_train_min_new", "Training", "New labels needed", "Skip the retrain with fewer than this.", "int", 1, 1000),
+    Pref("temp_sensor", "Patterns", "Temperature sensor",
+         "A Home Assistant sensor or weather entity, e.g. sensor.outdoor_temperature, sampled every 10 minutes "
+         "for the Patterns page. Empty = off. With Docker it also needs WBS_HA_TOKEN.", "str"),
+    Pref("feeder_quiet_h", "Patterns", "Feeder quiet after",
+         "No birds for this long, when those hours are usually busy, turns on Home Assistant's Feeder quiet "
+         "sensor (maybe empty). 0 = off.", "float", 0, 24, unit=" h"),
     Pref("region", "Location", "Region", "Told to LM Studio, to help it pick likely species.", "str"),
     Pref("sun_lat", "Location", "Latitude", "For sunrise and sunset.", "float", -90, 90),
     Pref("sun_lon", "Location", "Longitude", "West is negative.", "float", -180, 180),

@@ -75,6 +75,11 @@ CREATE TABLE IF NOT EXISTS models (
     path TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 0
 );
 
+-- Outdoor temperature from Home Assistant, every 10 minutes (patterns.WeatherSampler), for the Patterns page.
+CREATE TABLE IF NOT EXISTS weather (
+    ts REAL PRIMARY KEY, temp REAL NOT NULL, unit TEXT
+);
+
 CREATE TABLE IF NOT EXISTS species (
     name TEXT PRIMARY KEY,
     scientific TEXT, kind TEXT NOT NULL,      -- bird | other

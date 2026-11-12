@@ -55,7 +55,7 @@ def test_the_gallery_finds_each_species_photo(monkeypatch):
 
 def test_example_env_has_no_credentials():
     example = (ROOT / "deploy/.env.example").read_text()
-    for key in ("WBS_MQTT_USER", "WBS_MQTT_PASSWORD", "WBS_ADMIN_PASSWORD"):
+    for key in ("WBS_MQTT_USER", "WBS_MQTT_PASSWORD", "WBS_ADMIN_PASSWORD", "WBS_HA_TOKEN"):
         assert f"\n{key}=\n" in example
 
 

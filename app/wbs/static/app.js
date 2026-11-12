@@ -956,11 +956,63 @@ async function feederWatch() {
       half-day it ran. When it saw birds:</p><ul>${eff}</ul>`
     : '<p class="msg">No birds on those days.</p>';
 }
+// A heat table: rows are species, columns are hours or weeks; one hue, darker = more (5 steps of the max).
+function heatTable(rows, counts, cols, label, title) {
+  const max = Math.max(1, ...rows.flatMap((r) => counts[r]));
+  const step = (n) => n ? Math.min(5, Math.ceil(5 * n / max)) : 0;
+  return `<table class="heat"><thead><tr><th></th>${cols.map((c) => `<th><span>${esc(label(c))}</span></th>`).join("")}<th class="n">All</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr><th>${esc(r)}</th>${cols.map((c) => { const n = counts[r][c.i];
+      return `<td class="h${step(n)}" title="${esc(title(r, c, n))}"><span class="sr">${n}</span></td>`; }).join("")}
+      <td class="n">${counts[r].reduce((a, b) => a + b, 0)}</td></tr>`).join("")}</tbody></table>
+    <p class="heat-key" aria-hidden="true">Fewer <span class="h1"></span><span class="h2"></span><span class="h3"></span><span class="h4"></span><span class="h5"></span> More
+      (strongest = ${max} visits)</p>`;
+}
+const hourName = (h) => new Date(2000, 0, 1, h).toLocaleTimeString([], { hour: "numeric" });
+const visitsWord = (n) => `${n} visit${n === 1 ? "" : "s"}`;
+async function patterns(days) {
+  const r = await api(`/api/patterns?days=${days}`);
+  const f = r.feeder;
+  $("#feeder").innerHTML = !f.enabled ? '<p class="msg">Feeder check is off (Settings, Patterns).</p>'
+    : f.quiet ? `<p class="feeder-alert"><b>⚠ Feeder quiet:</b> no birds in the last ${f.hours} h, when these hours usually bring
+        about ${f.expected}. Maybe it needs filling. Home Assistant's <b>Feeder quiet</b> sensor is on.</p>`
+    : `<p class="msg">✓ Feeder busy as usual: ${visitsWord(f.recent)} in the last ${f.hours} h (usually about ${f.expected}).</p>`;
+  const h = r.hours, used = h.species.flatMap((sp) => h.counts[sp].map((n, i) => n ? i : -1)).filter((i) => i >= 0);
+  const lo = Math.max(0, Math.min(...used) - 1), hi = Math.min(23, Math.max(...used) + 1);
+  const hours = used.length ? Array.from({ length: hi - lo + 1 }, (_, k) => ({ i: lo + k })) : [];
+  $("#pat-hours").innerHTML = h.species.length ? heatTable(h.species, h.counts, hours,
+    (c) => c.i % 3 === 0 ? hourName(c.i) : "", (sp, c, n) => `${sp}, ${hourName(c.i)} to ${hourName((c.i + 1) % 24)}: ${visitsWord(n)}`)
+    : '<p class="msg">No visits in this period.</p>';
+  const w = r.weeks, wk = (d) => new Date(d + "T12:00:00");
+  $("#pat-weeks").innerHTML = w.species.length ? heatTable(w.species, w.counts, w.weeks.map((d, i) => ({ i, d })),
+    // A month's name over its first week (and over the first column, unless the next month starts right after).
+    (c) => (c.i === 0 ? wk(w.weeks[Math.min(2, w.weeks.length - 1)]).getMonth() === wk(c.d).getMonth()
+      : wk(c.d).getMonth() !== wk(w.weeks[c.i - 1]).getMonth()) ? wk(c.d).toLocaleDateString(undefined, { month: "short" }) : "",
+    (sp, c, n) => `${sp}, week of ${wk(c.d).toLocaleDateString(undefined, { month: "short", day: "numeric" })}: ${visitsWord(n)}`)
+    : '<p class="msg">No visits yet.</p>';
+  const t = r.temperature, ts = r.temp_sensor;
+  if (!t) {
+    $("#pat-temp").innerHTML = `<p class="msg">${!ts.entity ? "Name a Home Assistant temperature sensor on the Settings page (Patterns) to see this."
+      : !ts.token ? "The temperature sensor needs a Home Assistant token: set WBS_HA_TOKEN (Docker)."
+      : ts.error ? `Can't read ${esc(ts.entity)}: ${esc(ts.error)}` : `Collecting ${esc(ts.entity)} every 10 minutes; check back in a day or two.`}</p>`;
+    return;
+  }
+  const bands = t.bands.filter((b) => b.per_hour !== null), top = Math.max(0.01, ...bands.map((b) => b.per_hour));
+  const busy = t.busy_hours.length ? `${hourName(t.busy_hours[0])} to ${hourName((t.busy_hours.at(-1) + 1) % 24)}` : "none yet";
+  $("#pat-temp").innerHTML = `<p class="hint">Bird visits per hour at each outdoor temperature, counting only the hours birds usually
+      come (${esc(busy)}), so cold nights don't count.</p>
+    <table class="bars"><tbody>${bands.map((b) => `<tr><th>${b.from} to ${b.to} ${esc(t.unit)}</th>
+      <td><span class="bar" style="width:${(100 * b.per_hour / top).toFixed(1)}%"></span></td>
+      <td class="n">${b.per_hour} / h <span class="msg">(${b.visits} in ${b.hours} h)</span></td></tr>`).join("")}</tbody></table>`;
+}
 function patternsPage() {
   const y = new Date(); y.setDate(y.getDate() - 1);
   $("#fw-start").value = isoDay(y);
   $("#fw-start").max = isoDay(y);
   $("#fw-start").addEventListener("change", feederWatch);
+  const days = () => +$(".pat-range .on").dataset.days;
+  $$(".pat-range [data-days]").forEach((b) => b.addEventListener("click", () => {
+    $$(".pat-range [data-days]").forEach((x) => x.classList.toggle("on", x === b)); patterns(days()); }));
+  patterns(days());
   $("#fw-csv").addEventListener("click", () => { location.href = `${BASE}/api/feederwatch?start=${$("#fw-start").value}&format=csv`; });
   feederWatch();
 }

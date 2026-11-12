@@ -43,7 +43,8 @@ OPTION_ENV = {
 def environment(options: dict, mqtt: dict) -> dict[str, str]:
     """The settings for an add-on with these options. mqtt is the Supervisor's broker; options override it."""
     env = {"WBS_INGRESS": "true", "WBS_DATA_DIR": "/data", "WBS_IMAGE_DIR": IMAGES,
-           "WBS_HA_HOST": "homeassistant", "WBS_HA_URL": "http://homeassistant:8123"}
+           "WBS_HA_HOST": "homeassistant", "WBS_HA_URL": "http://homeassistant:8123",
+           "WBS_HA_API_URL": "http://supervisor/core/api"}   # with the Supervisor token: reads the temperature sensor
     if mqtt:
         env |= {"WBS_MQTT_HOST": str(mqtt.get("host", "")), "WBS_MQTT_PORT": str(mqtt.get("port", 1883)),
                 "WBS_MQTT_USER": str(mqtt.get("username", "")), "WBS_MQTT_PASSWORD": str(mqtt.get("password", ""))}
@@ -91,6 +92,7 @@ def main() -> None:
         mqtt = mqtt_service(token)
         LOG.info("Home Assistant add-on; MQTT broker %s", "from the Supervisor" if mqtt else "from the options")
         os.environ.update(environment(json.loads(OPTIONS.read_text()), mqtt))
+        os.environ["WBS_HA_TOKEN"] = token     # homeassistant_api in config.yaml: read-only use, one sensor
         Path(IMAGES).mkdir(parents=True, exist_ok=True)
         os.nice(NICE)
     os.execvp("uvicorn", ["uvicorn", "wbs.main:app", "--host", "0.0.0.0", "--port", "8095", "--proxy-headers"])

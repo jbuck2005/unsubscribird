@@ -61,6 +61,14 @@ class Settings:
     # Clips whose best activity score is below this had nothing move in them: no LM Studio, suggested Empty.
     # Measured 2026-11-05 on 55 clips: birds >= 0.061, 18 of 24 empty visits < 0.03.
     quiet_activity: float = field(default_factory=lambda: float(_env("WBS_QUIET_ACTIVITY", "0.025")))
+    # Home Assistant's REST API, only to read the temperature sensor below. Docker: a long-lived token
+    # (HA profile page, Security); the add-on uses its own Supervisor token.
+    ha_api_url: str = field(default_factory=lambda: (_env("WBS_HA_API_URL") or (
+        _env("WBS_HA_URL") or f"http://{_env('WBS_HA_HOST', 'localhost')}:8123") + "/api").rstrip("/"))
+    ha_token: str = field(default_factory=lambda: _env("WBS_HA_TOKEN"))
+    temp_sensor: str = field(default_factory=lambda: _env("WBS_TEMP_SENSOR"))
+    # Hours without a bird, at a time of day that is usually busy, before Home Assistant hears "feeder quiet".
+    feeder_quiet_h: float = field(default_factory=lambda: float(_env("WBS_FEEDER_QUIET_H", "3")))
     auto_train: bool = field(default_factory=lambda: _env("WBS_AUTO_TRAIN", "true").lower() in ("1", "true", "yes"))
     auto_train_hour: int = field(default_factory=lambda: int(_env("WBS_AUTO_TRAIN_HOUR", "2")))
     auto_train_days: int = field(default_factory=lambda: int(_env("WBS_AUTO_TRAIN_DAYS", "1")))

@@ -84,6 +84,7 @@ class Recognizer:
         self.stats: dict[str, Any] = {"published": 0, "last": None, "last_error": ""}
         self._gallery_sent: dict[str, str] = {}   # species slug -> trace id whose photo HA has
         self._sighting_types_sent: set[str] = set()
+        self._feeder_sent: tuple[bool | None, float] = (None, 0.0)   # (quiet, when) last sent to HA
 
     # ---- topics / discovery ---------------------------------------------------------
     def t(self, sub: str) -> str:
@@ -124,6 +125,10 @@ class Recognizer:
             cfg("event", "visit", {"name": "Visit", "state_topic": self.t("event"),
                                    "event_types": ["bird", "empty", "other_animal", "uncertain"]}),
             self.sighting_config(),
+            cfg("binary_sensor", "feeder_quiet", {"name": "Feeder quiet", "icon": "mdi:bird", "device_class": "problem",
+                                                  "state_topic": self.t("feeder"),
+                                                  "value_template": "{{ 'ON' if value_json.quiet else 'OFF' }}",
+                                                  "json_attributes_topic": self.t("feeder")}),
             cfg("sensor", "species_gallery", {"name": "Species gallery", "icon": "mdi:view-gallery",
                                               "state_topic": self.t("gallery"), "unit_of_measurement": "species",
                                               "value_template": "{{ value_json.count }}",
@@ -415,11 +420,25 @@ class Recognizer:
     def start(self) -> None:
         threading.Thread(target=self._loop, name="recognition", daemon=True).start()
 
+    def publish_feeder(self, now: float | None = None) -> dict[str, Any]:
+        """The quiet-feeder check (patterns.feeder_quiet), sent to HA when it changes or every hour."""
+        from .patterns import feeder_quiet
+        now = now or time.time()
+        state = feeder_quiet(self.db, self.s.feeder_quiet_h, now)
+        if state["quiet"] != self._feeder_sent[0] or now - self._feeder_sent[1] >= 3600:
+            self.publish(self.t("feeder"), json.dumps(state), True)
+            self._feeder_sent = (state["quiet"], now)
+        return state
+
     def _loop(self) -> None:
         last_day = None
+        last_feeder = 0.0
         while not self.stop.is_set():
             try:
                 self.run_once()
+                if time.time() - last_feeder >= 300:
+                    self.publish_feeder()
+                    last_feeder = time.time()
                 day = datetime.now().date()
                 if day != last_day:        # midnight: reset "today" in HA
                     self.publish_today()

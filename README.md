@@ -119,8 +119,8 @@ sticker for every bird found this year, and blanks for the ones on your species 
   them (it would save LM Studio's answer unseen) until you confirm each one or change its card, and it warns about
   labelled cards with unsaved changes, which only Update saves.
 * **Gallery** (`/admin/gallery`), **Dataset** (`/admin/dataset`: species colour coded by season, sortable),
-  **Model** (`/admin/model`: training, accuracy, LM Studio bake-off), **Patterns** (`/admin/patterns`: Project
-  FeederWatch counts), **Status** (`/admin/status`).
+  **Model** (`/admin/model`: training, accuracy, LM Studio bake-off), **Patterns** (`/admin/patterns`: when
+  birds come by hour, week and temperature; the quiet-feeder check; Project FeederWatch counts), **Status** (`/admin/status`).
 * **Settings** (`/admin/settings`): long-term preferences: clip order and theme, the clip cut, frames per visit,
   recognition confidence, the automatic retrain (how often, at what hour), location. Saved in the database, so they
   survive redeploys and are in the nightly backup, and they apply as soon as you save. A saved value beats `.env`,

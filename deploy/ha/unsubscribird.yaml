@@ -44,3 +44,26 @@ automation:
             clickAction: "{{ a.review_url }}"
             tag: "unsubscribird_{{ a.species | slugify }}"
             group: unsubscribird
+
+  - id: unsubscribird_feeder_quiet
+    alias: un-subscribird - feeder may be empty
+    description: >-
+      Phone notification when no birds came for a few hours at a time of day that usually brings them (the
+      Feeder quiet sensor; set the hours on the app's Settings page, Patterns). Maybe the feeder needs filling.
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.unsubscribird_feeder_quiet
+        from: "off"
+        to: "on"
+    actions:
+      - action: notify.mobile_app_YOUR_PHONE
+        continue_on_error: true
+        data:
+          title: "🪶 The feeder is quiet"
+          message: >-
+            No birds for {{ state_attr('binary_sensor.unsubscribird_feeder_quiet', 'hours') }} h; these hours
+            usually bring about {{ state_attr('binary_sensor.unsubscribird_feeder_quiet', 'expected') }}.
+            Maybe it needs filling.
+          data:
+            tag: unsubscribird_feeder_quiet
+            group: unsubscribird
