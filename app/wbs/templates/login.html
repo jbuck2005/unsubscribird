@@ -13,7 +13,7 @@
     <h2 class="brand"><img src="{{ base }}/static/brand/mark-192.png?v={{ version }}" alt="">{{ brand.wordmark(cfg.site_name) }}</h2>
     <p class="hint">Settings: review, training and the rest. <a href="{{ base }}/">← Back to the birds</a></p>
     {% if not configured %}
-      <p class="msg err">Login isn't set up yet: add WBS_ADMIN_PASSWORD to the stack's .env and redeploy.</p>
+      <p class="msg err">Login isn't set up yet: add UNSUB_ADMIN_PASSWORD to the stack's .env and redeploy.</p>
     {% endif %}
     <form method="post" action="{{ base }}/login" class="row" style="flex-direction:column;gap:10px">
       <input type="hidden" name="next" value="{{ next }}">

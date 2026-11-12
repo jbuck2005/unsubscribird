@@ -1,5 +1,5 @@
 """Starts the web app. As a Home Assistant add-on, first turns the add-on's options (and the MQTT broker the
-Supervisor knows about) into WBS_* settings. Anywhere else, .env already set them and this changes nothing."""
+Supervisor knows about) into UNSUB_* settings. Anywhere else, .env already set them and this changes nothing."""
 
 from __future__ import annotations
 
@@ -22,32 +22,32 @@ LOG = logging.getLogger("wbs.start")
 
 # add-on option -> setting. Empty options are left out, so the defaults in config.py apply.
 OPTION_ENV = {
-    "site_name": "WBS_SITE_NAME",
-    "admin_password": "WBS_ADMIN_PASSWORD",
-    "host": "WBS_HOST",
-    "public_url": "WBS_PUBLIC_URL",
-    "allowed_hosts": "WBS_ALLOWED_HOSTS",
-    "lmstudio_url": "WBS_LMSTUDIO_URL",
-    "lmstudio_model": "WBS_LMSTUDIO_MODEL",
-    "bridge_topic": "WBS_BRIDGE_TOPIC",
-    "ha_id": "WBS_HA_ID",
-    "embed_threads": "WBS_EMBED_THREADS",
-    "detect": "WBS_DETECT",
-    "mqtt_host": "WBS_MQTT_HOST",
-    "mqtt_port": "WBS_MQTT_PORT",
-    "mqtt_user": "WBS_MQTT_USER",
-    "mqtt_password": "WBS_MQTT_PASSWORD",
+    "site_name": "UNSUB_SITE_NAME",
+    "admin_password": "UNSUB_ADMIN_PASSWORD",
+    "host": "UNSUB_HOST",
+    "public_url": "UNSUB_PUBLIC_URL",
+    "allowed_hosts": "UNSUB_ALLOWED_HOSTS",
+    "lmstudio_url": "UNSUB_LMSTUDIO_URL",
+    "lmstudio_model": "UNSUB_LMSTUDIO_MODEL",
+    "bridge_topic": "UNSUB_BRIDGE_TOPIC",
+    "ha_id": "UNSUB_HA_ID",
+    "embed_threads": "UNSUB_EMBED_THREADS",
+    "detect": "UNSUB_DETECT",
+    "mqtt_host": "UNSUB_MQTT_HOST",
+    "mqtt_port": "UNSUB_MQTT_PORT",
+    "mqtt_user": "UNSUB_MQTT_USER",
+    "mqtt_password": "UNSUB_MQTT_PASSWORD",
 }
 
 
 def environment(options: dict, mqtt: dict) -> dict[str, str]:
     """The settings for an add-on with these options. mqtt is the Supervisor's broker; options override it."""
-    env = {"WBS_INGRESS": "true", "WBS_DATA_DIR": "/data", "WBS_IMAGE_DIR": IMAGES,
-           "WBS_HA_HOST": "homeassistant", "WBS_HA_URL": "http://homeassistant:8123",
-           "WBS_HA_API_URL": "http://supervisor/core/api"}   # with the Supervisor token: reads the temperature sensor
+    env = {"UNSUB_INGRESS": "true", "UNSUB_DATA_DIR": "/data", "UNSUB_IMAGE_DIR": IMAGES,
+           "UNSUB_HA_HOST": "homeassistant", "UNSUB_HA_URL": "http://homeassistant:8123",
+           "UNSUB_HA_API_URL": "http://supervisor/core/api"}   # with the Supervisor token: reads the temperature sensor
     if mqtt:
-        env |= {"WBS_MQTT_HOST": str(mqtt.get("host", "")), "WBS_MQTT_PORT": str(mqtt.get("port", 1883)),
-                "WBS_MQTT_USER": str(mqtt.get("username", "")), "WBS_MQTT_PASSWORD": str(mqtt.get("password", ""))}
+        env |= {"UNSUB_MQTT_HOST": str(mqtt.get("host", "")), "UNSUB_MQTT_PORT": str(mqtt.get("port", 1883)),
+                "UNSUB_MQTT_USER": str(mqtt.get("username", "")), "UNSUB_MQTT_PASSWORD": str(mqtt.get("password", ""))}
     for option, name in OPTION_ENV.items():
         value = options.get(option)
         if isinstance(value, bool):
@@ -92,7 +92,7 @@ def main() -> None:
         mqtt = mqtt_service(token)
         LOG.info("Home Assistant add-on; MQTT broker %s", "from the Supervisor" if mqtt else "from the options")
         os.environ.update(environment(json.loads(OPTIONS.read_text()), mqtt))
-        os.environ["WBS_HA_TOKEN"] = token     # homeassistant_api in config.yaml: read-only use, one sensor
+        os.environ["UNSUB_HA_TOKEN"] = token     # homeassistant_api in config.yaml: read-only use, one sensor
         Path(IMAGES).mkdir(parents=True, exist_ok=True)
         os.nice(NICE)
     os.execvp("uvicorn", ["uvicorn", "wbs.main:app", "--host", "0.0.0.0", "--port", "8095", "--proxy-headers"])

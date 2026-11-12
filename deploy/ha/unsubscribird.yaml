@@ -1,7 +1,7 @@
 # Home Assistant package for un-subscribird (github.com/jbuck2005/unsubscribird).
 # Change notify.mobile_app_YOUR_PHONE below to your phone.
 # Install: copy to /config/packages/unsubscribird.yaml, then reload automations (or restart).
-# The entities themselves come from MQTT discovery (device "un-subscribird", or your WBS_SITE_NAME).
+# The entities themselves come from MQTT discovery (device "un-subscribird", or your UNSUB_SITE_NAME).
 
 automation:
   - id: unsubscribird_first_species

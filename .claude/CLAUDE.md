@@ -28,7 +28,7 @@ Standing rules for AI assistants working in this repository.
 ## Naming
 - Display name: "un-subscribird" (site name, page titles, README heading).
 - Code and infrastructure keep `unsubscribird`: repo, Docker image, Home Assistant ids and entity ids (pinned with `default_entity_id`, so renaming the site never changes them). Don't rename those.
-- A user's `WBS_SITE_NAME` always wins over the default and is shown as plain text.
+- A user's `UNSUB_SITE_NAME` always wins over the default and is shown as plain text.
 
 ## Checks
 - Run `pytest -q` from the repo root before committing.

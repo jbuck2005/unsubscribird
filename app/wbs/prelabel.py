@@ -78,7 +78,7 @@ class LMStudio:
 
     def pick_model(self) -> str | None:
         if not self.s.lmstudio_url:
-            self.status = "off: WBS_AI_HOST isn't set"
+            self.status = "off: UNSUB_AI_HOST isn't set"
             return None
         try:
             models = self.http.get(f"{self.s.lmstudio_url}/api/v0/models", timeout=10).json()["data"]

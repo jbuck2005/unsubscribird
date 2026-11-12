@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* Settings in `.env` are now named `UNSUB_...` instead of `WBS_...`. The old names still work, through the app and
+  the compose file, and the log says which ones to rename. Add-on users have nothing to do.
+
 ## 0.28.0
 
 * **Also seen** on the Review page: when a second species shares the clip (a nuthatch beside a chickadee) but has

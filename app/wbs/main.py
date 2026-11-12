@@ -26,7 +26,7 @@ from . import feederwatch
 from . import patterns
 from . import frames as framelib
 from .collector import Collector
-from .config import settings
+from .config import OLD_NAMES_USED, settings
 from .db import DB
 from .auth import COOKIE, MAX_AGE, Auth
 from .bakeoff import Bakeoff
@@ -74,6 +74,9 @@ async def lifespan(app: FastAPI):
     if settings.embed_enabled:
         trainer.start_scheduler(settings)
     weather.start()
+    if OLD_NAMES_USED:
+        LOG.warning("Rename these settings in your .env (WBS_ is now UNSUB_; the old names still work for now): %s",
+                    ", ".join(sorted(OLD_NAMES_USED)))
     LOG.info("%s %s started (images %s, db %s)", settings.site_name, __version__, settings.image_dir, settings.db_path)
     yield
     collector.stop.set()

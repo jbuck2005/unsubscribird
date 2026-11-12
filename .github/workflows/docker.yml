@@ -34,4 +34,4 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.runner }}
           cache-to: type=gha,mode=max,scope=${{ matrix.runner }}
       - name: The app imports inside the image
-        run: docker run --rm -e WBS_AUTH=off unsubscribird:ci python -c "import open_clip, torch, wbs.config, wbs.start"
+        run: docker run --rm -e UNSUB_AUTH=off unsubscribird:ci python -c "import open_clip, torch, wbs.config, wbs.start"

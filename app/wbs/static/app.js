@@ -992,7 +992,7 @@ async function patterns(days) {
   const t = r.temperature, ts = r.temp_sensor;
   if (!t) {
     $("#pat-temp").innerHTML = `<p class="msg">${!ts.entity ? "Name a Home Assistant temperature sensor on the Settings page (Patterns) to see this."
-      : !ts.token ? "The temperature sensor needs a Home Assistant token: set WBS_HA_TOKEN (Docker)."
+      : !ts.token ? "The temperature sensor needs a Home Assistant token: set UNSUB_HA_TOKEN (Docker)."
       : ts.error ? `Can't read ${esc(ts.entity)}: ${esc(ts.error)}` : `Collecting ${esc(ts.entity)} every 10 minutes; check back in a day or two.`}</p>`;
     return;
   }

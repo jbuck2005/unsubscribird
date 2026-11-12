@@ -18,13 +18,13 @@ CRAFTED = {"Host": "x/static/?"}     # Starlette's request.url would read this a
 
 
 def secure():
-    os.environ["WBS_AUTH"] = "on"
-    os.environ["WBS_ADMIN_PASSWORD"] = "hunter2-bird"
+    os.environ["UNSUB_AUTH"] = "on"
+    os.environ["UNSUB_ADMIN_PASSWORD"] = "hunter2-bird"
 
 
 def teardown_function(_):
-    os.environ["WBS_AUTH"] = "off"
-    os.environ.pop("WBS_ADMIN_PASSWORD", None)
+    os.environ["UNSUB_AUTH"] = "off"
+    os.environ.pop("UNSUB_ADMIN_PASSWORD", None)
 
 
 def anonymous():

@@ -42,11 +42,11 @@ def test_collection_book_lists_found_birds_and_the_ones_to_find():
 
 
 def test_collection_is_public():
-    os.environ["WBS_AUTH"] = "on"
-    os.environ["WBS_ADMIN_PASSWORD"] = "hunter2-bird"
+    os.environ["UNSUB_AUTH"] = "on"
+    os.environ["UNSUB_ADMIN_PASSWORD"] = "hunter2-bird"
     try:
         c = TestClient(main.app, follow_redirects=False)
         assert c.get("/collection").status_code == 200 and c.get("/api/public/collection").status_code == 200
     finally:
-        os.environ["WBS_AUTH"] = "off"
-        os.environ.pop("WBS_ADMIN_PASSWORD", None)
+        os.environ["UNSUB_AUTH"] = "off"
+        os.environ.pop("UNSUB_ADMIN_PASSWORD", None)

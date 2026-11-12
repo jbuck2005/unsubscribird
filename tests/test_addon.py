@@ -20,8 +20,8 @@ def client(peer=main.INGRESS_PEER):
 
 @pytest.fixture
 def addon(monkeypatch):
-    monkeypatch.setenv("WBS_AUTH", "on")
-    monkeypatch.setenv("WBS_ADMIN_PASSWORD", "hunter2-bird")
+    monkeypatch.setenv("UNSUB_AUTH", "on")
+    monkeypatch.setenv("UNSUB_ADMIN_PASSWORD", "hunter2-bird")
     monkeypatch.setattr(main.settings, "ingress", True)
 
 
@@ -45,8 +45,8 @@ def test_only_the_supervisor_gets_in_that_way(addon):
 
 
 def test_without_the_add_on_the_supervisor_address_is_nothing_special(monkeypatch):
-    monkeypatch.setenv("WBS_AUTH", "on")
-    monkeypatch.setenv("WBS_ADMIN_PASSWORD", "hunter2-bird")
+    monkeypatch.setenv("UNSUB_AUTH", "on")
+    monkeypatch.setenv("UNSUB_ADMIN_PASSWORD", "hunter2-bird")
     assert not main.settings.ingress
     assert client().get("/api/stats", headers=INGRESS).status_code == 400
     assert client().get("/api/stats", headers={"Host": "localhost"}).status_code == 401
@@ -56,20 +56,20 @@ def test_options_become_settings():
     env = start.environment({"site_name": "Robin's Feeder", "lmstudio_url": "http://192.0.2.30:1234",
                              "embed_threads": 2, "host": "", "mqtt_host": None},
                             {"host": "core-mosquitto", "port": 1883, "username": "addons", "password": "pw"})
-    assert env["WBS_INGRESS"] == "true" and env["WBS_IMAGE_DIR"] == "/media/unsubscribird"
-    assert env["WBS_SITE_NAME"] == "Robin's Feeder" and env["WBS_EMBED_THREADS"] == "2"
-    assert env["WBS_LMSTUDIO_URL"] == "http://192.0.2.30:1234" and "WBS_HOST" not in env
-    assert (env["WBS_MQTT_HOST"], env["WBS_MQTT_USER"], env["WBS_MQTT_PASSWORD"]) == ("core-mosquitto", "addons", "pw")
+    assert env["UNSUB_INGRESS"] == "true" and env["UNSUB_IMAGE_DIR"] == "/media/unsubscribird"
+    assert env["UNSUB_SITE_NAME"] == "Robin's Feeder" and env["UNSUB_EMBED_THREADS"] == "2"
+    assert env["UNSUB_LMSTUDIO_URL"] == "http://192.0.2.30:1234" and "UNSUB_HOST" not in env
+    assert (env["UNSUB_MQTT_HOST"], env["UNSUB_MQTT_USER"], env["UNSUB_MQTT_PASSWORD"]) == ("core-mosquitto", "addons", "pw")
 
 
 def test_an_mqtt_option_beats_the_supervisor_broker():
     env = start.environment({"mqtt_host": "192.0.2.40", "mqtt_port": 8883}, {"host": "core-mosquitto", "port": 1883})
-    assert (env["WBS_MQTT_HOST"], env["WBS_MQTT_PORT"]) == ("192.0.2.40", "8883")
+    assert (env["UNSUB_MQTT_HOST"], env["UNSUB_MQTT_PORT"]) == ("192.0.2.40", "8883")
 
 
 def test_switches_become_true_or_false():
-    assert start.environment({"detect": False}, {})["WBS_DETECT"] == "false"
-    assert start.environment({"detect": True}, {})["WBS_DETECT"] == "true"
+    assert start.environment({"detect": False}, {})["UNSUB_DETECT"] == "false"
+    assert start.environment({"detect": True}, {})["UNSUB_DETECT"] == "true"
 
 
 PI_4GB = "MemTotal:        3884332 kB\nMemFree:          760000 kB\n"
@@ -106,7 +106,7 @@ def test_the_add_on_gives_way_to_home_assistant(tmp_path, monkeypatch):
     monkeypatch.setattr(start.os, "execvp", lambda f, args: calls.append(("exec", f)))
     start.main()
     assert calls == [("nice", start.NICE), ("exec", "uvicorn")] and start.NICE >= 10
-    assert start.os.environ["WBS_DETECT"] == "false"
+    assert start.os.environ["UNSUB_DETECT"] == "false"
 
 
 def test_outside_an_add_on_nothing_changes(tmp_path, monkeypatch):

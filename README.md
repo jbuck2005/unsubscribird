@@ -36,14 +36,14 @@ Vicohome cloud ──> ha-vicohome-bridge (HA add-on) ──MQTT + MP4 clips─�
 git clone https://github.com/jbuck2005/unsubscribird && cd unsubscribird
 cp deploy/.env.example deploy/.env      # then fill it in: your computers, folders and password
 chmod 600 deploy/.env
-mkdir -p deploy/data deploy/images      # or the folders you set in .env; they must belong to WBS_UID:WBS_GID
+mkdir -p deploy/data deploy/images      # or the folders you set in .env; they must belong to UNSUB_UID:UNSUB_GID
 docker build -t unsubscribird:latest app
 docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
 ```
 
 Open `http://your-server:8095/`, then log in at `/admin`. Everything specific to your home lives in `.env`:
-`WBS_HOST` (this computer), `WBS_HA_HOST` (Home Assistant) and `WBS_AI_HOST` (LM Studio, optional), plus the folders.
-With no `WBS_ADMIN_PASSWORD` the Settings area stays locked. Give the site your own name on the Settings page.
+`UNSUB_HOST` (this computer), `UNSUB_HA_HOST` (Home Assistant) and `UNSUB_AI_HOST` (LM Studio, optional), plus the folders.
+With no `UNSUB_ADMIN_PASSWORD` the Settings area stays locked. Give the site your own name on the Settings page.
 
 For Home Assistant, copy `deploy/ha/unsubscribird.yaml` to `/config/packages/` and put your phone in it. The entities
 appear by themselves over MQTT discovery. The species list is tuned to eastern Canada: edit it under Dataset, and set
@@ -59,6 +59,9 @@ git pull
 docker build -t unsubscribird:latest app
 docker compose -f deploy/docker-compose.yaml --env-file deploy/.env up -d
 ```
+
+Settings were named `WBS_...` before 0.29.0 and are `UNSUB_...` now. An old `.env` keeps working, and the log lists
+the names to rename (`WBS_HOST` becomes `UNSUB_HOST`, and so on).
 
 Compare `deploy/.env` with `deploy/.env.example` for new settings. Your database and clips are in your own folders.
 
@@ -88,10 +91,10 @@ Home Assistant Green, use Docker on another computer instead.
   trains as what it shows, and the other species counts in Home Assistant's Today, the species gallery and the kids'
   page. A frame marked Empty just trains as Empty.
 * **Clips lose their dark start.** The camera wakes dark or washed out for about 1.5 s, so each clip is cut once, in
-  place, right after download: a lossless stream copy from the first keyframe at or after `WBS_CLIP_SKIP_SECONDS`
+  place, right after download: a lossless stream copy from the first keyframe at or after `UNSUB_CLIP_SKIP_SECONDS`
   (default 2; the camera's keyframes are 2 s apart). Clips with no keyframe within 0.5 s after that, or that would
   drop under 2 s, stay whole. `visits.clip_cut` records the cut.
-* **Empty clips don't pile up.** Once a visit you confirmed as Empty is `WBS_EMPTY_CLIP_DAYS` old (default 14,
+* **Empty clips don't pile up.** Once a visit you confirmed as Empty is `UNSUB_EMPTY_CLIP_DAYS` old (default 14,
   0 = keep forever; also on the Settings page), its clip is deleted. Frames, thumbnails and the label stay, so
   training is unaffected. Excluded visits, and labels changed in the last day, are left alone.
   `visits.clip_removed` records when.
@@ -99,9 +102,9 @@ Home Assistant Green, use Docker on another computer instead.
   2 fps for change against its median frame, motion (a frame must differ from *both* neighbours) and sharpness;
   the best few frames, at least 1.5 s apart, are kept.
 * Pre-labelling uses whichever vision model LM Studio already has loaded (it never makes LM Studio load or swap
-  models unless `WBS_LMSTUDIO_REQUIRE_LOADED=false`). About 3 s per frame on an RTX 5090.
+  models unless `UNSUB_LMSTUDIO_REQUIRE_LOADED=false`). About 3 s per frame on an RTX 5090.
 * **Frames sent to LM Studio leave this computer.** Each visit's best frames (JPEGs, which can show people as well
-  as birds) go to `WBS_AI_HOST` or `WBS_LMSTUDIO_URL` over plain HTTP. Keep LM Studio on your own network: any
+  as birds) go to `UNSUB_AI_HOST` or `UNSUB_LMSTUDIO_URL` over plain HTTP. Keep LM Studio on your own network: any
   address you set there receives your frames.
 
 ## Web
@@ -127,17 +130,17 @@ sticker for every bird found this year, and blanks for the ones on your species 
   which beats the default in `config.py`, so `.env` is the starting value and the fallback ("↺ default", or a lost
   database); the page doesn't write to it. Passwords and server addresses are only in `.env`.
 
-Everything that changes data needs the login. Clips, frames and `/api/public/*` are public only for visits the kids' page shows; excluded and unconfirmed ones need the login. The app answers only to `WBS_HOST`, `WBS_PUBLIC_URL`'s host, localhost and `WBS_ALLOWED_HOSTS`. Old links redirect
+Everything that changes data needs the login. Clips, frames and `/api/public/*` are public only for visits the kids' page shows; excluded and unconfirmed ones need the login. The app answers only to `UNSUB_HOST`, `UNSUB_PUBLIC_URL`'s host, localhost and `UNSUB_ALLOWED_HOSTS`. Old links redirect
 (`/?visit=` to `/admin?visit=`, `/gallery` to the kids' page, `/dataset` and so on to `/admin/...`).
 
-All pages are light from sunrise to sunset at `WBS_LAT`/`WBS_LON` (default Ottawa) and dark otherwise, worked out in
+All pages are light from sunrise to sunset at `UNSUB_LAT`/`UNSUB_LON` (default Ottawa) and dark otherwise, worked out in
 the browser. The ☀️/🌙 button cycles Auto, Light and Dark, remembered per device.
 
 ## HTTPS and running under a path
 
 Nothing here is needed for a plain install. To serve the app at `https://example.org/birds/` from a reverse proxy,
 strip the path and say what it was; the app then adds it to its links, redirects and login cookie. Reaching port 8095
-directly keeps working at the same time. Add the proxy's host name to `WBS_ALLOWED_HOSTS`.
+directly keeps working at the same time. Add the proxy's host name to `UNSUB_ALLOWED_HOSTS`.
 
 ```nginx
 location = /birds { return 301 /birds/; }
@@ -158,8 +161,8 @@ Seed visits from clips already on Home Assistant:
 ssh root@homeassistant.local 'ls /config/www/vicohome' | docker exec -i unsubscribird python -m wbs.backfill
 ```
 
-Storage: SQLite in `/data` (`WBS_DATA_PATH`, a local disk), images and clips in `/images` (`WBS_IMAGE_PATH`, a NAS
-share is fine; use `WBS_EXTRA_GID` if the share needs a group, and `WBS_IMAGE_PROPAGATION=rslave` if it's automounted).
+Storage: SQLite in `/data` (`UNSUB_DATA_PATH`, a local disk), images and clips in `/images` (`UNSUB_IMAGE_PATH`, a NAS
+share is fine; use `UNSUB_EXTRA_GID` if the share needs a group, and `UNSUB_IMAGE_PROPAGATION=rslave` if it's automounted).
 
 ## Tests
 

@@ -79,7 +79,7 @@ class FakeHttp:
 
 
 def test_weather_sampler_reads_a_sensor_or_a_weather_entity(monkeypatch):
-    monkeypatch.setenv("WBS_TEMP_SENSOR", "sensor.outdoor")
+    monkeypatch.setenv("UNSUB_TEMP_SENSOR", "sensor.outdoor")
     s = Settings()
     w = patterns.WeatherSampler(s, main.db, "http://ha.example:8123/api", "tok")
     w.http = FakeHttp({"state": "-4.5", "attributes": {"unit_of_measurement": "°C"}})

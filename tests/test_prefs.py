@@ -81,8 +81,8 @@ def test_every_pref_is_a_real_setting_and_no_secrets():
 
 
 def test_settings_need_the_login(monkeypatch):
-    monkeypatch.setenv("WBS_AUTH", "on")
-    monkeypatch.setenv("WBS_ADMIN_PASSWORD", "x")
+    monkeypatch.setenv("UNSUB_AUTH", "on")
+    monkeypatch.setenv("UNSUB_ADMIN_PASSWORD", "x")
     c = TestClient(main.app, follow_redirects=False)
     assert c.get("/api/settings").status_code == 401
     assert c.put("/api/settings", json={"clip_skip_s": 1}).status_code == 401
@@ -98,7 +98,7 @@ def test_every_pref_can_be_set_from_env():
     compose = (root / "deploy/docker-compose.yaml").read_text()
     example = (root / "deploy/.env.example").read_text()
     for p in PREFS:
-        env = re.search(rf'^\s+{p.key}: .*_env\("(WBS_\w+)"', config, re.M)
+        env = re.search(rf'^\s+{p.key}: .*_env\("(UNSUB_\w+)"', config, re.M)
         assert env, f"{p.key} doesn't read an env variable"
         assert f"{env[1]}: ${{{env[1]}:-" in compose, f"{env[1]} isn't in docker-compose.yaml"
         assert f"\n{env[1]}=" in example, f"{env[1]} isn't in .env.example"

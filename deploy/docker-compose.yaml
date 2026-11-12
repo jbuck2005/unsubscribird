@@ -2,66 +2,66 @@
 # Build the image first:  docker build -t unsubscribird:latest app
 services:
   unsubscribird:
-    image: ${WBS_IMAGE:-unsubscribird:latest}
-    container_name: ${WBS_CONTAINER:-unsubscribird}
+    image: ${UNSUB_IMAGE:-${WBS_IMAGE:-unsubscribird:latest}}
+    container_name: ${UNSUB_CONTAINER:-${WBS_CONTAINER:-unsubscribird}}
     restart: unless-stopped
-    user: "${WBS_UID:-1000}:${WBS_GID:-1000}"
+    user: "${UNSUB_UID:-${WBS_UID:-1000}}:${UNSUB_GID:-${WBS_GID:-1000}}"
     group_add:
-      - "${WBS_EXTRA_GID:-1000}"
+      - "${UNSUB_EXTRA_GID:-${WBS_EXTRA_GID:-1000}}"
     environment:
       TZ: ${TZ:-UTC}
-      WBS_DATA_DIR: /data
-      WBS_IMAGE_DIR: /images
-      WBS_HOST: ${WBS_HOST:?Set WBS_HOST in .env (see .env.example)}
-      WBS_HA_HOST: ${WBS_HA_HOST:?Set WBS_HA_HOST in .env (see .env.example)}
-      WBS_AI_HOST: ${WBS_AI_HOST:-}
-      WBS_PORT: ${WBS_PORT:-8095}
-      WBS_PUBLIC_URL: ${WBS_PUBLIC_URL:-}
-      WBS_MQTT_HOST: ${WBS_MQTT_HOST:-}
-      WBS_MQTT_PORT: ${WBS_MQTT_PORT:-1883}
-      WBS_MQTT_USER: ${WBS_MQTT_USER:-}
-      WBS_MQTT_PASSWORD: ${WBS_MQTT_PASSWORD:-}
-      WBS_BRIDGE_TOPIC: ${WBS_BRIDGE_TOPIC:-vicohome_mqtt}
-      WBS_HA_URL: ${WBS_HA_URL:-}
-      WBS_LMSTUDIO_URL: ${WBS_LMSTUDIO_URL:-}
-      WBS_LMSTUDIO_MODEL: ${WBS_LMSTUDIO_MODEL:-}
-      WBS_LMSTUDIO_REQUIRE_LOADED: ${WBS_LMSTUDIO_REQUIRE_LOADED:-true}
-      WBS_FRAMES_PER_VISIT: ${WBS_FRAMES_PER_VISIT:-4}
-      WBS_PRELABEL_FRAMES: ${WBS_PRELABEL_FRAMES:-3}
-      WBS_PRELABEL_PAUSED: ${WBS_PRELABEL_PAUSED:-false}
-      WBS_REGION: ${WBS_REGION:-Ottawa, Ontario, Canada}
-      WBS_LAT: ${WBS_LAT:-45.42}
-      WBS_LON: ${WBS_LON:--75.70}
-      WBS_CLIP_SKIP_SECONDS: ${WBS_CLIP_SKIP_SECONDS:-2}
-      WBS_EMPTY_CLIP_DAYS: ${WBS_EMPTY_CLIP_DAYS:-14}
-      WBS_SITE_NAME: ${WBS_SITE_NAME:-un-subscribird}
-      WBS_HA_ID: ${WBS_HA_ID:-unsubscribird}
-      WBS_HA_TOPIC: ${WBS_HA_TOPIC:-unsubscribird}
-      WBS_KIDS_SORT: ${WBS_KIDS_SORT:-new}
-      WBS_THEME: ${WBS_THEME:-auto}
-      WBS_QUIET_ACTIVITY: ${WBS_QUIET_ACTIVITY:-0.025}
-      WBS_HA_MODEL_CONFIDENCE: ${WBS_HA_MODEL_CONFIDENCE:-0.75}
-      WBS_HA_VLM_CONFIDENCE: ${WBS_HA_VLM_CONFIDENCE:-0.8}
-      WBS_HA_WAIT_VLM_S: ${WBS_HA_WAIT_VLM_S:-600}
-      WBS_HA_MODEL_INSTANT: ${WBS_HA_MODEL_INSTANT:-0.98}
-      WBS_HA_MAX_AGE_H: ${WBS_HA_MAX_AGE_H:-6}
-      WBS_AUTO_TRAIN: ${WBS_AUTO_TRAIN:-true}
-      WBS_AUTO_TRAIN_HOUR: ${WBS_AUTO_TRAIN_HOUR:-2}
-      WBS_AUTO_TRAIN_DAYS: ${WBS_AUTO_TRAIN_DAYS:-1}
-      WBS_AUTO_TRAIN_MIN_NEW: ${WBS_AUTO_TRAIN_MIN_NEW:-5}
-      WBS_TEMP_SENSOR: ${WBS_TEMP_SENSOR:-}
-      WBS_FEEDER_QUIET_H: ${WBS_FEEDER_QUIET_H:-3}
-      # Home Assistant long-lived token, only to read WBS_TEMP_SENSOR
-      WBS_HA_TOKEN: ${WBS_HA_TOKEN:-}
+      UNSUB_DATA_DIR: /data
+      UNSUB_IMAGE_DIR: /images
+      UNSUB_HOST: ${UNSUB_HOST:-${WBS_HOST:?Set UNSUB_HOST in .env (see .env.example)}}
+      UNSUB_HA_HOST: ${UNSUB_HA_HOST:-${WBS_HA_HOST:?Set UNSUB_HA_HOST in .env (see .env.example)}}
+      UNSUB_AI_HOST: ${UNSUB_AI_HOST:-${WBS_AI_HOST:-}}
+      UNSUB_PORT: ${UNSUB_PORT:-${WBS_PORT:-8095}}
+      UNSUB_PUBLIC_URL: ${UNSUB_PUBLIC_URL:-${WBS_PUBLIC_URL:-}}
+      UNSUB_MQTT_HOST: ${UNSUB_MQTT_HOST:-${WBS_MQTT_HOST:-}}
+      UNSUB_MQTT_PORT: ${UNSUB_MQTT_PORT:-${WBS_MQTT_PORT:-1883}}
+      UNSUB_MQTT_USER: ${UNSUB_MQTT_USER:-${WBS_MQTT_USER:-}}
+      UNSUB_MQTT_PASSWORD: ${UNSUB_MQTT_PASSWORD:-${WBS_MQTT_PASSWORD:-}}
+      UNSUB_BRIDGE_TOPIC: ${UNSUB_BRIDGE_TOPIC:-${WBS_BRIDGE_TOPIC:-vicohome_mqtt}}
+      UNSUB_HA_URL: ${UNSUB_HA_URL:-${WBS_HA_URL:-}}
+      UNSUB_LMSTUDIO_URL: ${UNSUB_LMSTUDIO_URL:-${WBS_LMSTUDIO_URL:-}}
+      UNSUB_LMSTUDIO_MODEL: ${UNSUB_LMSTUDIO_MODEL:-${WBS_LMSTUDIO_MODEL:-}}
+      UNSUB_LMSTUDIO_REQUIRE_LOADED: ${UNSUB_LMSTUDIO_REQUIRE_LOADED:-${WBS_LMSTUDIO_REQUIRE_LOADED:-true}}
+      UNSUB_FRAMES_PER_VISIT: ${UNSUB_FRAMES_PER_VISIT:-${WBS_FRAMES_PER_VISIT:-4}}
+      UNSUB_PRELABEL_FRAMES: ${UNSUB_PRELABEL_FRAMES:-${WBS_PRELABEL_FRAMES:-3}}
+      UNSUB_PRELABEL_PAUSED: ${UNSUB_PRELABEL_PAUSED:-${WBS_PRELABEL_PAUSED:-false}}
+      UNSUB_REGION: ${UNSUB_REGION:-${WBS_REGION:-Ottawa, Ontario, Canada}}
+      UNSUB_LAT: ${UNSUB_LAT:-${WBS_LAT:-45.42}}
+      UNSUB_LON: ${UNSUB_LON:-${WBS_LON:--75.70}}
+      UNSUB_CLIP_SKIP_SECONDS: ${UNSUB_CLIP_SKIP_SECONDS:-${WBS_CLIP_SKIP_SECONDS:-2}}
+      UNSUB_EMPTY_CLIP_DAYS: ${UNSUB_EMPTY_CLIP_DAYS:-${WBS_EMPTY_CLIP_DAYS:-14}}
+      UNSUB_SITE_NAME: ${UNSUB_SITE_NAME:-${WBS_SITE_NAME:-un-subscribird}}
+      UNSUB_HA_ID: ${UNSUB_HA_ID:-${WBS_HA_ID:-unsubscribird}}
+      UNSUB_HA_TOPIC: ${UNSUB_HA_TOPIC:-${WBS_HA_TOPIC:-unsubscribird}}
+      UNSUB_KIDS_SORT: ${UNSUB_KIDS_SORT:-${WBS_KIDS_SORT:-new}}
+      UNSUB_THEME: ${UNSUB_THEME:-${WBS_THEME:-auto}}
+      UNSUB_QUIET_ACTIVITY: ${UNSUB_QUIET_ACTIVITY:-${WBS_QUIET_ACTIVITY:-0.025}}
+      UNSUB_HA_MODEL_CONFIDENCE: ${UNSUB_HA_MODEL_CONFIDENCE:-${WBS_HA_MODEL_CONFIDENCE:-0.75}}
+      UNSUB_HA_VLM_CONFIDENCE: ${UNSUB_HA_VLM_CONFIDENCE:-${WBS_HA_VLM_CONFIDENCE:-0.8}}
+      UNSUB_HA_WAIT_VLM_S: ${UNSUB_HA_WAIT_VLM_S:-${WBS_HA_WAIT_VLM_S:-600}}
+      UNSUB_HA_MODEL_INSTANT: ${UNSUB_HA_MODEL_INSTANT:-${WBS_HA_MODEL_INSTANT:-0.98}}
+      UNSUB_HA_MAX_AGE_H: ${UNSUB_HA_MAX_AGE_H:-${WBS_HA_MAX_AGE_H:-6}}
+      UNSUB_AUTO_TRAIN: ${UNSUB_AUTO_TRAIN:-${WBS_AUTO_TRAIN:-true}}
+      UNSUB_AUTO_TRAIN_HOUR: ${UNSUB_AUTO_TRAIN_HOUR:-${WBS_AUTO_TRAIN_HOUR:-2}}
+      UNSUB_AUTO_TRAIN_DAYS: ${UNSUB_AUTO_TRAIN_DAYS:-${WBS_AUTO_TRAIN_DAYS:-1}}
+      UNSUB_AUTO_TRAIN_MIN_NEW: ${UNSUB_AUTO_TRAIN_MIN_NEW:-${WBS_AUTO_TRAIN_MIN_NEW:-5}}
+      UNSUB_TEMP_SENSOR: ${UNSUB_TEMP_SENSOR:-${WBS_TEMP_SENSOR:-}}
+      UNSUB_FEEDER_QUIET_H: ${UNSUB_FEEDER_QUIET_H:-${WBS_FEEDER_QUIET_H:-3}}
+      # Home Assistant long-lived token, only to read UNSUB_TEMP_SENSOR
+      UNSUB_HA_TOKEN: ${UNSUB_HA_TOKEN:-${WBS_HA_TOKEN:-}}
       # Settings (/admin) login; without it the Settings area stays locked
-      WBS_ADMIN_PASSWORD: ${WBS_ADMIN_PASSWORD:-}
-      WBS_ALLOWED_HOSTS: ${WBS_ALLOWED_HOSTS:-}
+      UNSUB_ADMIN_PASSWORD: ${UNSUB_ADMIN_PASSWORD:-${WBS_ADMIN_PASSWORD:-}}
+      UNSUB_ALLOWED_HOSTS: ${UNSUB_ALLOWED_HOSTS:-${WBS_ALLOWED_HOSTS:-}}
     ports:
-      - "${WBS_PORT:-8095}:8095"
+      - "${UNSUB_PORT:-${WBS_PORT:-8095}}:8095"
     volumes:
-      - ${WBS_DATA_PATH:?Set WBS_DATA_PATH in .env (see .env.example)}:/data    # SQLite: use a local disk
+      - ${UNSUB_DATA_PATH:-${WBS_DATA_PATH:?Set UNSUB_DATA_PATH in .env (see .env.example)}}:/data    # SQLite: use a local disk
       - type: bind                                                               # images and clips: a NAS is fine
-        source: ${WBS_IMAGE_PATH:?Set WBS_IMAGE_PATH in .env (see .env.example)}
+        source: ${UNSUB_IMAGE_PATH:-${WBS_IMAGE_PATH:?Set UNSUB_IMAGE_PATH in .env (see .env.example)}}
         target: /images
         bind:
-          propagation: ${WBS_IMAGE_PROPAGATION:-rprivate}
+          propagation: ${UNSUB_IMAGE_PROPAGATION:-${WBS_IMAGE_PROPAGATION:-rprivate}}

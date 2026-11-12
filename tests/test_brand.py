@@ -48,8 +48,8 @@ def test_no_third_party_requests_in_pages_or_styles():
 
 
 def test_renaming_the_site_never_changes_home_assistant_entity_ids(monkeypatch):
-    monkeypatch.setenv("WBS_HA_ID", "unsubscribird")
-    monkeypatch.setenv("WBS_SITE_NAME", "un-subscribird")
+    monkeypatch.setenv("UNSUB_HA_ID", "unsubscribird")
+    monkeypatch.setenv("UNSUB_SITE_NAME", "un-subscribird")
     r = Recognizer(Settings(), main.db, lambda *a: None)
     for topic, body in [*r.discovery(), r.sighting_config(), r.species_image_config("Blue Jay")]:
         component = topic.split("/")[-4]

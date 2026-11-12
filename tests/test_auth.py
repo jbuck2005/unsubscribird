@@ -9,13 +9,13 @@ from wbs.config import settings
 
 
 def secure(password="hunter2-bird"):
-    os.environ["WBS_AUTH"] = "on"
-    os.environ["WBS_ADMIN_PASSWORD"] = password
+    os.environ["UNSUB_AUTH"] = "on"
+    os.environ["UNSUB_ADMIN_PASSWORD"] = password
 
 
 def teardown_function(_):
-    os.environ["WBS_AUTH"] = "off"
-    os.environ.pop("WBS_ADMIN_PASSWORD", None)
+    os.environ["UNSUB_AUTH"] = "off"
+    os.environ.pop("UNSUB_ADMIN_PASSWORD", None)
 
 
 def test_settings_need_login_but_the_kids_page_does_not():
@@ -58,8 +58,8 @@ def test_cookie_signature_and_expiry():
 
 
 def test_no_password_means_locked():
-    os.environ["WBS_AUTH"] = "on"
-    os.environ.pop("WBS_ADMIN_PASSWORD", None)
+    os.environ["UNSUB_AUTH"] = "on"
+    os.environ.pop("UNSUB_ADMIN_PASSWORD", None)
     c = TestClient(main.app, follow_redirects=False)
     assert "isn't set up yet" in c.get("/login").text
     assert c.post("/login", data={"password": "", "next": "/admin"}).status_code == 401

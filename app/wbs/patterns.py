@@ -2,7 +2,7 @@
 quiet-feeder check: no visits for hours at a time of day that is usually busy suggests an empty feeder.
 
 The temperature comes from a Home Assistant sensor you name (Settings, "Temperature sensor"), sampled every
-10 minutes into the weather table. It needs a Home Assistant token: WBS_HA_TOKEN with Docker; the add-on uses
+10 minutes into the weather table. It needs a Home Assistant token: UNSUB_HA_TOKEN with Docker; the add-on uses
 its own. Nothing else is fetched from anywhere.
 """
 

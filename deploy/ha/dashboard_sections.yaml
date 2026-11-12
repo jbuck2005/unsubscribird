@@ -37,7 +37,7 @@
         {% endif -%}
         {% if ba.get('time') %}{{ relative_time(as_datetime(ba.get('time'))) }} ago ({{ as_datetime(ba.get('time')) | as_local | as_timestamp | timestamp_custom('%a %H:%M') }}){% endif %}
         {%- if ba.get('clip_url') %} · <a href="{{ ba.get('clip_url') }}" target="_blank">▶ clip</a>{% endif %}
-        · <a href="__WBS_PUBLIC_URL__/?visit={{ ba.get('trace_id') }}" target="_blank">review ↗</a>
+        · <a href="__UNSUB_PUBLIC_URL__/?visit={{ ba.get('trace_id') }}" target="_blank">review ↗</a>
         {% endif %}
     - type: tile
       entity: sensor.unsubscribird_bird_visits_today
@@ -64,7 +64,7 @@
         {% for row in items | batch(3) %}<tr>
         {% for it in row %}<td align="center" width="33%" valign="top">
         {% set pic = state_attr(it.image, 'entity_picture') %}
-        <a href="__WBS_PUBLIC_URL__/gallery?species={{ it.name | urlencode }}" target="_blank">{% if pic %}<img src="{{ pic }}" width="100%">{% else %}photos{% endif %}</a><br>
+        <a href="__UNSUB_PUBLIC_URL__/gallery?species={{ it.name | urlencode }}" target="_blank">{% if pic %}<img src="{{ pic }}" width="100%">{% else %}photos{% endif %}</a><br>
         {{ it.get('dot', '') }} <b>{{ it.name }}</b><br>
         <small>{{ relative_time(as_datetime(it.last_seen)) }} ago<br>{{ it.today }} today · {{ it.week }} this week</small>
         </td>{% endfor %}

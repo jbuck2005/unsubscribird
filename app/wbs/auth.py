@@ -1,7 +1,7 @@
 """Login for the Settings area (/admin). The kids' page, clips and pictures stay public.
 
-* Password: WBS_ADMIN_PASSWORD (stack .env). If it isn't set, nobody can log in (the Settings area stays
-  locked) unless WBS_AUTH=off, which tests use.
+* Password: UNSUB_ADMIN_PASSWORD (stack .env). If it isn't set, nobody can log in (the Settings area stays
+  locked) unless UNSUB_AUTH=off, which tests use.
 * Session: a signed cookie (HMAC-SHA256 with a random secret kept in the data folder), valid 30 days.
 """
 
@@ -14,6 +14,8 @@ import os
 import secrets
 import time
 from pathlib import Path
+
+from .config import env
 
 COOKIE = "wbs_session"
 MAX_AGE = 30 * 86400
@@ -30,11 +32,11 @@ class Auth:
 
     @property
     def enabled(self) -> bool:
-        return os.environ.get("WBS_AUTH", "on").lower() not in ("off", "0", "false", "no")
+        return env("UNSUB_AUTH", "on").lower() not in ("off", "0", "false", "no")
 
     @property
     def password(self) -> str:
-        return os.environ.get("WBS_ADMIN_PASSWORD", "")
+        return env("UNSUB_ADMIN_PASSWORD")
 
     def secret(self) -> bytes:
         if self._secret is None:

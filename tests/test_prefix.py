@@ -20,8 +20,8 @@ def client():
 
 
 def teardown_function(_):
-    os.environ["WBS_AUTH"] = "off"
-    os.environ.pop("WBS_ADMIN_PASSWORD", None)
+    os.environ["UNSUB_AUTH"] = "off"
+    os.environ.pop("UNSUB_ADMIN_PASSWORD", None)
 
 
 @pytest.mark.parametrize("page", PAGES)
@@ -45,7 +45,7 @@ def test_redirects_keep_the_prefix(path, target):
 
 
 def test_login_keeps_the_prefix_and_scopes_the_cookie():
-    os.environ.update(WBS_AUTH="on", WBS_ADMIN_PASSWORD="hunter2-bird")
+    os.environ.update(UNSUB_AUTH="on", UNSUB_ADMIN_PASSWORD="hunter2-bird")
     c = client()
     r = c.get("/admin/model", headers=BIRDS)
     assert r.headers["location"] == "/birds/login?next=/admin/model"
