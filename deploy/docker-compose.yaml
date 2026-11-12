@@ -9,11 +9,14 @@ services:
     group_add:
       - "${UNSUB_EXTRA_GID:-${WBS_EXTRA_GID:-1000}}"
     environment:
+      # Each setting falls back to its old WBS_ name. No ":?" (required) inside a fallback: Portainer checks those
+      # even when the UNSUB_ name is set, and then won't create the container. UNSUB_HOST, UNSUB_HA_HOST and the
+      # two paths below are still required: see .env.example.
       TZ: ${TZ:-UTC}
       UNSUB_DATA_DIR: /data
       UNSUB_IMAGE_DIR: /images
-      UNSUB_HOST: ${UNSUB_HOST:-${WBS_HOST:?Set UNSUB_HOST in .env (see .env.example)}}
-      UNSUB_HA_HOST: ${UNSUB_HA_HOST:-${WBS_HA_HOST:?Set UNSUB_HA_HOST in .env (see .env.example)}}
+      UNSUB_HOST: ${UNSUB_HOST:-${WBS_HOST:-}}
+      UNSUB_HA_HOST: ${UNSUB_HA_HOST:-${WBS_HA_HOST:-}}
       UNSUB_AI_HOST: ${UNSUB_AI_HOST:-${WBS_AI_HOST:-}}
       UNSUB_PORT: ${UNSUB_PORT:-${WBS_PORT:-8095}}
       UNSUB_PUBLIC_URL: ${UNSUB_PUBLIC_URL:-${WBS_PUBLIC_URL:-}}
@@ -59,9 +62,9 @@ services:
     ports:
       - "${UNSUB_PORT:-${WBS_PORT:-8095}}:8095"
     volumes:
-      - ${UNSUB_DATA_PATH:-${WBS_DATA_PATH:?Set UNSUB_DATA_PATH in .env (see .env.example)}}:/data    # SQLite: use a local disk
+      - ${UNSUB_DATA_PATH:-${WBS_DATA_PATH:-}}:/data    # SQLite: use a local disk
       - type: bind                                                               # images and clips: a NAS is fine
-        source: ${UNSUB_IMAGE_PATH:-${WBS_IMAGE_PATH:?Set UNSUB_IMAGE_PATH in .env (see .env.example)}}
+        source: ${UNSUB_IMAGE_PATH:-${WBS_IMAGE_PATH:-}}
         target: /images
         bind:
           propagation: ${UNSUB_IMAGE_PROPAGATION:-${WBS_IMAGE_PROPAGATION:-rprivate}}

@@ -13,14 +13,15 @@ OLD_NAMES_USED: set[str] = set()
 
 
 def _env(name: str, default: str = "") -> str:
-    """UNSUB_X, or else the old WBS_X (noted in OLD_NAMES_USED for a startup warning), or else `default`."""
-    if name in os.environ:
+    """UNSUB_X, or else the old WBS_X (noted in OLD_NAMES_USED for a startup warning), or else `default`.
+    An empty UNSUB_X still lets an old WBS_X through: the compose file passes empty values for anything left out."""
+    if os.environ.get(name, "").strip():
         return os.environ[name].strip()
     old = OLD_PREFIX + name.removeprefix("UNSUB_")
-    if old in os.environ:
+    if os.environ.get(old, "").strip():
         OLD_NAMES_USED.add(old)
         return os.environ[old].strip()
-    return default.strip()
+    return os.environ.get(name, default).strip()
 
 
 env = _env

@@ -80,6 +80,8 @@ def test_old_wbs_names_still_work(monkeypatch):
     compose = (ROOT / "deploy/docker-compose.yaml").read_text()
     for new in set(re.findall(r"\$\{(UNSUB_\w+)", compose)):
         assert f"${{{new}:-${{WBS_{new[6:]}" in compose, f"{new} has no WBS_ fallback in the compose file"
+    # Portainer evaluates a ":?" even inside a fallback that isn't used, and then creates no container (2026-11-12).
+    assert not re.search(r"\$\{WBS_\w+:\?", compose)
 
 
 def hosts(monkeypatch, **env):
