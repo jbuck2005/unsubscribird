@@ -95,10 +95,11 @@ def test_public_footage_needs_a_named_species(trace, species, excluded, public):
     c = anonymous()
     listed = [v["trace_id"] for v in c.get(f"/api/public/day?day={when.date().isoformat()}").json()["visits"]]
     assert (trace in listed) == public
-    assert c.get(f"/clips/{trace}/x.mp4").status_code == (200 if public else 404)
+    # Any name is sent on to the clip's real one, but only after the access check: a hidden clip is a plain 404.
+    assert c.get(f"/clips/{trace}/x.mp4", follow_redirects=True).status_code == (200 if public else 404)
     assert c.get(f"/img/visits/{trace}/f.jpg").status_code == (200 if public else 404)
     you = logged_in()                                     # the review pages still see everything
-    assert you.get(f"/clips/{trace}/x.mp4").status_code == 200
+    assert you.get(f"/clips/{trace}/x.mp4", follow_redirects=True).status_code == 200
     assert you.get(f"/img/visits/{trace}/f.jpg").status_code == 200
 
 

@@ -287,7 +287,7 @@ const Review = {
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
         ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}
         <span class="chip edited" ${v._edited ? "" : "hidden"}>✎ changed</span>
-        ${v.clip_href ? `<a class="meta" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
+        ${v.clip_href ? `<a class="meta clip" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
       <div class="frames">${frames || '<span class="msg">No frames yet.</span>'}</div>
       <div class="actions">
         <input placeholder="Species…" value="${esc(initial)}" aria-label="Species">
@@ -340,6 +340,14 @@ const Review = {
     }));
     el.addEventListener("focus", () => this.setFocus(i, false));
     return el;
+  },
+
+  // After a save: the clip is named after the new species.
+  setClip(v, el, res) {
+    const a = $("a.clip", el);
+    if (!a || !res.clip_href) return;
+    v.clip_href = res.clip_href; v.clip_name = res.clip_name;
+    a.href = BASE + res.clip_href; a.textContent = `▶ ${res.clip_name}`;
   },
 
   renderAlso(v, el) {
@@ -511,7 +519,8 @@ const Review = {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
         if (res.ok) { v.label = { species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also,
-                                  also_seen: res.also_seen }; el.classList.add("done");
+                                  also_seen: res.also_seen };
+          this.setClip(v, el, res); el.classList.add("done");
           v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
           m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}).`; }
         else { el.classList.add("skipped"); m.className = "msg err"; m.textContent = res.error; }
@@ -543,6 +552,7 @@ const Review = {
       const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
         body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), also_seen: [...v._also] }) });
       v.label = { species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen };
+      this.setClip(v, el, r);
       v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
       el.classList.add("done"); el.classList.remove("skipped");
       msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}).`;

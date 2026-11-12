@@ -481,8 +481,9 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
     source = "confirmed" if cons and cons["species"] == name else "corrected"
     db.set_label(trace_id, name, frame_ids, body.count, source, per_frame, sorted(seen))
     also = sorted({s for s in per_frame.values() if s != "Empty"} | seen)
+    vj = visit_json(v, index)   # the clip's name follows the new label
     return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also,
-            "also_seen": sorted(seen)}
+            "also_seen": sorted(seen), "clip_name": vj["clip_name"], "clip_href": vj["clip_href"]}
 
 
 def ha_refresh(trace_id: str) -> None:
@@ -704,15 +705,17 @@ def get_image(request: Request, path: str):
 @app.get("/clips/{trace_id}/{name}")
 def get_clip(request: Request, trace_id: str, name: str):
     """A visit's clip served under a readable name (YYYYMMDD_HHMMSS_species.mp4): plays in the browser and
-    'Save as' / downloads keep that name. The name in the URL is cosmetic; the trace id picks the file.
-    Without a login: public visits only."""
-    v = db.one("SELECT clip FROM visits WHERE trace_id=?", trace_id)
+    'Save as' / downloads keep that name. The trace id picks the file; a link made before the species was
+    corrected is sent on to the current name. Without a login: public visits only."""
+    v = db.one("SELECT * FROM visits WHERE trace_id=?", trace_id)
     if not v or not v["clip"] or not (settings.image_dir / v["clip"]).exists():
         raise HTTPException(404)
     if not logged_in(request) and not public_visit(trace_id):
         raise HTTPException(404)
-    safe = name if name.endswith(".mp4") and "/" not in name else f"{trace_id}.mp4"
-    return FileResponse(settings.image_dir / v["clip"], media_type="video/mp4", filename=safe,
+    current = visit_json(v, species_index())["clip_name"]
+    if name != current:
+        return RedirectResponse(f"{base_path(request)}/clips/{quote(trace_id)}/{quote(current)}", status_code=302)
+    return FileResponse(settings.image_dir / v["clip"], media_type="video/mp4", filename=current,
                         content_disposition_type="inline")
 
 

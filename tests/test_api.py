@@ -34,8 +34,10 @@ def test_review_queue_and_confirm():
     r = c.get("/api/visits?queue=review").json()
     v = next(x for x in r["visits"] if x["trace_id"] == "trace0001")
     assert v["consensus"]["species"] == "Blue Jay" and v["consensus"]["known"]  # case normalised
-    assert c.post("/api/visits/trace0001/label", json={"species": "blue jay", "frame_ids": ids[:2]}).json() == \
+    out = c.post("/api/visits/trace0001/label", json={"species": "blue jay", "frame_ids": ids[:2]}).json()
+    assert {k: out[k] for k in ("ok", "species", "source", "frame_species", "also", "also_seen")} == \
         {"ok": True, "species": "Blue Jay", "source": "confirmed", "frame_species": {}, "also": [], "also_seen": []}
+    assert out["clip_name"] is None                       # this test visit has no clip
     assert all(x["trace_id"] != "trace0001" for x in c.get("/api/visits?queue=review").json()["visits"])
     lab = c.get("/api/visits?queue=labelled").json()["visits"][0]["label"]
     assert lab["species"] == "Blue Jay" and lab["frame_ids"] == ids[:2]
@@ -155,3 +157,10 @@ def test_clip_names_follow_the_detection():
     assert 'filename="20261105_091702_black-capped-chickadee.mp4"' in r.headers["content-disposition"]
     assert r.headers["content-disposition"].startswith("inline")
     assert c.get("/clips/nope/x.mp4").status_code == 404
+    # Corrected: the save returns the new name, and a link made before (with the old name) is sent on to it.
+    out = c.post("/api/visits/clipn1/label", json={"species": "Hairy Woodpecker", "frame_ids": [fid]}).json()
+    assert out["clip_name"] == "20261105_091702_hairy-woodpecker.mp4" and out["clip_href"].endswith(out["clip_name"])
+    old = client().get(v["clip_href"], follow_redirects=False)
+    assert old.status_code == 302 and old.headers["location"] == "/clips/clipn1/20261105_091702_hairy-woodpecker.mp4"
+    r = c.get(v["clip_href"])                                  # followed: the file, under its new name
+    assert r.status_code == 200 and 'filename="20261105_091702_hairy-woodpecker.mp4"' in r.headers["content-disposition"]
