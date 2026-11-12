@@ -11,6 +11,8 @@
 * Home page: **By bird** lists the day's rarest visitor first.
 * Home page: picking a species shows links to read about it, on Wikipedia and (for birds) All About Birds.
   These are plain links: nothing loads from those sites until you click.
+* Kids' **collection book** (📖 on the home page): a sticker for every bird found this year, cropped from your
+  own feeder's frames, with the day it first came. Dashed blanks are the birds on your species list still to find.
 * New **Patterns** page, starting with a **Project FeederWatch count**: pick two days and get the most birds of
   each species seen at once, ready to copy into FeederWatch (or download as CSV). Nothing is sent anywhere.
 * Review page: a **How many?** box for the most birds of the species at once. FeederWatch counts use it first,

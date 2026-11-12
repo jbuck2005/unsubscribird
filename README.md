@@ -108,7 +108,8 @@ Home Assistant Green, use Docker on another computer instead.
 
 **Kids' page, http://your-server:8095/ (public).** The day's bird clips, newest first (also oldest first, or by bird with the rarest first). Hover
 plays a tile silently; click opens a big player that auto-plays, with ◀ ▶ (also ← → and Esc, or swipe). Day arrows
-and per-bird chips. Empty visits never appear. A new visit appears by itself once it is recognised as a named species; anything else (Uncertain, Unknown bird, Other animal) waits until you confirm it, and a confirmed Unknown bird shows as "Mystery bird".
+and per-bird chips. Empty visits never appear. A new visit appears by itself once it is recognised as a named species; anything else (Uncertain, Unknown bird, Other animal) waits until you confirm it, and a confirmed Unknown bird shows as "Mystery bird". 📖 opens the collection book (`/collection`): a
+sticker for every bird found this year, and blanks for the ones on your species list still to find.
 
 **Settings, http://your-server:8095/admin (login; signed cookie, 30 days).**
 

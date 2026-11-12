@@ -7,13 +7,14 @@ import logging
 import shutil
 import time
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import re
 from urllib.parse import quote
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -402,6 +403,63 @@ def api_public_day(day: str | None = None, species: str | None = None):
     return {"day": d.isoformat(), "today": d == datetime.now().date(), "species": species,
             "counts": dict(sorted(counts.items(), key=lambda kv: -kv[1])), "visits": out, "about": about_links(counts),
             "dots": {("Mystery bird" if s in ("Uncertain", "Unknown bird") else s): c for s, c in colours.items()}}
+
+
+@app.get("/collection", response_class=HTMLResponse)
+def page_collection(request: Request):
+    """The kids' collection book: every bird found this year, and the ones still to find."""
+    return templates.TemplateResponse(request, "collection.html", {"version": __version__, "page": "collection"})
+
+
+@app.get("/api/public/collection")
+def api_public_collection(year: int | None = None):
+    """Bird species with a public visit in `year` (default this year): first seen, visits, the visit with the
+    best portrait. Plus the active birds on the species list not found yet."""
+    from datetime import datetime
+    year = year or datetime.now().year
+    if not 2000 <= year <= 2100:
+        raise HTTPException(400, "bad year")
+    start, end = datetime(year, 1, 1).astimezone().timestamp(), datetime(year + 1, 1, 1).astimezone().timestamp()
+    birds = {r["name"]: r for r in db.q("SELECT name, scientific, active FROM species WHERE kind='bird'")
+             if r["name"] != "Unknown bird"}
+    rows = db.q(f"""SELECT v.trace_id, v.ts, v.rec_conf, COALESCE(l.species, v.rec_species) shown, l.species labelled,
+                           l.also FROM visits v LEFT JOIN labels l USING(trace_id)
+                    WHERE v.ts >= ? AND v.ts < ? AND {PUBLIC_VISIT} ORDER BY v.ts""", start, end)
+    found: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        for sp in [r["shown"], *[s for s in json.loads(r["also"] or "[]") if s != r["shown"]]]:
+            if sp not in birds:
+                continue
+            # The portrait: a visit that is mainly this bird (an Also seen one may not show it best); then one you
+            # labelled; then the surest; then the latest.
+            rank = (sp == r["shown"], r["labelled"] is not None, r["rec_conf"] or 0, r["ts"])
+            it = found.setdefault(sp, {"species": sp, "first": r["ts"], "visits": 0, "rank": None})
+            it["visits"] += 1
+            if it["rank"] is None or rank > it["rank"]:
+                it.update(rank=rank, portrait=f"/api/public/portrait/{quote(r['trace_id'])}?species={quote(sp)}")
+    first_ts = db.one("SELECT MIN(ts) t FROM visits")["t"]
+    return {"year": year, "first_year": datetime.fromtimestamp(first_ts).year if first_ts else year,
+            "found": sorted(({k: v for k, v in it.items() if k != "rank"} for it in found.values()), key=lambda x: x["first"]),
+            "to_find": sorted(n for n, r in birds.items() if r["active"] and n not in found)}
+
+
+@lru_cache(maxsize=128)   # ~60 kB each
+def _portrait(trace_id: str, species: str) -> bytes | None:
+    return recognizer.portrait(trace_id, species)
+
+
+@app.get("/api/public/portrait/{trace_id}")
+def api_public_portrait(trace_id: str, species: str = ""):
+    """A square crop of the bird from a public visit's best frame (the collection book's pictures)."""
+    if not public_visit(trace_id):
+        raise HTTPException(404, "not found")
+    try:
+        jpeg = _portrait(trace_id, species)
+    except (OSError, ValueError):
+        jpeg = None
+    if not jpeg:
+        raise HTTPException(404, "no picture")
+    return Response(jpeg, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ---- API ------------------------------------------------------------------------

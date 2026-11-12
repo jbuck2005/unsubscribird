@@ -20,7 +20,7 @@ MAX_AGE = 30 * 86400
 
 # Public: the kids' page and what it needs. Everything else under /admin and /api is protected.
 PUBLIC_PREFIXES = ("/static/", "/img/", "/clips/", "/api/public/", "/login", "/logout", "/favicon")
-PUBLIC_EXACT = {"/", "/gallery"}
+PUBLIC_EXACT = {"/", "/gallery", "/collection"}
 
 
 class Auth:

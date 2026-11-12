@@ -10,7 +10,7 @@ from wbs import main
 
 STATIC = Path(main.HERE) / "static"
 BIRDS = {"X-Forwarded-Prefix": "/birds"}
-PAGES = ["/", "/login", "/admin", "/admin/dataset", "/admin/model", "/admin/patterns", "/admin/gallery", "/admin/status",
+PAGES = ["/", "/collection", "/login", "/admin", "/admin/dataset", "/admin/model", "/admin/patterns", "/admin/gallery", "/admin/status",
          "/admin/settings"]
 LINK = re.compile(r'(?:href|src|action)="(/[^"]*)"')
 
@@ -67,7 +67,7 @@ def test_a_bad_prefix_is_ignored(bad):
     assert 'data-base=""' in client().get("/", headers={"X-Forwarded-Prefix": bad}).text
 
 
-@pytest.mark.parametrize("name", ["app.js", "kids.js"])
+@pytest.mark.parametrize("name", ["app.js", "kids.js", "collection.js"])
 def test_scripts_build_no_bare_root_links(name):
     js = (STATIC / name).read_text()
     assert not re.search(r"""(?:src|href|data-full|action)=["']/""", js)

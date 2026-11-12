@@ -58,6 +58,19 @@ body { transition: background-color .6s ease, color .6s ease; }
 .tile .label .time { color: var(--muted); font-weight: 600; font-size: 15px; white-space: nowrap; }
 .tile .play { position: absolute; top: 10px; right: 12px; background: rgba(0,0,0,.45); color: #fff; border-radius: 999px;
   width: 34px; height: 34px; display: grid; place-items: center; font-size: 14px; pointer-events: none; }
+/* Collection book: one sticker per bird found, a blank for each still to find. */
+.book { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; padding: 14px 24px 40px; }
+.sticker { display: block; background: var(--panel); border-radius: 22px; box-shadow: var(--shadow); padding: 10px 10px 12px;
+  text-align: center; color: inherit; text-decoration: none; transition: transform .15s ease; }
+a.sticker:hover, a.sticker:focus-visible { transform: translateY(-3px) rotate(-1deg); }
+.sticker img, .sticker .q { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 16px; background: var(--accent-soft); }
+.sticker .q { display: grid; place-items: center; font: 800 56px "Montserrat", "Inter", sans-serif; color: var(--muted); }
+.sticker .name { font-weight: 700; margin-top: 8px; }
+.sticker .when { color: var(--muted); font-size: 14px; }
+.sticker.blank { opacity: .55; box-shadow: none; border: 2px dashed var(--muted); background: transparent; }
+.kids-bar .back { color: var(--accent); font-weight: 700; text-decoration: none; }
+.book-link { color: var(--muted); text-decoration: none; font-size: 26px; padding: 6px 10px; border-radius: 999px; }
+.book-link:hover { background: var(--panel); }
 .kids-foot { text-align: center; color: var(--muted); font-size: 12px; padding: 0 16px 20px; }
 .empty { text-align: center; color: var(--muted); font-size: 22px; padding: 50px 16px; }
 .empty[hidden] { display: none; }
@@ -79,6 +92,7 @@ body { transition: background-color .6s ease, color .6s ease; }
 .viewer .close { position: absolute; top: 16px; right: 16px; width: 48px; height: 48px; font-size: 20px; }
 @media (max-width: 640px) {
   .about { margin-left: 16px; margin-right: 16px; }
+  .book { padding-left: 16px; padding-right: 16px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .kids-head, .kids-bar, .chips, .grid { padding-left: 16px; padding-right: 16px; }
   .grid { grid-template-columns: 1fr; }
   .viewer .nav { position: absolute; bottom: 18px; width: 52px; height: 52px; }
