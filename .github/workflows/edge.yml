@@ -51,6 +51,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           provenance: false
+          build-args: UNSUB_BUILD=edge
           tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.arch }}-unsubscribird:edge
           labels: |
             io.hass.type=addon

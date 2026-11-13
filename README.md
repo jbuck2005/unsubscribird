@@ -71,7 +71,7 @@ Instead of building the image, set `UNSUB_IMAGE` in `deploy/.env` to one that Gi
 
 * `ghcr.io/jbuck2005/unsubscribird:latest`: the latest release
 * `ghcr.io/jbuck2005/unsubscribird:edge`: every change merged to the `edge` branch, a few minutes after its tests
-  pass, before it's released. Newest, and the least tried
+  pass, before it's released. Newest, and the least tried. The pages show its version with `-edge` on the end
 
 Then update with a pull instead of a build:
 

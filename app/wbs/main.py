@@ -22,7 +22,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__
+from . import __version__, version_label
 from . import feederwatch
 from . import patterns
 from . import frames as framelib
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
     if OLD_NAMES_USED:
         LOG.warning("Rename these settings in your .env (WBS_ is now UNSUB_; the old names still work for now): %s",
                     ", ".join(sorted(OLD_NAMES_USED)))
-    LOG.info("%s %s started (images %s, db %s)", settings.site_name, __version__, settings.image_dir, settings.db_path)
+    LOG.info("%s %s started (images %s, db %s)", settings.site_name, version_label, settings.image_dir, settings.db_path)
     yield
     collector.stop.set()
     prelabeler.stop.set()
@@ -264,7 +264,7 @@ def review_json(v, index: dict[str, str]) -> dict[str, Any]:
 
 # ---- pages ----------------------------------------------------------------------
 def _page(request: Request, template: str, page: str):
-    return templates.TemplateResponse(request, template, {"version": __version__, "page": page})
+    return templates.TemplateResponse(request, template, {"version": version_label, "page": page})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -272,7 +272,7 @@ def page_home(request: Request, visit: str | None = None):
     """The kids' page: today's bird clips. Old review links (/?visit=...) go to Settings."""
     if visit:
         return RedirectResponse(f"{base_path(request)}/admin?visit={quote(visit)}", status_code=303)
-    return templates.TemplateResponse(request, "home.html", {"version": __version__, "page": "home"})
+    return templates.TemplateResponse(request, "home.html", {"version": version_label, "page": "home"})
 
 
 @app.get("/gallery")
@@ -343,7 +343,7 @@ for _old in ("dataset", "model", "status"):
 
 @app.get("/login", response_class=HTMLResponse)
 def page_login(request: Request, next: str = "/admin"):
-    return templates.TemplateResponse(request, "login.html", {"version": __version__, "page": "login",
+    return templates.TemplateResponse(request, "login.html", {"version": version_label, "page": "login",
                                                               "next": next, "error": None,
                                                               "configured": bool(auth.password)})
 
@@ -358,7 +358,7 @@ def do_login(request: Request, password: str = Form(""), next: str = Form("/admi
         r.set_cookie(COOKIE, auth.make_cookie(), max_age=MAX_AGE, httponly=True, samesite="lax", secure=https,
                      path=base_path(request) or "/")
         return r
-    return templates.TemplateResponse(request, "login.html", {"version": __version__, "page": "login",
+    return templates.TemplateResponse(request, "login.html", {"version": version_label, "page": "login",
                                                               "next": target, "error": "That isn't the password.",
                                                               "configured": bool(auth.password)}, status_code=401)
 
@@ -417,7 +417,7 @@ def api_public_day(day: str | None = None, species: str | None = None):
 @app.get("/collection", response_class=HTMLResponse)
 def page_collection(request: Request):
     """The kids' collection book: every bird found this year, and the ones still to find."""
-    return templates.TemplateResponse(request, "collection.html", {"version": __version__, "page": "collection"})
+    return templates.TemplateResponse(request, "collection.html", {"version": version_label, "page": "collection"})
 
 
 @app.get("/api/public/collection")
@@ -1038,7 +1038,7 @@ def api_stats():
         disk = {"free_gb": round(usage.free / 1024 ** 3, 1), "total_gb": round(usage.total / 1024 ** 3, 1)}
     except OSError:
         disk = None
-    return {"version": __version__, "visits": counts, "labelled_visits": labelled, "labelled_frames": frames,
+    return {"version": version_label, "visits": counts, "labelled_visits": labelled, "labelled_frames": frames,
             "excluded_visits": excluded,
             "by_species": by_species,
             "vlm_agreement": (round(agree["ok"] / agree["n"], 3) if agree["n"] else None),
