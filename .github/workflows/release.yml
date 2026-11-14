@@ -3,9 +3,13 @@ name: Release
 # Publishes the images for the version in app/wbs/__init__.py and addon/config.yaml:
 #   ghcr.io/<owner>/amd64-unsubscribird and aarch64-unsubscribird   (the add-on pulls these)
 #   ghcr.io/<owner>/unsubscribird                                    (both, for docker compose)
-# Releases are made by hand, when you choose: push a tag like v0.29.0 (it must match the version in both files),
-# or publish a GitHub Release for that tag. Merging to main does NOT publish on its own, so main can hold a
-# finished, unreleased version until you tag it.
+# Releases are made by hand, when you choose: push a tag like v0.29.0 (it must match the version in both files).
+# Merging to main does NOT publish on its own, so main can hold a finished, unreleased version until you tag it.
+#
+# Two guard rails:
+#   * One release a day. A tag pushed on a day that already has a release publishes nothing (release_guard.py).
+#     The day is counted in the repository variable RELEASE_TZ (an IANA name, default UTC).
+#   * The GitHub Release is only drafted, with the changelog section as its notes. Publishing it is left to you.
 on:
   push:
     tags: ["v*"]
@@ -20,42 +24,35 @@ concurrency:
 
 jobs:
   version:
-    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
-      release: ${{ steps.v.outputs.release }}
       sha: ${{ steps.v.outputs.sha }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0   # every tag, for the one-a-day check
       - id: v
-        name: Which version, and is it new?
-        env:
-          EVENT: ${{ github.event_name }}
-          GH_TOKEN: ${{ github.token }}
+        name: Which version, and does it match the tag?
         run: |
           app=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' app/wbs/__init__.py)
           addon=$(sed -n 's/^version: "\(.*\)"/\1/p' addon/config.yaml)
-          echo "app $app, add-on $addon"
+          echo "tag $GITHUB_REF_NAME, app $app, add-on $addon"
           [ "$app" = "$addon" ]
+          [ "${GITHUB_REF_NAME#v}" = "$app" ]
           echo "version=$app" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if [ "$EVENT" = push ]; then
-            [ "${GITHUB_REF_NAME#v}" = "$app" ]
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$app" --silent 2>/dev/null; then
-            echo "v$app is already released"
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "v$app is new: releasing"
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          fi
+      - name: One release a day
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TZ: ${{ vars.RELEASE_TZ || 'UTC' }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          python3 .github/scripts/release_guard.py --tag "$GITHUB_REF_NAME" --tz "$RELEASE_TZ" \
+            --releases "$RUNNER_TEMP/releases.json"
 
   build:
     needs: version
-    if: needs.version.outputs.release == 'true'
     strategy:
       matrix:
         include:
@@ -115,17 +112,27 @@ jobs:
               "$r/amd64-unsubscribird:$VERSION" "$r/aarch64-unsubscribird:$VERSION"
           done
 
-  tag:
-    # Only after every image is up, so a v<version> tag always means a complete release. A tag made with the
-    # workflow's token doesn't start this workflow again.
+  draft:
+    # Only after every image is up. Drafts the GitHub Release with this version's changelog section as its notes,
+    # and never publishes it: review it and press Publish yourself. A re-run leaves an existing release alone.
     needs: [version, manifest]
-    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
       - env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
-          SHA: ${{ needs.version.outputs.sha }}
-        run: gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/v$VERSION" -f "sha=$SHA"
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "A release for v$VERSION already exists: left as it is"
+            exit 0
+          fi
+          awk -v h="## $VERSION" '$0 == h {on=1; next} on && /^## / {exit} on' addon/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || echo "See addon/CHANGELOG.md." > "$RUNNER_TEMP/notes.md"
+          printf '\n---\nImages: `ghcr.io/%s/unsubscribird:%s` (amd64 and arm64).\n' "${GITHUB_REPOSITORY_OWNER,,}" "$VERSION" >> "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --draft --verify-tag --title "un-subscribird $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md"

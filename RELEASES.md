@@ -9,8 +9,9 @@ How versions move:
 
 - Work merges into `edge` and is published as `:edge` (shown on the pages as `v<version>-edge`) as soon as its
   tests pass. This is the newest, least-tried code.
-- A release promotes `edge` into `main` with the version bumped. Tests run on `main`, the `:<version>` and
-  `:latest` images are published, and the commit is tagged `v<version>`.
+- A release promotes `edge` into `main` with the version bumped. Pushing the tag `v<version>` on `main`
+  publishes the `:<version>` and `:latest` images and drafts a GitHub Release for it, which is published by hand.
+  At most one release a day. The steps are in the README's "Releasing".
 
 ---
 
