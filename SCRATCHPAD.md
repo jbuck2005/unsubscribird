@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Docker container renamed to `unsubscribird`
+
+**What changed.** The app's container on my Docker host now has the name everyone expects, `unsubscribird`. It's set
+by `UNSUB_CONTAINER` in the stack `.env`, which is already the public default in `deploy/.env.example` and the compose
+file, so nothing in this repo changed. On the host I also updated the container name in the updater script (its
+health check, DB backup and rollback use it) and in the nightly backup's list of containers to stop. I backed up every
+edited file beside the original first.
+
+**Unchanged on purpose:** the Portainer stack name and id, the stack folder, the data and image paths, the HA ID, topic
+and MQTT user (changing those would make new HA entities), and the reverse proxy (it goes by port).
+
+**Status.** Done. It was down for about 8 seconds. Port 8095 answers 200, version 0.29.0, and the updater ran clean
+by hand. The updater's next real deploy will be the first to exercise its health check under the new name.
+
+**Next.** The updater's word check flags this branch, so every scratchpad push sends a "don't merge" alert. Skipping
+`dev/scratchpad` in that check would stop the noise.
+
+---
+
 ## 2026-11-14: Count only, so I can count a bird without training on it (PR #55)
 
 **Why.** Some visits show a bird I can identify but that's too hidden (behind the feeder ball) or blurry to teach
