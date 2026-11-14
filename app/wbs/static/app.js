@@ -190,9 +190,9 @@ const Review = {
     this.queue = q;
     $(".hint").innerHTML = q === "check"
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
-      : q === "excluded" ? "Visits kept out of training. <b>Restore</b> puts one back."
+      : q === "excluded" ? "Visits kept out of counts, eBird and training. <b>Restore</b> puts one back."
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
-      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).";
+      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     $("#queues button.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
     this.load();
@@ -252,6 +252,8 @@ const Review = {
     v._edited = !!v._preset?.edited;
     // Other species seen in the visit without a frame of their own (two birds in one frame). Not training data.
     v._also = new Set(v._preset?.also ?? v.label?.also_seen ?? []);
+    // Count only: the species and count go into counts and eBird, the frames never train the model.
+    v._train = v._preset?.train ?? (v.label ? v.label.train !== 0 && v.label.train !== false : true);
     const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const frames = v.frames.map((f, n) => {
       const s = byFrame[f.id];
@@ -294,6 +296,7 @@ const Review = {
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
         ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}
+        <span class="chip alt countonly-chip" title="Counted, but its frames are not training data" ${v.label && !v._train ? "" : "hidden"}>count only</span>
         <span class="chip edited" ${v._edited ? "" : "hidden"}>✎ changed</span>
         ${v.clip_href ? `<a class="meta clip" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
       ${preds}
@@ -304,13 +307,15 @@ const Review = {
           <span class="also-chips"></span><input class="alsoin" placeholder="+ Also seen…" aria-label="Also seen"></span>
         <input class="countin" type="number" min="1" max="99" placeholder="How many?" value="${esc(v._preset?.count ?? v.label?.count ?? "")}" aria-label="How many at once"
           title="The most birds of this species at once, for a FeederWatch count. Leave empty for one, or LM Studio's count.">
+        <label class="countonly" title="Count this visit (species, how many, eBird) but keep its frames out of training, e.g. a bird hidden behind the feeder or a blurry clip (o)">
+          <input type="checkbox" ${v._train ? "" : "checked"}> Count only</label>
         <button class="btn primary" data-a="confirm">${v.label ? "Update" : "Confirm"} ⏎</button>
         <button class="btn" data-a="Empty" title="Set to Empty (confirm later)">Empty (e)</button>
         <button class="btn" data-a="Squirrel">Squirrel (s)</button>
         <button class="btn" data-a="Unknown bird">Unknown bird (u)</button>
         ${v.label ? '<button class="btn" data-a="unlabel">Remove label</button>' : ""}
         ${v.label && v.check ? '<button class="btn" data-a="keep" title="Your label is right (c)">Keep ✓ (c)</button>' : ""}
-        <button class="btn" data-a="${v.excluded ? "restore" : "exclude"}" title="${v.excluded ? "Use this visit again" : "Keep this visit out of training"}">${v.excluded ? "Restore" : "Exclude"}</button>
+        <button class="btn" data-a="${v.excluded ? "restore" : "exclude"}" title="${v.excluded ? "Use this visit again" : "Not a real visit: keep it out of counts, eBird and training"}">${v.excluded ? "Restore" : "Exclude"}</button>
         <span class="msg"></span>
       </div>`;
     $(".morebtn", el)?.addEventListener("click", (e) => {
@@ -345,6 +350,8 @@ const Review = {
       if (b) { v._also.delete(b.dataset.s); this.renderAlso(v, el); this.markEdited(v, el); }
     });
     this.renderAlso(v, el);
+    el.classList.toggle("notrain", !v._train);
+    $(".countonly input", el).addEventListener("change", (e) => this.setTrain(v, el, !e.target.checked));
     $$("button[data-a]", el).forEach((b) => b.addEventListener("click", () => {
       const a = b.dataset.a;
       if (a === "confirm") this.save(v, el);
@@ -363,6 +370,16 @@ const Review = {
     if (!a || !res.clip_href) return;
     v.clip_href = res.clip_href; v.clip_name = res.clip_name;
     a.href = BASE + res.clip_href; a.textContent = `▶ ${res.clip_name}`;
+  },
+
+  setTrain(v, el, on) {
+    v._train = on;
+    $(".countonly input", el).checked = !on;
+    el.classList.toggle("notrain", !on);
+    const m = $(".msg", el);
+    m.className = "msg";
+    m.textContent = on ? "Ticked frames will be training data." : "Count only: the species and count are kept, the frames won't train the model.";
+    this.markEdited(v, el);
   },
 
   renderAlso(v, el) {
@@ -451,7 +468,7 @@ const Review = {
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
       const fs = new Map(v._fs);
       if (fs.has(fid)) { fs.set(r.frame.id, fs.get(fid)); fs.delete(fid); }
-      nv._preset = { species: $(".actions input", el).value, frames, fs, also: v._also, count: $(".countin", el)?.value, edited: v._edited };
+      nv._preset = { species: $(".actions input", el).value, frames, fs, also: v._also, count: $(".countin", el)?.value, edited: v._edited, train: v._train };
       const i = this.visits.indexOf(v);
       this.visits[i] = nv;
       const ne = this.card(nv, i);
@@ -499,13 +516,13 @@ const Review = {
     for (const { v, el } of this.pending()) {
       const species = ($(".actions input", el).value || "").trim();
       if (this.held(v)) { held.push(el); continue; }
-      if (!species || !known.has(species.toLowerCase()) || !v._frames.size) { skipped.push(el); continue; }
+      if (!species || !known.has(species.toLowerCase()) || (v._train && !v._frames.size)) { skipped.push(el); continue; }
       items.push({ trace_id: v.trace_id, species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v),
-                   also_seen: [...v._also], count: this.count(el), _v: v, _el: el });
+                   also_seen: [...v._also], count: this.count(el), train: v._train, _v: v, _el: el });
     }
     const unsaved = this.unsaved().map(({ el }) => el);
     const mark = (els, text) => els.forEach((el) => { el.classList.add("skipped"); const m = $(".msg", el); m.className = "msg err"; m.textContent = text; });
-    mark(skipped, "Skipped by Confirm all: pick a species from the list (and at least one frame).");
+    mark(skipped, "Skipped by Confirm all: pick a species from the list (and at least one frame, or tick Count only).");
     mark(held, "Skipped by Confirm all: the model and LM Studio disagree. Check the frames, then confirm this one (Enter).");
     mark(unsaved, "Not saved: Confirm all only saves new visits. Press Update to save your changes to this label.");
     const notes = [
@@ -523,21 +540,23 @@ const Review = {
     items.forEach((it) => (tally[it.species] = (tally[it.species] || 0) + 1));
     const summary = Object.entries(tally).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(", ");
     const edited = items.filter((it) => it._v._edited).length;
-    if (!confirm(`Confirm ${items.length} visit(s) as training data?\n\n${summary}\n\n${edited} changed by you.` +
+    const countOnly = items.filter((it) => !it.train).length;
+    if (!confirm(`Confirm ${items.length} visit(s)?\n\n${summary}\n\n${edited} changed by you.` +
+                 (countOnly ? ` ${countOnly} count only (not training data).` : "") +
                  (notes.length ? "\n\n" + notes.join("\n") : ""))) return;
     const btn = $("#confirm-all"); btn.disabled = true; btn.textContent = "Saving…";
     try {
       const r = await api("/api/labels/batch", { method: "POST",
-        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species, also_seen, count }) =>
-          ({ trace_id, species, frame_ids, frame_species, also_seen, count }))) });
+        body: JSON.stringify(items.map(({ trace_id, species, frame_ids, frame_species, also_seen, count, train }) =>
+          ({ trace_id, species, frame_ids, frame_species, also_seen, count, train }))) });
       r.results.forEach((res, n) => {
         const { _v: v, _el: el } = items[n];
         const m = $(".msg", el);
         if (res.ok) { v.label = { count: items[n].count, species: res.species, frame_ids: items[n].frame_ids, frame_species: res.frame_species, also: res.also,
-                                  also_seen: res.also_seen };
-          this.setClip(v, el, res); el.classList.add("done");
+                                  also_seen: res.also_seen, train: res.train };
+          this.setClip(v, el, res); el.classList.add("done"); this.showTrain(v, el);
           v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
-          m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}).`; }
+          m.className = "msg"; m.textContent = `Saved: ${res.species} (${res.source}${res.train ? "" : ", count only"}).`; }
         else { el.classList.add("skipped"); m.className = "msg err"; m.textContent = res.error; }
       });
       $("#batch-msg").textContent = `Saved ${r.saved}` + (r.failed ? `, ${r.failed} failed (marked in red)` : "") + ".";
@@ -568,15 +587,21 @@ const Review = {
     try {
       const r = await api(`/api/visits/${v.trace_id}/label`, { method: "POST",
         body: JSON.stringify({ species, frame_ids: [...v._frames], frame_species: this.frameSpecies(v), also_seen: [...v._also],
-                               count: this.count(el) }) });
-      v.label = { count: this.count(el), species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen };
-      this.setClip(v, el, r);
+                               count: this.count(el), train: v._train }) });
+      v.label = { count: this.count(el), species: r.species, frame_ids: [...v._frames], frame_species: r.frame_species, also: r.also, also_seen: r.also_seen, train: r.train };
+      this.setClip(v, el, r); this.showTrain(v, el);
       v._edited = false; const badge = $(".chip.edited", el); if (badge) badge.hidden = true;
       el.classList.add("done"); el.classList.remove("skipped");
-      msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}).`;
+      msg.className = "msg"; msg.textContent = `Saved: ${r.species}${r.also.length ? " + " + r.also.join(", ") : ""} (${r.source}${r.train ? "" : ", count only: not training data"}).`;
       this.counts(); this.updateConfirmAll();
       this.setFocus(this.focus + 1);
     } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
+  },
+
+  // After a save: the header says whether the label is count only.
+  showTrain(v, el) {
+    const c = $(".countonly-chip", el);
+    if (c) c.hidden = !v.label || v.label.train !== false;
   },
 
   async keep(v, el) {
@@ -592,7 +617,7 @@ const Review = {
       await api(`/api/visits/${v.trace_id}/exclude`, { method: "POST", body: JSON.stringify({ excluded: on }) });
       v.excluded = on ? 1 : 0;
       el.classList.add("done"); $(".msg", el).className = "msg";
-      $(".msg", el).textContent = on ? "Excluded from training." : "Restored.";
+      $(".msg", el).textContent = on ? "Excluded from counts and training." : "Restored.";
       const b = $(`button[data-a="${on ? "exclude" : "restore"}"]`, el);
       if (b) { b.dataset.a = on ? "restore" : "exclude"; b.textContent = on ? "Restore" : "Exclude"; }
       this.counts(); this.updateConfirmAll(); this.setFocus(this.focus + 1);
@@ -601,7 +626,7 @@ const Review = {
 
   async unlabel(v, el) {
     await api(`/api/visits/${v.trace_id}/label`, { method: "DELETE" });
-    v.label = null; el.classList.remove("done"); $(".msg", el).textContent = "Label removed."; this.counts(); this.updateConfirmAll();
+    v.label = null; el.classList.remove("done"); this.showTrain(v, el); $(".msg", el).textContent = "Label removed."; this.counts(); this.updateConfirmAll();
   },
 
   setFocus(i, scroll = true) {
@@ -636,6 +661,7 @@ const Review = {
     else if (k === "u") { this.pickSpecies(v, el, "Unknown bird"); this.setFocus(this.focus + 1); }
     else if (k === "A") { this.confirmAll(); }
     else if (k === "c" && v.label && v.check) { this.keep(v, el); }
+    else if (k === "o") { this.setTrain(v, el, !v._train); }
     else if (k === "z") { const f = $(".frame img", el); if (f) zoom(f.dataset.full); }
     else if (e.shiftKey && /^Digit[1-9]$/.test(e.code)) { const f = v.frames[+e.code.slice(5) - 1]; if (f && v.clip) this.regrab(v, el, f.id); }
     else if (/^[1-9]$/.test(k)) { const f = v.frames[+k - 1]; if (f) this.toggle(v, el, f.id); }
@@ -676,6 +702,7 @@ async function datasetPage() {
   $("#summary").innerHTML = [
     ["Confirmed visits", stats.labelled_visits], ["Training frames", stats.labelled_frames],
     ["Species with data", withData],
+    ...(stats.count_only_visits ? [["Count only", stats.count_only_visits]] : []),
     ["Model agreed", stats.vlm_agreement == null ? "–" : Math.round(stats.vlm_agreement * 100) + "%"],
   ].map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   // Grouped by how likely the species is around Ottawa this month; sorting happens WITHIN each group.
