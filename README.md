@@ -219,8 +219,9 @@ released) code.
    still cleaned up. If `edge` does go missing, recreate it from `main` (`git push origin main:edge`).
 
 **Bot pull requests.** Merge Dependabot's (and any other bot's) pull requests into `edge` with **Squash and merge**,
-never with a merge commit, so `edge` stays a line of single commits. A host that only deploys commits from the
-maintainer can then check each commit on its own.
+never with a merge commit, so `edge` stays a line of single commits. A squash keeps the bot as the commit's author
+(GitHub is the committer), so a host that only deploys trusted commits should accept the maintainer, GitHub
+(`noreply@github.com`) and Dependabot's noreply address, and can then check each commit on its own.
 4. **Publish.** Push the tag from `main`:
 
    ```sh
