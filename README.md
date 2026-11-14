@@ -199,12 +199,37 @@ docker run --rm -v "$PWD":/src:ro python:3.12-slim sh -c 'apt-get -qq update && 
   pip install -q -r /src/app/requirements.txt pytest httpx; cp -r /src /w && cd /w && python -m pytest -q tests'
 ```
 
-GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. Pull requests go
-into `edge`; each push there that passes the tests publishes the `:edge` images, overwriting the last ones. `edge`
-reaches `main` when a release is prepared: change the version in both `app/wbs/__init__.py` and `addon/config.yaml`
-and merge. That stages the release on `main` without publishing. To publish it, push a tag like `v0.29.0` (it must
-match the version in both files), or publish a GitHub Release for that tag; GitHub then builds and pushes the images
-to GHCR.
+GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request.
+
+## Releasing
+
+There are two channels. `edge` is where work lands and gets tried; `main` only ever holds released (or about to be
+released) code.
+
+1. **Work goes into `edge`.** Open pull requests against `edge`. Each push there that passes the tests publishes
+   the `:edge` images, overwriting the last ones (`.github/workflows/edge.yml`). No version bump is needed.
+2. **Try it.** A Docker host that follows `:edge` (see [Published images](#published-images): `UNSUB_IMAGE` set to
+   `ghcr.io/jbuck2005/unsubscribird:edge`, and the hourly pull from cron, or the two `docker compose` lines by hand)
+   picks the build up. The pages show `v<version>-edge`, so you can tell which build you are looking at.
+3. **Stage the release.** On `edge`, set the new version in both `app/wbs/__init__.py` and `addon/config.yaml`,
+   turn the top of `addon/CHANGELOG.md` into `## <version>`, and add the story to `RELEASES.md`. Then open a pull
+   request from `edge` into `main` and merge it. Merging publishes nothing.
+4. **Publish.** Push the tag from `main`:
+
+   ```sh
+   git checkout main && git pull
+   git tag -a v0.30.0 -m v0.30.0 && git push origin v0.30.0
+   ```
+
+   `.github/workflows/release.yml` checks that the tag matches both version files, and that no other release was
+   made the same day. It then builds and pushes `:<version>` and `:latest`, and **drafts** a GitHub Release with
+   the changelog section as its notes. It never publishes that release: read it over and press **Publish** on
+   GitHub yourself.
+
+**One release a day.** A second `v*` tag on a day that already had a release fails the workflow before anything is
+built, and nothing is published. Re-run the workflow the next day, or delete the tag (`git push origin :v0.30.0`)
+and push it again then. The day is counted in UTC unless the repository variable `RELEASE_TZ` (Settings → Secrets
+and variables → Actions → Variables) names another time zone, such as `America/New_York`.
 
 ## Roadmap
 
