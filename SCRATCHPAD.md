@@ -5,6 +5,24 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Phone layout promoted to main (0.29.0 staged)
+
+**What I changed**
+- I tested the phone layout on the `:edge` image. It looks much better, so I promoted it.
+- PR #48 (into `edge`) adds the phone layout (#47) and the release guard rails (#46) to the 0.29.0 notes in
+  `addon/CHANGELOG.md` and `RELEASES.md`. 0.29.0 was never tagged, so both ship with it and the version stays 0.29.0.
+- PR #49 moves `edge` into `main`. `main` was fast-forwarded to `edge` (same commits, no merge commit), and the
+  checks were green.
+
+**Status:** `main` and `edge` point at the same commit. 0.29.0 is staged on `main` and still untagged. Nothing has
+been published.
+
+**Next**
+- When I'm ready, push the `v0.29.0` tag (one release a day). The workflow builds the images and drafts the GitHub
+  Release, and I publish it by hand.
+
+---
+
 ## 2026-11-14: Release guard rails merged into edge
 
 **What I changed**
