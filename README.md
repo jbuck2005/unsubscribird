@@ -244,6 +244,9 @@ and variables → Actions → Variables) names another time zone, such as `Ameri
 
 ## Models and credits
 
+How the Vicohome camera and cloud work, and how we found out (open-source clients, a capture of the app, measured
+clips), is in [reverse-engineering.md](reverse-engineering.md).
+
 un-subscribird stands on two open models. Both are downloaded from Hugging Face on first start, not shipped in the
 image, and run entirely on your computer: nothing is sent to them over the network.
 
