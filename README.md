@@ -71,7 +71,7 @@ Instead of building the image, set `UNSUB_IMAGE` in `deploy/.env` to one that Gi
 
 * `ghcr.io/jbuck2005/unsubscribird:latest`: the latest release
 * `ghcr.io/jbuck2005/unsubscribird:edge`: every change merged to the `edge` branch, a few minutes after its tests
-  pass, before it's released. Newest, and the least tried. The pages show its version with `-edge` on the end
+  pass, before it's released. Newest, and the least tried. The pages show its version with `-edge.<commit>` on the end (for example `v0.29.0-edge.da495c4`)
 
 Then update with a pull instead of a build:
 
@@ -215,7 +215,7 @@ released) code.
    the `:edge` images, overwriting the last ones (`.github/workflows/edge.yml`). No version bump is needed.
 2. **Try it.** A Docker host that follows `:edge` (see [Published images](#published-images): `UNSUB_IMAGE` set to
    `ghcr.io/jbuck2005/unsubscribird:edge`, and the hourly pull from cron, or the two `docker compose` lines by hand)
-   picks the build up. The pages show `v<version>-edge`, so you can tell which build you are looking at.
+   picks the build up. The pages show `v<version>-edge.<commit>`, so you can tell which build you are looking at.
 3. **Stage the release.** On `edge`, set the new version in both `app/wbs/__init__.py` and `addon/config.yaml`,
    turn the top of `addon/CHANGELOG.md` into `## <version>`, and add the story to `RELEASES.md`. Then open a pull
    request from `edge` into `main` and merge it. Merging publishes nothing.

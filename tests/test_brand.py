@@ -63,7 +63,7 @@ def test_renaming_the_site_never_changes_home_assistant_entity_ids(monkeypatch):
 def test_an_edge_build_shows_the_suffix(monkeypatch):
     import importlib
     import wbs
-    monkeypatch.setenv("UNSUB_BUILD", "edge")
-    assert importlib.reload(wbs).version_label == f"{wbs.__version__}-edge"
+    monkeypatch.setenv("UNSUB_BUILD", "edge.da495c4")
+    assert importlib.reload(wbs).version_label == f"{wbs.__version__}-edge.da495c4"
     monkeypatch.delenv("UNSUB_BUILD")
     assert importlib.reload(wbs).version_label == wbs.__version__
