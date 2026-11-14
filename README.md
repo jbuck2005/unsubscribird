@@ -217,6 +217,10 @@ released) code.
    `edge` must survive that merge: a branch ruleset on `main` and `edge` with **Restrict deletions** (and **Block
    force pushes**) keeps GitHub's "Automatically delete head branches" from removing it, while topic branches are
    still cleaned up. If `edge` does go missing, recreate it from `main` (`git push origin main:edge`).
+
+**Bot pull requests.** Merge Dependabot's (and any other bot's) pull requests into `edge` with **Squash and merge**,
+never with a merge commit, so `edge` stays a line of single commits. A host that only deploys commits from the
+maintainer can then check each commit on its own.
 4. **Publish.** Push the tag from `main`:
 
    ```sh
