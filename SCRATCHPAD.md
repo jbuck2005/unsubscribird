@@ -5,6 +5,27 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Phone layout for the admin pages
+
+**What I changed**
+- The admin pages were very cluttered on my phone, so I opened PR #47 into `edge` (branch `dev/mobile-admin`).
+  It only changes screens up to 640px wide:
+  - The header shows the logo, a menu button that names the current page, and the theme toggle. The nine page
+    links and the version moved into the menu.
+  - The review queues are one row of chips that scrolls sideways. The keyboard help is hidden on phones, and the
+    queue hint is cut to two lines (tap to read all of it).
+  - Visit cards show the frames first, two to a row, then the lead guess. The other guesses sit behind a `+N`
+    button.
+  - Wider screens keep their layout.
+- Tests pass (213), including the new `tests/test_mobile_nav.py`.
+
+**Status:** PR #47 is open and waiting on my review.
+
+**Next**
+- Merge #47, then check the `:edge` build on my phone.
+
+---
+
 ## 2026-11-14: Release guard rails
 
 **What I changed**
