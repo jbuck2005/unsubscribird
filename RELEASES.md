@@ -26,6 +26,8 @@ pre-release **edge channel** so the newest work can be tried before it is releas
   minutes after its tests pass, before it is released. Its pages show the version with `-edge` on the end (for
   example `v0.29.0-edge`) so a pre-release build is obvious at a glance. Point `UNSUB_IMAGE` at `:edge` in
   `deploy/.env` to follow it; releases still come only from `main`. See the README's "Published images".
+- **Delete old models (Model tab).** Every trained model except the active one has a **Delete** button that removes
+  it and its file; the active model is protected (switch to another first).
 
 **Carried into the release from the preceding feature work**
 

@@ -307,3 +307,27 @@ def test_retrain_every_n_days(tmp_path, monkeypatch):
     assert not t.retrain_due(s(auto_train_days=4), now)    # 4 days: not yet
     assert not t.retrain_due(s(), at(0, 3))                # wrong hour
     assert not t.retrain_due(s(auto_train=False), now)     # turned off
+
+
+def test_delete_removes_an_inactive_model_and_protects_the_active_one(tmp_path):
+    main.embed_worker.embedder = FakeEmbedder()
+    for i in range(6):
+        add_visit(f"dj{i:03d}", "Blue Jay")
+        add_visit(f"dc{i:03d}", "Black-capped Chickadee")
+        add_visit(f"de{i:03d}", "Empty")
+    trainer = Trainer(main.db, main.embed_worker, tmp_path / "models")
+    old = trainer.train()["model_id"]
+    new = trainer.train()["model_id"]
+    c = TestClient(main.app)
+    assert c.post(f"/api/models/{new}/activate").json()["ok"]        # new is active, old is not
+    oldpath = main.db.one("SELECT path FROM models WHERE id=?", old)["path"]
+    assert (tmp_path / "models").exists() and __import__("pathlib").Path(oldpath).exists()
+
+    assert c.delete(f"/api/models/{old}").json()["ok"]              # delete the inactive one
+    assert main.db.one("SELECT 1 FROM models WHERE id=?", old) is None
+    assert not __import__("pathlib").Path(oldpath).exists()         # file gone too
+    assert main.db.q("SELECT 1 FROM label_checks WHERE model_id=?", old) == []
+
+    assert c.delete(f"/api/models/{new}").status_code == 409        # active model is protected
+    assert main.db.one("SELECT 1 FROM models WHERE id=?", new)      # still there
+    assert c.delete("/api/models/999999").status_code == 404

@@ -811,10 +811,15 @@ async function modelPage(first = false) {
       <td>${esc(new Date(x.created * 1000).toLocaleString())}</td><td class="n">${x.classes.length}</td><td class="n">${x.n_visits}</td>
       <td class="n">${pct(x.metrics.visit_accuracy)}</td><td class="n">${pct(x.metrics.baselines?.bioclip?.visit_accuracy)}</td>
       <td class="n">${pct(x.metrics.baselines?.vlm?.visit_accuracy)}</td>
-      <td>${x.active ? "" : `<button class="btn" data-activate="${x.id}">Use</button>`}</td></tr>`).join("")
+      <td>${x.active ? "" : `<button class="btn" data-activate="${x.id}">Use</button> <button class="btn" data-del="${x.id}">Delete</button>`}</td></tr>`).join("")
     || '<tr><td colspan="8" class="msg">No models yet.</td></tr>';
   $$("[data-activate]").forEach((b) => b.addEventListener("click", async () => {
     await api(`/api/models/${b.dataset.activate}/activate`, { method: "POST" }); modelPage(); }));
+  $$("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Delete model v${b.dataset.del}? Its file is removed and this can't be undone.`)) return;
+    try { await api(`/api/models/${b.dataset.del}`, { method: "DELETE" }); modelPage(); }
+    catch (e) { alert(e.message); }
+  }));
 
   const latest = m.models.find((x) => x.active) || m.models[0];
   if (!latest) { $("#latest").innerHTML = ""; return; }

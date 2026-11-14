@@ -885,6 +885,25 @@ def api_activate(model_id: int):
     return {"ok": True, "predicted": n}
 
 
+@app.delete("/api/models/{model_id}")
+def api_delete_model(model_id: int):
+    """Delete an old model: its database row and its .joblib file. The active model is protected;
+    activate another one first. Past suggestions that named it keep their text (history)."""
+    row = db.one("SELECT * FROM models WHERE id=?", model_id)
+    if not row:
+        raise HTTPException(404)
+    if row["active"]:
+        raise HTTPException(409, "That model is in use. Switch to another model first.")
+    with db.tx() as c:
+        c.execute("DELETE FROM label_checks WHERE model_id=?", (model_id,))
+        c.execute("DELETE FROM models WHERE id=?", (model_id,))
+    try:
+        Path(row["path"]).unlink(missing_ok=True)
+    except OSError:
+        pass
+    return {"ok": True}
+
+
 @app.get("/img/{path:path}")
 def get_image(request: Request, path: str):
     """A picture under the image folder. Without a login: only a kept frame of a public visit."""

@@ -6,6 +6,9 @@
   after its tests pass, so the newest work can be tried before it is released. Its pages show the version with
   `-edge` on the end (for example `v0.29.0-edge`). Releases still come only from `main`; see the README for how
   to follow the edge channel.
+* **Model tab:** delete old models. Each trained model that isn't the active one gets a **Delete** button that
+  removes it and its file; the active model is protected (switch to another first). Past suggestions that named
+  a deleted model keep their text.
 
 * Clips that grew after they were downloaded are fetched again: the Vicohome bridge may save a clip before the
   whole video is uploaded and replace it later (bridge 0.3.5 re-checks for 30 minutes). Clips from the last 45
