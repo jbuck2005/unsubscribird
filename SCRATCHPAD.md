@@ -5,6 +5,29 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: OWL-ViT broke on transformers 5
+
+**What happened:** `ff20b55` (#45, the library updates) broke OWL-ViT on my station, so I rolled the app back by
+hand to `219a762`. `edge` still points at `ff20b55`.
+
+**Cause:** transformers 5 removed `OwlViTProcessor.post_process_object_detection` (renamed
+`post_process_grounded_object_detection`), and `detect.py` still called the old name, so every check raised
+`AttributeError`.
+
+**Fix (PR #56 into `edge`, not merged):** call `processor.image_processor.post_process_object_detection`, which
+exists in both 4 and 5 with the same output. I chose that over pinning transformers below 5, because open_clip 4
+came in with #45 and a pin would give an untested combination. New unit test with a processor shaped like
+transformers 5's: it fails on `edge` and passes with the fix. The Docker build now also runs the real OWL-ViT and
+BioCLIP 2 calls inside the image (`tests/smoke_models.py`).
+
+**Status:** waiting for #56's CI (image builds plus the model smoke run), then for my OK to merge.
+
+**Next**
+- Keep the updater from redeploying `ff20b55` until #56 is merged.
+- Merge #56, then let the station deploy it and check that OWL-ViT detections and BioCLIP suggestions are back.
+
+---
+
 ## 2026-11-14: Docker container renamed to `unsubscribird`
 
 **What changed.** The app's container on my Docker host now has the name everyone expects, `unsubscribird`. It's set
