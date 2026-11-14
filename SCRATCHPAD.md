@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Deep health check
+
+**What I changed (PR #57 into `edge`, not merged)**
+- `GET /healthz` answers 200 when the app is up. `GET /healthz?deep=1` also runs one real OWL-ViT detection and
+  one BioCLIP 2 embedding on a built-in made-up frame, and answers 503 if either fails.
+- The result is cached for 60 s, and only one check runs at a time. No login is needed. Failures report only the
+  error type.
+- New tests in `tests/test_health.py`; the full suite passes (225).
+
+**Why:** my updater's 200 check passed while every OWL-ViT detection failed after #45.
+
+**Status:** waiting for CI and my OK. #56 (the OWL-ViT fix) is ready too and isn't merged yet.
+
+**Next**
+- Merge #56 and #57, then switch the updater to `/healthz?deep=1` with a timeout of a minute or two, and roll back
+  on anything but 200.
+
+---
+
 ## 2026-11-14: OWL-ViT broke on transformers 5
 
 **What happened:** `ff20b55` (#45, the library updates) broke OWL-ViT on my station, so I rolled the app back by
