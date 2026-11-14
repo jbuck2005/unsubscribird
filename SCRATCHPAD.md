@@ -5,6 +5,23 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Rulesets for main and edge
+
+**What I changed**
+- I added a "Protect main and edge" ruleset (Restrict deletions, Block force pushes) to both repos.
+
+**Status**
+- un-subscribird: GitHub now reports `main` and `edge` as protected. Done.
+- ha-vicohome-bridge: GitHub still reports `main` and `edge` as unprotected, so that ruleset probably isn't
+  Active yet, or its targets don't match. I need to check it.
+
+**Next**
+- Fix the ha-vicohome-bridge ruleset (Enforcement status Active, targets `main` and `edge`).
+- Merge PR #50 (README note; checks are green).
+- Still to do: delete the old `scratchpad` branch, and set `RELEASE_TZ`.
+
+---
+
 ## 2026-11-14: Keep edge from being deleted
 
 **What I changed**
