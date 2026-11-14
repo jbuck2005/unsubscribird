@@ -5,6 +5,31 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: "Nothing moved" was hiding small birds (PR #54)
+
+**What I saw.** In Review, pairs of visits a minute or two apart (1:39/1:40, 1:42/1:44) were all "nothing moved",
+Empty 90%, with LM Studio skipped. One pair had a bird moving inside the feeder ball; the other had a bird sitting
+behind it. I worried the bridge's SD path was double counting.
+
+**What I found.**
+- Not double counting. None of November's 731 clips share a sha256, and the frame times differ between each pair,
+  so they're separate recordings. The camera just fired twice for a bird that stayed.
+- The quiet test only looked at the share of changed pixels (`quiet_activity` 0.025). A small bird inside the ball
+  changes far less than that, so it read as empty and LM Studio never saw it.
+
+**What I changed** (PR #54, `dev/quiet-small-birds`):
+- `frames.largest_blob()` finds the biggest connected changed region. A clip is quiet only if activity is low and
+  no region is bird-sized (`QUIET_BLOB` 0.15% of the picture).
+- At start-up, unlabelled quiet visits from the last 7 days are checked again. The ones with movement lose the
+  Empty suggestion and go to LM Studio.
+- `pytest -q`: 225 passed.
+
+**Next.** Merge, then watch `:edge`: the recheck line in the log, and how many empty clips with wind now reach LM
+Studio. To try real clips first, there's a probe script, `quiet_check.py`, in the project files. Run it with
+`docker exec -i <container> python - 2026/11/14 < quiet_check.py`.
+
+---
+
 ## 2026-11-14: Library updates and README notes merged into edge
 
 **What I changed**
