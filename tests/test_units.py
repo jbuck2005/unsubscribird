@@ -92,3 +92,39 @@ def test_repick_label_fit_rule():
     assert fits("Blue Jay", {"bird_present": True}) and not fits("Blue Jay", {"bird_present": False})
     assert fits("Empty", {"bird_present": False}) and not fits("Empty", {"bird_present": False, "other_animal": "squirrel"})
     assert fits("Squirrel", {"other_animal": "squirrel"}) and fits("Blue Jay", None) is None
+
+
+def small_bird_clip(n=20, size=12, noise=6):
+    """A static scene with a small dark "bird" hopping about: like a chickadee inside a feeder ball."""
+    rng = np.random.default_rng(1)
+    base = rng.integers(60, 120, (frames.AH, frames.AW)).astype(np.int16)
+    out = np.repeat(base[None], n, axis=0).copy()
+    out += rng.integers(-noise, noise + 1, out.shape)   # sensor noise, below the change threshold
+    for i in range(n):
+        x, y = 150 + (i % 4) * 6, 90 + (i % 3) * 5
+        out[i, y:y + size, x:x + size] = 20
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def test_small_moving_bird_is_not_quiet():
+    clip = small_bird_clip()
+    info = {"activity": float(max(frames.score_frames(clip))), "blob": frames.largest_blob(clip)}
+    assert info["activity"] < 0.025                    # too little for the old whole-picture test...
+    assert info["blob"] >= frames.QUIET_BLOB           # ...but one region clearly changed
+    assert not frames.is_quiet(info, 0.025)
+
+
+def test_noise_alone_is_quiet():
+    rng = np.random.default_rng(2)
+    clip = small_bird_clip(size=0)
+    speckle = rng.random(clip.shape) < 0.002           # scattered single-pixel flicker
+    clip[speckle] = 255
+    blob = frames.largest_blob(clip)
+    assert blob < frames.QUIET_BLOB
+    assert frames.is_quiet({"activity": 0.001, "blob": blob}, 0.025)
+
+
+def test_whole_picture_change_is_not_a_blob():
+    clip = make_clip(bird_at=(0, 0))
+    clip[10:] = np.clip(clip[10:].astype(int) + 80, 0, 255)   # exposure jump
+    assert frames.largest_blob(clip) < frames.QUIET_BLOB

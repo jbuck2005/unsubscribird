@@ -46,7 +46,8 @@ PREFS = (
          "wait and catch up when you resume, within about 2 minutes.", "bool"),
     Pref("prelabel_frames", "Clips and frames", "Frames sent to LM Studio", "Per visit, best frames first.", "int", 1, 6),
     Pref("quiet_activity", "Clips and frames", "Quiet clip threshold",
-         "Clips with less movement than this are suggested as Empty and skip LM Studio.", "float", 0, 1),
+         "Clips with less movement than this, and no moving region the size of a bird, are suggested as Empty "
+         "and skip LM Studio.", "float", 0, 1),
     Pref("ha_model_confidence", "Recognition", "Trust the model from",
          "Below this the local model's answer isn't reported as certain.", "float", 0, 1),
     Pref("ha_vlm_confidence", "Recognition", "Trust LM Studio from",
