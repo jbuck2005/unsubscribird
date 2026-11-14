@@ -5,6 +5,22 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: edge restored, Dependabot PRs back on edge
+
+**What I changed**
+- `origin/edge` exists again at `6156d72`, the same commit as `main`, with 0.29.0 staged and untagged. The update
+  job on my Docker host can fetch it again, so the station should move off `0309900` on its next run.
+- Moved Dependabot PRs #43, #44 and #45 back to `edge`. They had been switched to `main` when `edge` was deleted.
+
+**Status:** Done, apart from the old `scratchpad` branch. The cloud session gets a 403 when it tries to delete
+branches, so I'm deleting it myself on the branches page.
+
+**Next**
+- Delete `scratchpad` on GitHub.
+- Check that the host's update job is green on its next run.
+
+---
+
 ## 2026-11-14: Rulesets for main and edge
 
 **What I changed**
