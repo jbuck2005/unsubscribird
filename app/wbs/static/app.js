@@ -194,6 +194,7 @@ const Review = {
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
       : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
+    $("#queues button.on").scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
     this.load();
   },
 
@@ -279,16 +280,23 @@ const Review = {
     const from = { model: "trained model", lmstudio: "LM Studio", uncertain: "uncertain", motion: "nothing moved" };
     const bestChip = v.best && !v.label ? `<span class="chip ${v.best.source === "uncertain" ? "unknown" : "sugg"}"
         title="The model and LM Studio combined, as Home Assistant gets it">Best guess: ${esc(v.best.species)} · ${esc(from[v.best.source] || v.best.source)}${v.best.confidence != null ? " " + Math.round(v.best.confidence * 100) + "%" : ""}</span>` : "";
+    // The lead guess, then the rest. On a phone the rest folds behind a "+N" button (style.css) and the
+    // predictions sit under the frames, so the picture comes first.
+    const lead = bestChip || consChip;
+    const rest = (bestChip ? consChip : "") + altChips;
+    const nRest = (rest.match(/<span class="chip /g) || []).length;
+    const preds = lead || rest ? `<div class="preds">${lead}<span class="more">${rest}</span>${lead && nRest
+      ? `<button type="button" class="chip morebtn" aria-expanded="false" title="Show the other guesses">+${nRest}</button>` : ""}</div>` : "";
     el.innerHTML = `
       <div class="vhead"><span class="time">${esc(fmtTime(v.time))}</span>
         ${v.disagree && !v.label ? `<span class="chip unknown" title="The trained model and LM Studio name different things: look before confirming">⚠ disagree</span>` : ""}
         ${v.flagged ? `<span class="chip unknown" title="Someone pressed Wrong bird? on the home page. Saving a label answers it.">⚑ flagged${v.flag_note ? `: “${esc(v.flag_note)}”` : ""}</span>` : ""}
-        ${bestChip}${consChip}${altChips}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
         ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}
         <span class="chip edited" ${v._edited ? "" : "hidden"}>✎ changed</span>
         ${v.clip_href ? `<a class="meta clip" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
+      ${preds}
       <div class="frames">${frames || '<span class="msg">No frames yet.</span>'}</div>
       <div class="actions">
         <input placeholder="Species…" value="${esc(initial)}" aria-label="Species">
@@ -305,6 +313,10 @@ const Review = {
         <button class="btn" data-a="${v.excluded ? "restore" : "exclude"}" title="${v.excluded ? "Use this visit again" : "Keep this visit out of training"}">${v.excluded ? "Restore" : "Exclude"}</button>
         <span class="msg"></span>
       </div>`;
+    $(".morebtn", el)?.addEventListener("click", (e) => {
+      const b = e.currentTarget, open = b.closest(".preds").classList.toggle("open");
+      b.setAttribute("aria-expanded", open);
+    });
     $$(".frame .regrab", el).forEach((b) => b.addEventListener("click", (e) => {
       e.stopPropagation(); this.regrab(v, el, +b.closest(".frame").dataset.f);
     }));
@@ -772,6 +784,21 @@ async function galleryPage() {
           ${f.x1 != null ? `<span class="det ${f.det_source}" style="left:${f.x1 * 100}%;top:${f.y1 * 100}%;width:${(f.x2 - f.x1) * 100}%;height:${(f.y2 - f.y1) * 100}%"></span>` : ""}</div></div>`).join("")}</div>
     </section>`).join("");
   $$("#g-visits .frame img").forEach((img) => img.addEventListener("click", () => zoom(img.dataset.full)));
+}
+
+// ---- header menu (phones; style.css hides the button on wider screens) ----------
+{
+  const header = $("body > header"), btn = header && $(".navtoggle", header);
+  if (btn) {
+    const setOpen = (open) => { header.classList.toggle("open", open); btn.setAttribute("aria-expanded", open); };
+    btn.addEventListener("click", () => setOpen(!header.classList.contains("open")));
+    document.addEventListener("click", (e) => { if (!header.contains(e.target)) setOpen(false); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && header.classList.contains("open")) { setOpen(false); btn.focus(); }
+    });
+  }
+  // Phones: the queue hint is cut to two lines; a tap shows all of it.
+  $(".qhint")?.addEventListener("click", (e) => { if (!e.target.closest("a")) e.currentTarget.classList.toggle("open"); });
 }
 
 const page = document.body.dataset.page;
