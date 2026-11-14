@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* eBird checklists: a bird nobody counted goes in as 1 (every visit shows at least one) instead of X. The number of
+  visits stays in each bird's comment; it isn't a count of birds, since the same ones keep coming back.
+
 ## 0.29.0
 
 * A pre-release **`:edge`** image is now published on every change merged to the `edge` branch, a few minutes
