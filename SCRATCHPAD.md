@@ -5,6 +5,27 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Count only, so I can count a bird without training on it (PR #55)
+
+**Why.** Some visits show a bird I can identify but that's too hidden (behind the feeder ball) or blurry to teach
+the model anything. Until now a label always made the frames training data (Confirm needed a ticked frame), and
+Exclude was the only way out of training. But Exclude also drops the visit from counts, FeederWatch and eBird.
+
+**What I changed** (PR #55 into edge, `dev/count-only`):
+- A **Count only** checkbox next to Confirm on Review (key `o`). The species, Also seen and How many still go
+  into the counts, FeederWatch, eBird, the home page and HA. The frames never train the model. No frame needs to be
+  ticked. A saved one shows a "count only" chip.
+- Stored as `labels.train` (default 1, so existing labels are unchanged). Training, auto-retrain, the bake-off,
+  the Model tab's counts, the Check labels queue and the Dataset page's training frames skip `train=0`.
+- Exclude still means "not a real visit": it drops the visit from everything. Its wording now says so.
+- 224 tests pass, including the new `tests/test_count_only.py`.
+
+**Status.** PR open, waiting for my review and merge into edge.
+
+**Next.** Once it's on edge, tick Count only on the hidden-bird visits from today's quiet-clip pairs.
+
+---
+
 ## 2026-11-14: "Nothing moved" was hiding small birds (PR #54)
 
 **What I saw.** In Review, pairs of visits a minute or two apart (1:39/1:40, 1:42/1:44) were all "nothing moved",
