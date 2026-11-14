@@ -5,6 +5,20 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Updater health check now uses `/healthz?deep=1` (#57)
+
+**What changed.** After a deploy, the updater on my Docker host used to accept any 200 from the home page, which kept
+passing while every OWL-ViT detection failed. Now it waits for the right image, the right version and `/healthz`, and then
+makes one `/healthz?deep=1` request with a 120 s limit (the first one loads both models). Anything but a 200 rolls
+back: a 503, a timeout or no answer. The script is backed up beside the original. The rollback's own check is unchanged,
+so it still works with images from before #57.
+
+**Status.** Live on `da495c4`. The deep check answered 200 (OWL-ViT and BioCLIP both ok). I ran the updater by hand
+(nothing to deploy) and ran the new check on its own against the live app: it passes, and it fails on a wrong version
+or a dead URL. A real 503 hasn't happened yet, so the rollback on a model failure hasn't been tested live.
+
+---
+
 ## 2026-11-14: Deep health check
 
 **What I changed (PR #57 into `edge`, not merged)**
