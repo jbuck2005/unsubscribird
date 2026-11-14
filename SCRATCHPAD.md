@@ -5,6 +5,21 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Release day follows my time zone
+
+**What I changed**
+- Decided that `RELEASE_TZ` will be `America/Toronto`, so the one-release-a-day guard counts my local day, not UTC.
+
+**Status:** Waiting on me. The cloud session can't set repository variables, so I'm setting it on GitHub:
+Settings → Secrets and variables → Actions → Variables → New repository variable, name `RELEASE_TZ`, value
+`America/Toronto` (or `gh variable set RELEASE_TZ --body America/Toronto -R jbuck2005/unsubscribird`).
+
+**Next**
+- Once it's set, the next tag's "One release a day" step should log `(America/Toronto)`.
+- Still to do: delete the old `scratchpad` branch.
+
+---
+
 ## 2026-11-14: Phone layout promoted to main (0.29.0 staged)
 
 **What I changed**
