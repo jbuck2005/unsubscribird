@@ -5,6 +5,28 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Library updates and README notes merged into edge
+
+**What I changed**
+- Fixed the updater on my Docker host. It now accepts Dependabot's noreply address as author and ignores
+  `Co-authored-by: dependabot[bot]`. The station deployed `219a762` (#44).
+- #45 (16 library updates): added a Dockerfile change so the CPU-only torch 2.15.0 / torchvision 0.29.2 match
+  `requirements-ml.txt` and the amd64 image doesn't pull CUDA torch. Both image builds and the import check passed,
+  and I squash-merged it into `edge` as `ff20b55`.
+- #50 (README: keep `edge`, squash bot PRs, and which authors a deploy host should accept): squash-merged as
+  `3f4a886`.
+
+**Watch on `:edge`**
+- transformers 4 to 5 and open_clip_torch 2 to 4 are major jumps, and the tests use a fake embedder. Check that
+  BioCLIP loads, frames get embeddings, and suggestions and training still work. If the model download or the
+  first embedding fails, roll back by reverting `ff20b55` on `edge`.
+- The amd64 image size should stay about the same. A big jump would mean CUDA torch slipped in.
+
+**Still open:** #43 (Python 3.15), no-go. Old `RELEASE_TZ` item, and the bridge's #20 date check, are in their
+own threads.
+
+---
+
 ## 2026-11-14: Dependabot squash merges
 
 **What I changed**
