@@ -5,6 +5,30 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Dependabot squash merges
+
+**What I changed**
+- Squash-merged #44 (docker/login-action 3 to 4) into `edge` as `219a762`.
+
+**Problem:** a squash merge on github.com keeps the bot as the **author**:
+`219a762` is authored by `dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>` and committed by
+`GitHub <noreply@github.com>`. If the updater wants my address as author, it will skip this commit. `edge` can't be
+rewritten (and the ruleset blocks force pushes), so the fix belongs in the updater: accept `dependabot[bot]` as
+author when GitHub is the committer.
+
+**Held**
+- #45 (the python group, 16 updates): CI is green, but the Dockerfile still installs `torch==2.5.1` from the CPU
+  index, and then `requirements-ml.txt` asks for `torch==2.15.0` from PyPI. On amd64 that pulls the CUDA build
+  (several GB of nvidia packages). The Dockerfile pins need to move to torch 2.15.0 / torchvision 0.29.2 together
+  with it. It also jumps transformers 4 to 5 and open_clip 2 to 4, and the tests use a fake embedder, so BioCLIP
+  only gets proven on the `:edge` host.
+- #43 (Python 3.15): no-go, see below.
+
+**Next**
+- Decide on the updater rule, then #45 with the Dockerfile fix.
+
+---
+
 ## 2026-11-14: Python 3.15 base image (Dependabot #43): no-go
 
 **What I checked**
