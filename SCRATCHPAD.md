@@ -5,6 +5,22 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: OWL-ViT fix and deep health check are on edge
+
+**What I changed**
+- Squash-merged #56 (OWL-ViT fix for transformers 5) as `275d1e2`, then #57 (`/healthz?deep=1`) as `da495c4`.
+  The suite passed on the two combined (227) before the second merge.
+- The Edge images run for `da495c4` is green, so `:edge` now holds both. The run for `275d1e2` was cancelled
+  because a newer push replaced it, which is expected.
+
+**Status:** the station should deploy `da495c4` on its next updater run.
+
+**Next**
+- Switch the updater's health check to `/healthz?deep=1` (timeout a minute or two; roll back on anything but 200).
+- After the deploy, check that OWL-ViT detections show up on new visits again.
+
+---
+
 ## 2026-11-14: Updater health check now uses `/healthz?deep=1` (#57)
 
 **What changed.** After a deploy, the updater on my Docker host used to accept any 200 from the home page, which kept
