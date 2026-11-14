@@ -26,6 +26,23 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Release guard rails merged into edge
+
+**What I changed**
+- Merged PR #46 into `edge` after its checks went green. It didn't touch the same files as the phone-layout PR
+  (#47), so no rebase was needed. From now on, `release.yml` refuses a second tag on the same day and only drafts
+  the GitHub Release.
+- Moved this scratch pad to `dev/scratchpad` to follow the `dev/<topic>` naming.
+
+**Status:** Done on `edge`. The `:edge` image rebuilds from this push. No tag and no release.
+
+**Next**
+- Delete the old `scratchpad` branch on GitHub (the cloud session couldn't).
+- Decide whether to set `RELEASE_TZ` to my local time zone.
+- The guard first runs for real on the next tag, once `edge` is promoted to `main`.
+
+---
+
 ## 2026-11-14: Release guard rails
 
 **What I changed**
