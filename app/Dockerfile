@@ -9,7 +9,7 @@ ENV UNSUB_BUILD=$UNSUB_BUILD
 WORKDIR /app
 COPY requirements.txt requirements-ml.txt ./
 RUN pip install -r requirements.txt \
- && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchvision==0.20.1 \
+ && pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0 torchvision==0.29.2 \
  && pip install -r requirements-ml.txt
 COPY wbs/ wbs/
 
