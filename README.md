@@ -214,6 +214,9 @@ released) code.
 3. **Stage the release.** On `edge`, set the new version in both `app/wbs/__init__.py` and `addon/config.yaml`,
    turn the top of `addon/CHANGELOG.md` into `## <version>`, and add the story to `RELEASES.md`. Then open a pull
    request from `edge` into `main` and merge it. Merging publishes nothing.
+   `edge` must survive that merge: a branch ruleset on `main` and `edge` with **Restrict deletions** (and **Block
+   force pushes**) keeps GitHub's "Automatically delete head branches" from removing it, while topic branches are
+   still cleaned up. If `edge` does go missing, recreate it from `main` (`git push origin main:edge`).
 4. **Publish.** Push the tag from `main`:
 
    ```sh
