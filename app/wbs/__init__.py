@@ -2,7 +2,7 @@
 
 import os
 
-__version__ = "0.28.0"
+__version__ = "0.29.0"
 
 # What the pages and /api/stats show. A pre-release image (the :edge channel) is built with UNSUB_BUILD=edge
 # and shows as "0.28.0-edge"; a release or a local build shows the plain version.

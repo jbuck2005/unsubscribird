@@ -22,14 +22,17 @@ def visit(trace, when, species, label=False, count=None, excluded=0):
 def test_species_card_stats_come_from_public_visits():
     now = datetime.now().replace(minute=0, second=0, microsecond=0)
     sp = "Evening Grosbeak"                                       # no other test uses it
-    visit("sc1", now - timedelta(days=2, hours=1), sp)
+    # Two calendar days back. Don't borrow the hour across midnight in the first hour of the day, or sc1
+    # lands three days back and breaks the day-streak and first-seen checks.
+    two_days_ago = now - timedelta(days=2, hours=1 if now.hour else 0)
+    visit("sc1", two_days_ago, sp)
     visit("sc2", now - timedelta(days=1), sp, label=True, count=3)
     visit("sc3", now - timedelta(minutes=5) if now.hour else now, sp)
     visit("sc4", now - timedelta(days=3), sp, excluded=1)         # excluded: not public, not counted
     c = TestClient(main.app).get(f"/api/public/species-card?species={sp}").json()
     assert (c["today"], c["all_time"], c["most_at_once"]) == (1, 3, 3)
     assert c["streak"] == 3 and c["scientific"] == "Coccothraustes vespertinus"
-    assert c["first_seen"] == (now - timedelta(days=2, hours=1)).timestamp()
+    assert c["first_seen"] == two_days_ago.timestamp()
     assert c["portrait"] == f"/api/public/portrait/sc2?species={sp.replace(' ', '%20')}"   # the one you labelled
     assert c["about"]["Wikipedia"].endswith("Coccothraustes_vespertinus") and c["rank"] >= 1
     assert len(c["facts"]) >= 2

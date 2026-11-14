@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.29.0
+
+* A pre-release **`:edge`** image is now published on every change merged to the `edge` branch, a few minutes
+  after its tests pass, so the newest work can be tried before it is released. Its pages show the version with
+  `-edge` on the end (for example `v0.29.0-edge`). Releases still come only from `main`; see the README for how
+  to follow the edge channel.
 
 * Clips that grew after they were downloaded are fetched again: the Vicohome bridge may save a clip before the
   whole video is uploaded and replace it later (bridge 0.3.5 re-checks for 30 minutes). Clips from the last 45
