@@ -11,7 +11,8 @@
 <body data-page="{{ page }}">
   <header>
     <span class="brand"><img src="{{ base }}/static/brand/mark-192.png?v={{ version }}" alt="">{{ brand.wordmark(cfg.site_name) }}</span>
-    <nav>
+    <button type="button" class="navtoggle" aria-expanded="false" aria-controls="mainnav" aria-label="Menu"><span aria-hidden="true">☰</span>{% if page %} <span class="navpage">{{ page|title }}</span>{% endif %}</button>
+    <nav id="mainnav">
       <a href="{{ base }}/" title="The kids' page">🏠 Home</a>
       <a href="{{ base }}/admin" class="{{ 'on' if page == 'review' }}">Review</a>
       <a href="{{ base }}/admin/gallery" class="{{ 'on' if page == 'gallery' }}">Gallery</a>
@@ -21,8 +22,8 @@
       <a href="{{ base }}/admin/status" class="{{ 'on' if page == 'status' }}">Status</a>
       <a href="{{ base }}/admin/settings" class="{{ 'on' if page == 'settings' }}">Settings</a>
       <a href="{{ base }}/logout">Log out</a>
+      <span class="ver">v{{ version }}</span>
     </nav>
-    <span class="ver">v{{ version }}</span>
     <button id="theme-toggle" class="theme-toggle" aria-label="Light or dark"></button>
   </header>
   <main>{% block main %}{% endblock %}</main>

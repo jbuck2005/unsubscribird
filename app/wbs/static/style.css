@@ -35,10 +35,12 @@ header { display: flex; align-items: center; gap: 24px; padding: 10px 20px; back
 .brand { display: flex; align-items: center; gap: 8px; font-size: 19px; letter-spacing: -.2px; white-space: nowrap; }
 .brand img { width: 34px; height: 34px; display: block; }
 .wordmark .un { color: var(--brand-un); } .wordmark .sub { color: var(--brand-sub); } .wordmark .bird { color: var(--brand-bird); }
+nav { display: flex; align-items: center; flex: 1; min-width: 0; }
 nav a:hover { color: var(--hover); }
 nav a { color: var(--muted); text-decoration: none; margin-right: 16px; padding: 4px 0; }
 nav a.on { color: var(--text); border-bottom: 2px solid var(--accent); }
 .ver { margin-left: auto; color: var(--muted); font-size: 12px; }
+.navtoggle { display: none; }   /* phones only, see the max-width: 640px block */
 main { max-width: 1280px; margin: 0 auto; padding: 16px 20px 60px; }
 h2 { margin: 8px 0 4px; } h3 { margin-top: 28px; }
 .hint { color: var(--muted); margin: 6px 0 14px; font-size: 13.5px; }
@@ -63,6 +65,10 @@ kbd { background: var(--chip); border: 1px solid var(--line); border-radius: 4px
 .chip.unknown { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
 .chip.label { background: var(--accent); color: var(--on-accent); }
 .chip.alt { background: var(--chip); color: var(--muted); }
+/* A visit's guesses: the lead one, then .more. Wide screens show them all in a row; phones fold .more away. */
+.preds { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 8px; }
+.preds .more { display: contents; }
+.preds .morebtn { display: none; }
 .bar { height: 8px; background: var(--chip); border-radius: 999px; overflow: hidden; margin-top: 6px; }
 .bar > i { display: block; height: 100%; background: var(--accent); }
 table.cm td, table.cm th { text-align: center; padding: 4px 6px; font-variant-numeric: tabular-nums; }
@@ -180,9 +186,61 @@ pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8p
 #lightbox[hidden] { display: none; }
 #lightbox img { max-width: 96vw; max-height: 94vh; }
 @media (max-width: 640px) {
-  header { gap: 12px; padding: 8px 16px; } main { padding: 12px 16px 40px; }
+  header { gap: 8px; padding: 8px 16px; } main { padding: 12px 16px 40px; }
   .actions input { min-width: 0; flex: 1; }
+
+  /* Header: logo and name, a menu button for the pages, the theme toggle. */
+  .brand { flex: 1; min-width: 0; font-size: 16px; }
+  .brand img { width: 28px; height: 28px; flex: none; }
+  .brand .wordmark { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .navtoggle { display: inline-flex; align-items: center; gap: 6px; flex: none; font: inherit; font-size: 14px;
+    color: var(--text); background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  .navtoggle[aria-expanded="true"] { border-color: var(--focus); }
+  .theme-toggle { flex: none; }
+  nav { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; align-items: stretch;
+    background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: 0 8px 20px rgba(0,0,0,.15); padding: 4px 0; }
+  header.open nav { display: flex; }
+  nav a { margin: 0; padding: 11px 20px; font-size: 16px; }
+  nav a.on { border-bottom: 0; background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  .ver { margin: 4px 0 0; padding: 8px 20px 6px; border-top: 1px solid var(--line); }
+
+  /* Review toolbar: one row of queue chips that scrolls sideways; no keyboard help on a phone. */
+  .toolbar { gap: 8px; }
+  .tabs { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; width: calc(100% + 32px);
+    margin: 0 -16px; padding: 2px 32px 2px 16px; scroll-padding: 0 32px 0 16px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; margin: 0; padding: 4px 12px; font-size: 14px; white-space: nowrap; }
+  .keys { display: none; }
+  .batch button.btn { padding: 5px 12px; font-size: 14px; }
+  .qhint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin: 4px 0 10px; cursor: pointer; }
+  .qhint.open { display: block; }
+
+  /* Visit cards: the frames first, then the guesses (the lead one, and the rest behind "+N"), then the actions. */
+  .visit { display: flex; flex-direction: column; padding: 10px; }
+  .vhead { order: 0; gap: 6px 10px; }
+  .vhead .clip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frames { order: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }   /* a whole visit in one screen */
+  .frame .cap { font-size: 11.5px; padding: 3px 6px; min-height: 0; }
+  .frame .cap .why { display: none; }
+  .frame .regrab, .frame .tagbtn { bottom: auto; top: calc(50% - 15px); }
+  .frame .ftag { top: 32px; }
+  .preds { order: 2; gap: 6px; margin: 10px 0 0; }
+  .preds .chip { font-size: 12.5px; }
+  .preds .more { display: none; }
+  .preds.open .more { display: contents; }
+  .preds .morebtn { display: inline-block; border: 0; font: inherit; font-size: 12.5px; color: var(--accent); cursor: pointer; }
+  .preds.open .morebtn { display: none; }
+  .actions { order: 3; }
+  .actions > input:first-child { flex: 1 1 100%; }   /* the species box gets its own row */
+  .alsoseen { flex: 1 1 calc(100% - 8.5em - 8px); min-width: 0; } .alsoseen .alsoin { flex: 1; width: auto; min-width: 0; }
+  .actions .countin { width: 7.5em; flex: none; }
+  .batch button.btn:disabled { display: none; }   /* nothing to confirm: no button */
+  .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }   /* two stat cards a row */
 }
+@media (hover: none) and (pointer: coarse) { .keys { display: none; } }
 
 .theme-toggle { border: 0; background: transparent; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 8px; }
 .theme-toggle:hover { background: var(--chip); }
