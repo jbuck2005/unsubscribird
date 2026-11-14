@@ -5,6 +5,30 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Python 3.15 base image (Dependabot #43): no-go
+
+**What I checked**
+- CI on #43: pytest and lint are green, but they run on Python 3.12, not on the image. The Docker build fails
+  (arm64 failed, amd64 was cancelled) at `pip install`: numpy 2.2.1 has no 3.15 wheel, pip tries to build it from
+  source, and the slim image has no compiler.
+- Wheels for 3.15 with today's pins: none for numpy 2.2.1, scipy 1.14.1, scikit-learn 1.6.0, pillow 11.0.0,
+  torch 2.5.1, torchvision 0.20.1 or pydantic-core 2.27.2 (pulled in by pydantic 2.10.4). PyYAML (from
+  `uvicorn[standard]`) has no 3.15 wheel at all; it builds from source in its pure-Python form.
+- With newer pins (numpy 2.5.4, scipy 1.18.1, scikit-learn 1.9.1, pillow 13.0.0, pydantic 2.14.3) the full suite
+  passes on 3.15 (220 passed; tested on 3.15.0b4). The only warnings come from libraries (joblib, starlette,
+  fastapi), none from our code.
+- Not tested: the torch/BioCLIP stack on 3.15 (torch 2.5.1 must move to a release with 3.15 wheels, and the
+  PyTorch CPU index isn't reachable from the cloud session), and building the image (no Docker there).
+
+**Status:** No-go as it stands. I haven't merged it.
+
+**Next**
+- Either close #43 and stay on 3.12 (torch 2.5.1 supports up to 3.13), or do a proper upgrade PR: base image plus
+  numpy, scipy, scikit-learn, pillow, pydantic, torch and torchvision, built and smoke-tested on my Docker host
+  before merging.
+
+---
+
 ## 2026-11-14: Squash-merge bot PRs
 
 **What I changed**
