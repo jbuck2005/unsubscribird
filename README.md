@@ -214,6 +214,14 @@ released) code.
 3. **Stage the release.** On `edge`, set the new version in both `app/wbs/__init__.py` and `addon/config.yaml`,
    turn the top of `addon/CHANGELOG.md` into `## <version>`, and add the story to `RELEASES.md`. Then open a pull
    request from `edge` into `main` and merge it. Merging publishes nothing.
+   `edge` must survive that merge: a branch ruleset on `main` and `edge` with **Restrict deletions** (and **Block
+   force pushes**) keeps GitHub's "Automatically delete head branches" from removing it, while topic branches are
+   still cleaned up. If `edge` does go missing, recreate it from `main` (`git push origin main:edge`).
+
+**Bot pull requests.** Merge Dependabot's (and any other bot's) pull requests into `edge` with **Squash and merge**,
+never with a merge commit, so `edge` stays a line of single commits. A squash keeps the bot as the commit's author
+(GitHub is the committer), so a host that only deploys trusted commits should accept the maintainer, GitHub
+(`noreply@github.com`) and Dependabot's noreply address, and can then check each commit on its own.
 4. **Publish.** Push the tag from `main`:
 
    ```sh
