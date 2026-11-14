@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Keep edge from being deleted
+
+**What I changed**
+- `edge` was deleted when the release PR (edge into main) merged, because "Automatically delete head branches" is
+  on. I recreated `edge` from `main`. They were the same commit, so nothing was lost.
+- The stray `claude/project-thread-*` branch is already gone from GitHub.
+- PR #50 into `edge` adds a note to the README's Releasing steps: protect `main` and `edge` with a ruleset, and
+  recreate `edge` with `git push origin main:edge` if it ever goes missing.
+
+**Status:** Waiting on me. The cloud session can't create rulesets, so I'm adding one in both repos (this one and
+ha-vicohome-bridge): Settings → Rules → Rulesets → New branch ruleset, targets `main` and `edge`, with Restrict
+deletions and Block force pushes. Auto-delete stays on for topic branches.
+
+**Next**
+- Add the rulesets, then merge PR #50.
+- Still to do: delete the old `scratchpad` branch, and set `RELEASE_TZ`.
+
+---
+
 ## 2026-11-14: Local checkout on my PC checked
 
 **What I found**
