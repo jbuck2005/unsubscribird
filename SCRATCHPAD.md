@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Releasing v0.29.0
+
+**Checked:** `main` is at `6156d72` ("0.29.0 notes: phone layout and release guard rails (#48)"). Both
+`app/wbs/__init__.py` and `addon/config.yaml` say 0.29.0, and `addon/CHANGELOG.md` opens with `## 0.29.0`. There's
+no `v0.29.0` tag yet, and no other release today. `main` doesn't include the transformers 5 / OWL-ViT work, which
+stays on `edge` for now.
+
+**Status:** waiting on me. GitHub refuses tag pushes from the cloud session (403), so I'm pushing the tag myself:
+
+    git fetch origin && git tag -a v0.29.0 -m v0.29.0 6156d72 && git push origin v0.29.0
+
+`release.yml` then checks the versions and the one-a-day rule, builds `:0.29.0` and `:latest`, and **drafts** the
+GitHub Release. I'll review the draft and publish it by hand.
+
+**Next**
+- Push the tag, watch the Release run, then review and publish the draft.
+
+---
+
 ## 2026-11-14: OWL-ViT fix and deep health check are on edge
 
 **What I changed**
