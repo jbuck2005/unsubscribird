@@ -194,7 +194,7 @@ const Review = {
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
       : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit).";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
-    $("#queues button.on").scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
+    $("#queues button.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
     this.load();
   },
 
