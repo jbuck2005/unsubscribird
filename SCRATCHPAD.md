@@ -19,10 +19,10 @@ sessions. It is never merged into `main` or `edge`.
   - Wider screens keep their layout.
 - Tests pass (213), including the new `tests/test_mobile_nav.py`.
 
-**Status:** PR #47 is open and waiting on my review.
+**Status:** I merged #47 into `edge` on 2026-11-14. That push rebuilds the `:edge` images. No tag and no release.
 
 **Next**
-- Merge #47, then check the `:edge` build on my phone.
+- Pull the new `:edge` image on my Docker host and check the admin pages on my phone.
 
 ---
 
