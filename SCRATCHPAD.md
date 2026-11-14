@@ -5,6 +5,21 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Local checkout on my PC checked
+
+**What I found**
+- My local clone is on `main`, level with `origin/main` (0.29.0 notes, #48). Tracked files look untouched since my pull.
+- `edge` no longer exists on GitHub. It looks like it was deleted when #49 merged. Rules and `edge.yml` still need it.
+- There is a stray `claude/project-thread-z2w4r3` branch on GitHub that breaks the branch-name rule.
+- Old local worktree `.claude/worktrees/edge-channel` (branch `dev/edge-channel`) is already in `main`.
+
+**Status:** Waiting on me to OK recreating `edge` from `main`.
+
+**Next**
+- Recreate `edge` at `main`, then track it locally. Delete the stray branch and the old `scratchpad` branch.
+
+---
+
 ## 2026-11-14: Release day follows my time zone
 
 **What I changed**
