@@ -9,6 +9,12 @@
 * **Model tab:** delete old models. Each trained model that isn't the active one gets a **Delete** button that
   removes it and its file; the active model is protected (switch to another first). Past suggestions that named
   a deleted model keep their text.
+* **Admin pages on a phone.** On narrow screens the page links and version fold into a **☰** menu, the Review
+  queues sit in one row that scrolls sideways, the keyboard help is hidden, and each visit shows its frames
+  first (two to a row) with the lead guess under them and the other guesses behind **+N**. Wider screens are
+  unchanged.
+* Releases: a second `v*` tag on a day that already had a release is refused before anything is built, and the
+  release workflow only drafts the GitHub Release; publishing it is a manual step.
 
 * Clips that grew after they were downloaded are fetched again: the Vicohome bridge may save a clip before the
   whole video is uploaded and replace it later (bridge 0.3.5 re-checks for 30 minutes). Clips from the last 45

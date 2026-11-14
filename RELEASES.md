@@ -29,6 +29,12 @@ pre-release **edge channel** so the newest work can be tried before it is releas
   `deploy/.env` to follow it; releases still come only from `main`. See the README's "Published images".
 - **Delete old models (Model tab).** Every trained model except the active one has a **Delete** button that removes
   it and its file; the active model is protected (switch to another first).
+- **Admin pages on a phone.** On a narrow screen the nine page links and the version fold into a **☰** menu that
+  names the page you're on, the Review queues become one row of chips that scrolls sideways, and the keyboard
+  help is hidden. Each visit shows its frames first, two to a row, then the lead guess, with the other guesses
+  behind a **+N** button. Desktop layout is unchanged.
+- **Release guard rails.** At most one tagged release a day (a second `v*` tag that day is refused before any
+  image is built), and the workflow only drafts the GitHub Release, so publishing stays a manual step.
 
 **Carried into the release from the preceding feature work**
 
