@@ -89,6 +89,11 @@ lines from cron, say every hour (`crontab -e`, with the path to your checkout):
 
 Old images stay on disk; `docker image prune` removes them.
 
+To check a deploy, `GET /healthz` answers 200 when the app is up, and `GET /healthz?deep=1` also runs OWL-ViT and
+BioCLIP 2 once on a built-in frame and answers 503 if either fails (no login; the result is cached for a minute, and
+the first deep check after a start loads both models, so allow a minute or two). A script that follows `:edge` can
+roll back to the previous image on a 503.
+
 ## Or as a Home Assistant add-on
 
 If Home Assistant (HA OS or Supervised) runs on a 64-bit x86 or ARM computer with 8 GB of RAM or more, it can run
