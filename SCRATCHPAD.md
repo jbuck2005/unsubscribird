@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-14: Squash-merge bot PRs
+
+**What I changed**
+- PR #50 now also says to merge Dependabot and other bot PRs into `edge` with **Squash and merge**, never with a
+  merge commit. My updater only deploys commits that I authored and committed.
+
+**Status:** PR #50 is open and its checks are re-running. Dependabot PRs #43 to #45 are on `edge` and aren't
+merged yet; they wait for my OK.
+
+**Watch out:** a squash merge done on github.com is committed by "GitHub <noreply@github.com>", and on a bot PR
+the author stays the bot. The squash commit from #46 shows that. If the updater checks the committer as well as
+the author, a web squash merge won't pass it. In that case either squash the bot PR locally under my name and push
+it to `edge`, or let the updater accept GitHub as committer when I'm the one who merged.
+
+**Next**
+- Decide how the updater should handle web merges, then merge #43 to #45.
+
+---
+
 ## 2026-11-14: edge restored, Dependabot PRs back on edge
 
 **What I changed**
