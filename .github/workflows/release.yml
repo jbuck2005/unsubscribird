@@ -3,16 +3,12 @@ name: Release
 # Publishes the images for the version in app/wbs/__init__.py and addon/config.yaml:
 #   ghcr.io/<owner>/amd64-unsubscribird and aarch64-unsubscribird   (the add-on pulls these)
 #   ghcr.io/<owner>/unsubscribird                                    (both, for docker compose)
-# Automatically: once Tests pass on main with a version that has no v<version> tag yet; the release then adds
-# the tag. Home Assistant offers an update as soon as main's addon/config.yaml changes, so it mustn't wait.
-# By hand: push a tag like v0.25.3 (it must match both files), e.g. to publish again.
+# Releases are made by hand, when you choose: push a tag like v0.29.0 (it must match the version in both files),
+# or publish a GitHub Release for that tag. Merging to main does NOT publish on its own, so main can hold a
+# finished, unreleased version until you tag it.
 on:
   push:
     tags: ["v*"]
-  workflow_run:
-    workflows: [Tests]
-    types: [completed]
-    branches: [main]
 
 permissions:
   contents: read

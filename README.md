@@ -201,9 +201,10 @@ docker run --rm -v "$PWD":/src:ro python:3.12-slim sh -c 'apt-get -qq update && 
 
 GitHub runs the same tests, plus a lint and an amd64 and arm64 image build, on every pull request. Pull requests go
 into `edge`; each push there that passes the tests publishes the `:edge` images, overwriting the last ones. `edge`
-reaches `main` only as a release: change the version in both `app/wbs/__init__.py` and `addon/config.yaml`, and once
-the tests pass on `main`, GitHub publishes the images to GHCR and tags the commit (`v0.25.3`). Pushing a tag yourself
-publishes that version again.
+reaches `main` when a release is prepared: change the version in both `app/wbs/__init__.py` and `addon/config.yaml`
+and merge. That stages the release on `main` without publishing. To publish it, push a tag like `v0.29.0` (it must
+match the version in both files), or publish a GitHub Release for that tag; GitHub then builds and pushes the images
+to GHCR.
 
 ## Roadmap
 
