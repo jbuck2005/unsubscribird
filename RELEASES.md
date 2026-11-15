@@ -24,9 +24,10 @@ pre-release **edge channel** so the newest work can be tried before it is releas
 **New in this release**
 
 - **Edge channel.** Every change merged to `edge` is published as `ghcr.io/jbuck2005/unsubscribird:edge` a few
-  minutes after its tests pass, before it is released. Its pages show the version with `-edge` on the end (for
-  example `v0.29.0-edge`) so a pre-release build is obvious at a glance. Point `UNSUB_IMAGE` at `:edge` in
-  `deploy/.env` to follow it; releases still come only from `main`. See the README's "Published images".
+  minutes after its tests pass, before it is released. Its pages show the version with `-edge.<commit>` on the end
+  (for example `v0.29.0-edge.da495c4`) so a pre-release build and its commit are obvious at a glance. Point
+  `UNSUB_IMAGE` at `:edge` in `deploy/.env` to follow it; releases still come only from `main`. See the README's
+  "Published images".
 - **Delete old models (Model tab).** Every trained model except the active one has a **Delete** button that removes
   it and its file; the active model is protected (switch to another first).
 - **Admin pages on a phone.** On a narrow screen the nine page links and the version fold into a **☰** menu that
@@ -35,6 +36,16 @@ pre-release **edge channel** so the newest work can be tried before it is releas
   behind a **+N** button. Desktop layout is unchanged.
 - **Release guard rails.** At most one tagged release a day (a second `v*` tag that day is refused before any
   image is built), and the workflow only drafts the GitHub Release, so publishing stays a manual step.
+
+- **Count only (Review).** A checkbox next to Confirm (key `o`) keeps a visit in the counts, FeederWatch and
+  eBird, but out of training: for a bird too hidden or blurry to learn from.
+- **Small birds behind the feeder.** "Nothing moved" no longer hides a small bird moving inside or behind the
+  feeder; the last week's quiet visits are looked at again on start-up.
+- **Deploy health check.** `/healthz?deep=1` runs OWL-ViT and BioCLIP once and answers 503 if either fails, so a
+  station that follows `:edge` can roll back a broken image by itself.
+- **Newer libraries.** torch 2.15, transformers 5 and open_clip 4, among others. OWL-ViT was adapted to
+  transformers 5, and every image build now runs both models once before it can be published.
+- **Python 3.15** in the image (was 3.12).
 
 **Carried into the release from the preceding feature work**
 

@@ -23,6 +23,10 @@ AW, AH, FPS = 320, 180, 2.0      # analysis size and rate
 OVERLAY_ROWS = 0.12              # the camera's date/time stamp lives in the top strip: ignore it
 CHANGE_THRESHOLD = 25            # grey levels
 GLOBAL_CHANGE = 0.5              # share of the picture: above this it is a camera/lighting event
+# A small bird moving inside a feeder changes only a few hundred pixels, well under the quiet-clip threshold
+# (a share of the whole picture). One connected changed region at least this big (share of the analysed picture,
+# about 75 px at 320x158) means something moved, however small the overall activity.
+QUIET_BLOB = 0.0015
 
 
 @dataclass
@@ -121,6 +125,42 @@ def score_frames(frames: np.ndarray) -> list[float]:
     return list(activity * np.sqrt(sharp_n))
 
 
+def largest_blob(frames: np.ndarray) -> float:
+    """The biggest connected region that changed in any frame, as a share of the analysed picture.
+
+    A region counts when it differs from both neighbouring frames (something moving) or from the clip's median
+    frame (something that came or went). Whole-picture changes (exposure, shake) and single-pixel noise don't."""
+    from scipy import ndimage
+    if len(frames) == 0:
+        return 0.0
+    body = frames[:, int(AH * OVERLAY_ROWS):, :].astype(np.int16)
+    body = body - np.median(body, axis=(1, 2), keepdims=True).astype(np.int16)
+    area = body.shape[1] * body.shape[2]
+    changed = np.abs(body - np.median(body, axis=0)) > CHANGE_THRESHOLD
+    if len(body) > 2:
+        step = np.abs(np.diff(body, axis=0)) > CHANGE_THRESHOLD   # step[i] = f[i+1] vs f[i]
+        moving = np.zeros_like(changed)
+        moving[1:-1] = step[:-1] & step[1:]
+        masks = np.concatenate([changed, moving])
+    else:
+        masks = changed
+    best = 0
+    for mask in masks:
+        share = mask.mean()
+        if share == 0 or share > GLOBAL_CHANGE:
+            continue
+        mask = ndimage.binary_opening(mask, iterations=1)
+        lab, n = ndimage.label(mask)
+        if n:
+            best = max(best, int(np.bincount(lab.ravel())[1:].max()))
+    return best / area
+
+
+def is_quiet(info: dict, quiet_activity: float) -> bool:
+    """Nothing moved: low overall activity and no changed region big enough to be a bird."""
+    return info.get("activity", 1.0) < quiet_activity and info.get("blob", 1.0) < QUIET_BLOB
+
+
 def motion_box(frames: np.ndarray, index: int, min_pixels: int = 30) -> list[float] | None:
     """Largest changed region of one analysed frame vs the clip's median, as [x1, y1, x2, y2] in 0..1.
 
@@ -172,12 +212,14 @@ def cut(path: Path, t: float, out: Path, width: int | None = None) -> None:
 
 def extract_best(clip: Path, out_dir: Path, k: int, info: dict | None = None) -> list[dict]:
     """Returns [{t, score, path, thumb, width, height}] for the k best frames.
-    If `info` is given, info['activity'] is set to the clip's highest activity score."""
+    If `info` is given, info['activity'] is set to the clip's highest activity score and info['blob'] to its
+    largest changed region (largest_blob)."""
     duration, w, h = probe(clip)
     small = decode_small(clip)
     scores = score_frames(small)
     if info is not None:
         info["activity"] = float(max(scores)) if scores else 0.0
+        info["blob"] = largest_blob(small)
     picks = choose(scores, k)
     results = []
     for p in picks:

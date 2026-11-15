@@ -3,9 +3,9 @@ name: Docker build
 on:
   push:
     branches: [main, edge]
-    paths: [app/**, .github/workflows/docker.yml]
+    paths: [app/**, tests/smoke_models.py, .github/workflows/docker.yml]
   pull_request:
-    paths: [app/**, .github/workflows/docker.yml]
+    paths: [app/**, tests/smoke_models.py, .github/workflows/docker.yml]
   workflow_dispatch:
 
 permissions:
@@ -35,3 +35,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.runner }}
       - name: The app imports inside the image
         run: docker run --rm -e UNSUB_AUTH=off unsubscribird:ci python -c "import open_clip, torch, wbs.config, wbs.start"
+      # The real OWL-ViT and BioCLIP 2 calls on a blank frame (downloads both models), so a library upgrade that
+      # changes their APIs fails here instead of on a running station.
+      - name: The models run inside the image
+        run: docker run --rm -e UNSUB_AUTH=off -v "$PWD/tests/smoke_models.py:/app/smoke_models.py:ro" unsubscribird:ci python smoke_models.py

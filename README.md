@@ -71,7 +71,7 @@ Instead of building the image, set `UNSUB_IMAGE` in `deploy/.env` to one that Gi
 
 * `ghcr.io/jbuck2005/unsubscribird:latest`: the latest release
 * `ghcr.io/jbuck2005/unsubscribird:edge`: every change merged to the `edge` branch, a few minutes after its tests
-  pass, before it's released. Newest, and the least tried. The pages show its version with `-edge` on the end
+  pass, before it's released. Newest, and the least tried. The pages show its version with `-edge.<commit>` on the end (for example `v0.29.0-edge.da495c4`)
 
 Then update with a pull instead of a build:
 
@@ -88,6 +88,11 @@ lines from cron, say every hour (`crontab -e`, with the path to your checkout):
 ```
 
 Old images stay on disk; `docker image prune` removes them.
+
+To check a deploy, `GET /healthz` answers 200 when the app is up, and `GET /healthz?deep=1` also runs OWL-ViT and
+BioCLIP 2 once on a built-in frame and answers 503 if either fails (no login; the result is cached for a minute, and
+the first deep check after a start loads both models, so allow a minute or two). A script that follows `:edge` can
+roll back to the previous image on a 503.
 
 ## Or as a Home Assistant add-on
 
@@ -210,10 +215,18 @@ released) code.
    the `:edge` images, overwriting the last ones (`.github/workflows/edge.yml`). No version bump is needed.
 2. **Try it.** A Docker host that follows `:edge` (see [Published images](#published-images): `UNSUB_IMAGE` set to
    `ghcr.io/jbuck2005/unsubscribird:edge`, and the hourly pull from cron, or the two `docker compose` lines by hand)
-   picks the build up. The pages show `v<version>-edge`, so you can tell which build you are looking at.
+   picks the build up. The pages show `v<version>-edge.<commit>`, so you can tell which build you are looking at.
 3. **Stage the release.** On `edge`, set the new version in both `app/wbs/__init__.py` and `addon/config.yaml`,
    turn the top of `addon/CHANGELOG.md` into `## <version>`, and add the story to `RELEASES.md`. Then open a pull
    request from `edge` into `main` and merge it. Merging publishes nothing.
+   `edge` must survive that merge: a branch ruleset on `main` and `edge` with **Restrict deletions** (and **Block
+   force pushes**) keeps GitHub's "Automatically delete head branches" from removing it, while topic branches are
+   still cleaned up. If `edge` does go missing, recreate it from `main` (`git push origin main:edge`).
+
+**Bot pull requests.** Merge Dependabot's (and any other bot's) pull requests into `edge` with **Squash and merge**,
+never with a merge commit, so `edge` stays a line of single commits. A squash keeps the bot as the commit's author
+(GitHub is the committer), so a host that only deploys trusted commits should accept the maintainer, GitHub
+(`noreply@github.com`) and Dependabot's noreply address, and can then check each commit on its own.
 4. **Publish.** Push the tag from `main`:
 
    ```sh
@@ -243,6 +256,9 @@ and variables → Actions → Variables) names another time zone, such as `Ameri
 6. Coral/edge model export (later)
 
 ## Models and credits
+
+How the Vicohome camera and cloud work, and how we found out (open-source clients, a capture of the app, measured
+clips), is in [reverse-engineering.md](reverse-engineering.md).
 
 un-subscribird stands on two open models. Both are downloaded from Hugging Face on first start, not shipped in the
 image, and run entirely on your computer: nothing is sent to them over the network.

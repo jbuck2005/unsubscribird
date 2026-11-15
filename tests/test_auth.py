@@ -73,8 +73,9 @@ def test_old_links_redirect():
 
 
 def test_public_day_lists_bird_clips_newest_first():
-    # Early today (not noon: before noon that would be "the future" and the newest visit for other tests).
-    noon = datetime.now().replace(hour=0, minute=1, second=0, microsecond=0)
+    # The first seconds of today. Anything later would be "the future" for a test that runs just after midnight
+    # and treats the newest visit as its own (test_recognition's today summary), as happened on CI at 00:06.
+    noon = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     def mk(trace, when, species):
         main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": when.timestamp(), "time": when.isoformat()})
         p = settings.image_dir / "visits" / trace
@@ -82,9 +83,9 @@ def test_public_day_lists_bird_clips_newest_first():
         main.db.add_frame(trace, "clip", f"visits/{trace}/f.jpg", f"visits/{trace}/f_thumb.jpg", 1.0, 0.5, 10, 10)
         main.db.set_visit(trace, clip=f"visits/{trace}/clip.mp4", rec_species=species, rec_source="model", rec_at=1)
     mk("kid1", noon, "Blue Jay")
-    mk("kid2", noon + timedelta(minutes=10), "Uncertain")
+    mk("kid2", noon + timedelta(seconds=1), "Uncertain")
     main.db.set_label("kid2", "Unknown bird", [], None, "confirmed")     # a human looked: a mystery bird is fine
-    mk("kid3", noon + timedelta(minutes=20), "Empty")
+    mk("kid3", noon + timedelta(seconds=2), "Empty")
     d = TestClient(main.app).get(f"/api/public/day?day={noon.date().isoformat()}").json()
     mine = [v for v in d["visits"] if v["trace_id"].startswith("kid")]
     assert [v["trace_id"] for v in mine] == ["kid2", "kid1"]             # newest first, no Empty

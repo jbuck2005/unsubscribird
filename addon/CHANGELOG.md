@@ -2,6 +2,26 @@
 
 ## 0.29.0
 
+* "Nothing moved" no longer hides small birds. A bird moving inside or behind the feeder changes only a few hundred
+  pixels, too few for the quiet-clip threshold, so those visits were suggested as Empty and skipped LM Studio. A
+  clip is now quiet only if no single changed region is big enough to be a bird. At start-up, unlabelled
+  "nothing moved" visits of the last 7 days are looked at again, and the ones with something moving go on to
+  LM Studio.
+* **Review: Count only.** A new checkbox next to Confirm (key `o`) saves the species and how many for the counts,
+  FeederWatch and eBird, but keeps the visit's frames out of training. Use it when a bird is too hidden or blurry
+  to learn from. Count-only visits show a "count only" chip, aren't cross-checked on Check labels, and don't count
+  towards the Model tab's training frames. **Exclude** is unchanged: it still drops a visit from everything, and its
+  wording now says so.
+* eBird checklists: a bird nobody counted goes in as 1 (every visit shows at least one) instead of X. The number of
+  visits stays in each bird's comment; it isn't a count of birds, since the same ones keep coming back.
+* **Health check for deploys.** `/healthz` answers 200 when the app is up, and `/healthz?deep=1` also runs
+  OWL-ViT and BioCLIP 2 once on a built-in frame and answers 503 if either fails, so an updater can roll back a
+  broken image. Cached for a minute; no login; errors are reported by type only.
+* Libraries updated: torch 2.15 (CPU build), transformers 5, open_clip 4, numpy 2.5, scipy 1.18, scikit-learn 1.9,
+  pillow 13, pydantic 2.14, fastapi 0.162. OWL-ViT works with transformers 5, and the image build now runs both
+  models once, so a library change that breaks them fails before it is published.
+* The image runs on Python 3.15 (was 3.12).
+* Edge builds show the commit in the version label.
 * A pre-release **`:edge`** image is now published on every change merged to the `edge` branch, a few minutes
   after its tests pass, so the newest work can be tried before it is released. Its pages show the version with
   `-edge` on the end (for example `v0.29.0-edge`). Releases still come only from `main`; see the README for how

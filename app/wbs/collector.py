@@ -37,6 +37,7 @@ NO_CLIP_GRACE_S = 30 * 60
 # A bird that sits still barely changes the clip, so a quiet clip's best frame goes to OWL-ViT first. On real
 # feeder clips it found the bird in every quiet clip that had one (0.36-0.76) and nothing in the empty ones.
 STILL_BIRD_SCORE = 0.3
+QUIET_RECHECK_DAYS = 7   # at start-up, unlabelled "nothing moved" visits this recent are looked at again
 MAX_CLIP_BYTES = 200 * 1024 * 1024
 # MQTT is input, not truth: a trace id becomes a folder name and a clip_url is appended to Home Assistant's address.
 TRACE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -205,8 +206,44 @@ class Collector:
         self.db.add_frame(trace_id, "snapshot", rel(self.s, path), rel(self.s, path), None, None, None, None)
 
     # ---- clip + frames worker -----------------------------------------------
+    def recheck_quiet(self, days: float = QUIET_RECHECK_DAYS) -> int:
+        """Look again at unlabelled "nothing moved" visits of the last `days` days.
+
+        Older versions could call a small bird moving inside the feeder quiet. A visit whose clip has a changed
+        region big enough to be a bird loses its Empty suggestion and goes on to LM Studio and recognition.
+        Returns how many changed."""
+        rows = self.db.q("""SELECT v.trace_id, v.clip FROM visits v LEFT JOIN labels l ON l.trace_id=v.trace_id
+                            WHERE v.quiet=1 AND l.trace_id IS NULL AND v.clip IS NOT NULL AND v.ts >= ?
+                            ORDER BY v.ts DESC LIMIT 1000""", time.time() - days * 86400)
+        moved = 0
+        for v in rows:
+            if self.stop.is_set():
+                break
+            clip = self.s.image_dir / v["clip"]
+            if not clip.exists():
+                continue
+            try:
+                blob = framelib.largest_blob(framelib.decode_small(clip))
+            except Exception as err:
+                LOG.warning("Visit %s: quiet recheck failed: %s", v["trace_id"], err)
+                continue
+            if blob < framelib.QUIET_BLOB:
+                continue
+            with self.db.tx() as c:
+                c.execute("DELETE FROM suggestions WHERE trace_id=? AND source='motion'", (v["trace_id"],))
+                c.execute("UPDATE visits SET quiet=0, status='frames', rec_at=NULL WHERE trace_id=?", (v["trace_id"],))
+            moved += 1
+        if rows:
+            LOG.info("Quiet recheck: %d of %d \"nothing moved\" visit(s) had something moving; sent on to LM Studio",
+                     moved, len(rows))
+        return moved
+
     def _worker(self) -> None:
         last_recheck = 0.0
+        try:
+            self.recheck_quiet()
+        except Exception:
+            LOG.exception("Quiet recheck failed")
         while not self.stop.is_set():
             try:
                 self.process_pending()
@@ -331,15 +368,17 @@ class Collector:
                 self.db.add_frame(trace, "clip", rel(self.s, f["path"]), rel(self.s, f["thumb"]), f["t"],
                                   f["score"], f["width"], f["height"], f.get("motion_box"))
             activity = info.get("activity", 1.0)
-            if activity < self.s.quiet_activity and (seen := self.still_animal(trace)):
+            quiet = framelib.is_quiet(info, self.s.quiet_activity)
+            if quiet and (seen := self.still_animal(trace)):
                 LOG.info("Visit %s: little movement (activity %.3f) but OWL-ViT sees a %s (%.2f)",
                          trace, activity, seen["label"], seen["score"])
                 self.db.set_visit(trace, clip=rel(self.s, clip), status="frames", error=None, activity=activity)
-            elif activity < self.s.quiet_activity:
+            elif quiet:
                 # Nothing moved: skip LM Studio (and features until confirmed); suggest Empty for one-key review.
                 self.db.add_suggestion(trace, None, "motion", "frame-picker", {
                     "bird_present": False, "species": "Empty", "confidence": 0.9,
-                    "notes": f"nothing moved in the clip (activity {activity:.3f} < {self.s.quiet_activity})"}, "")
+                    "notes": f"nothing moved in the clip (activity {activity:.3f} < {self.s.quiet_activity}, "
+                             f"largest change {info.get('blob', 0):.4f})"}, "")
                 self.db.set_visit(trace, clip=rel(self.s, clip), status="prelabelled", error=None,
                                   activity=activity, quiet=1)
             else:

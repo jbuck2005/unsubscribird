@@ -1,6 +1,8 @@
 """eBird checklists (Cornell Lab), as a file to upload yourself: "eBird Record Format (Extended)".
 
-One checklist per day: every bird species the camera saw that day, with the most seen at once in one visit. Upload
+One checklist per day: every bird species the camera saw that day, with the most seen at once in one visit (a
+counted number, else 1: every visit shows at least one bird; never the number of visits, which counts the same
+birds again each time they come back). Upload
 it at eBird's "Import data" page in your own account; nothing is sent from here.
 
 The format, from eBird's "Upload spreadsheet data" help (2025): .csv, no header row, 19 columns in a fixed order, no
@@ -39,7 +41,7 @@ def checklists(db: DB, settings, first: date, last: date) -> list[dict[str, Any]
         out.append({"day": d, "start": e["first"], "minutes": max(1, int((last_t - first_t).total_seconds() // 60) + 1),
                     "visits": e["bird_visits"],
                     "species": [{"species": s["species"], "scientific": " ".join(sci.get(s["species"], [])[:2]),
-                                 "number": s["counted"].get(d) or "X", "visits": s["day_visits"].get(d, 0)}
+                                 "number": s["days"][d], "visits": s["day_visits"].get(d, 0)}
                                 for s in sorted(rows, key=lambda s: s["species"])]})
     return out
 
