@@ -37,6 +37,15 @@ pre-release **edge channel** so the newest work can be tried before it is releas
 - **Release guard rails.** At most one tagged release a day (a second `v*` tag that day is refused before any
   image is built), and the workflow only drafts the GitHub Release, so publishing stays a manual step.
 
+- **Count only (Review).** A checkbox next to Confirm (key `o`) keeps a visit in the counts, FeederWatch and
+  eBird, but out of training: for a bird too hidden or blurry to learn from.
+- **Small birds behind the feeder.** "Nothing moved" no longer hides a small bird moving inside or behind the
+  feeder; the last week's quiet visits are looked at again on start-up.
+- **Deploy health check.** `/healthz?deep=1` runs OWL-ViT and BioCLIP once and answers 503 if either fails, so a
+  station that follows `:edge` can roll back a broken image by itself.
+- **Newer libraries.** torch 2.15, transformers 5 and open_clip 4, among others. OWL-ViT was adapted to
+  transformers 5, and every image build now runs both models once before it can be published.
+
 **Carried into the release from the preceding feature work**
 
 - **Bird trading cards.** Ctrl-click (Cmd-click on a Mac) a clip, or press **🃏 Card** in the player, for a

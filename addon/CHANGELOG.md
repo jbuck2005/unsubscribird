@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.29.0
 
 * "Nothing moved" no longer hides small birds. A bird moving inside or behind the feeder changes only a few hundred
   pixels, too few for the quiet-clip threshold, so those visits were suggested as Empty and skipped LM Studio. A
@@ -14,9 +14,13 @@
   wording now says so.
 * eBird checklists: a bird nobody counted goes in as 1 (every visit shows at least one) instead of X. The number of
   visits stays in each bird's comment; it isn't a count of birds, since the same ones keep coming back.
-
-## 0.29.0
-
+* **Health check for deploys.** `/healthz` answers 200 when the app is up, and `/healthz?deep=1` also runs
+  OWL-ViT and BioCLIP 2 once on a built-in frame and answers 503 if either fails, so an updater can roll back a
+  broken image. Cached for a minute; no login; errors are reported by type only.
+* Libraries updated: torch 2.15 (CPU build), transformers 5, open_clip 4, numpy 2.5, scipy 1.18, scikit-learn 1.9,
+  pillow 13, pydantic 2.14, fastapi 0.162. OWL-ViT works with transformers 5, and the image build now runs both
+  models once, so a library change that breaks them fails before it is published.
+* Edge builds show the commit in the version label.
 * A pre-release **`:edge`** image is now published on every change merged to the `edge` branch, a few minutes
   after its tests pass, so the newest work can be tried before it is released. Its pages show the version with
   `-edge` on the end (for example `v0.29.0-edge`). Releases still come only from `main`; see the README for how
