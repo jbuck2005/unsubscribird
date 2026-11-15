@@ -55,8 +55,10 @@ class Detector:
             inputs = self._proc(text=[QUERIES], images=img, return_tensors="pt")
             with torch.no_grad():
                 out = self._model(**inputs)
-            res = self._proc.post_process_object_detection(out, threshold=MIN_SCORE,
-                                                           target_sizes=torch.tensor([img.size[::-1]]))[0]
+            # The image processor's method exists in transformers 4 and 5; the processor's own
+            # post_process_object_detection was removed in 5 (renamed post_process_grounded_object_detection).
+            res = self._proc.image_processor.post_process_object_detection(
+                out, threshold=MIN_SCORE, target_sizes=torch.tensor([img.size[::-1]]))[0]
         if not len(res["scores"]):
             return None
         i = int(res["scores"].argmax())

@@ -136,3 +136,62 @@ def test_owlvit_overrules_nothing_moved_for_a_still_bird():
     assert v["quiet"] == 1 and v["status"] == "prelabelled" and motion                  # too unsure
     v, _, motion = run("trace0412", RuntimeError("model missing"))
     assert v["quiet"] == 1 and motion                                                   # no verdict: as before
+
+
+def make_small_bird_video(path, seconds=4):
+    """A grey scene with a small dark square hopping about: a small bird inside the feeder."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    graph = (f"color=c=gray:size=640x360:rate=10:duration={seconds}[bg];"
+             f"color=c=black:size=24x24:rate=10:duration={seconds}[b];"
+             "[bg][b]overlay=x='300+40*mod(floor(t*2),3)':y='160+20*mod(floor(t*2),2)'[out0]")
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", graph,
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", str(path)], check=True)
+
+
+def test_small_moving_bird_is_not_called_nothing_moved():
+    from wbs import collector as col
+    trace = "trace0420"
+    main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": time.time() - 100,
+                          "time": "2026-11-05T12:00:00-05:00", "clip_url": "/local/vicohome/x.mp4"})
+    clip = settings.image_dir / "visits" / "small" / trace / "clip.mp4"
+    make_small_bird_video(clip)
+    orig = col.visit_dir
+    col.visit_dir = lambda s, t, ts: clip.parent
+    try:
+        main.collector.fetch_clip(main.db.one("SELECT * FROM visits WHERE trace_id=?", trace))
+    finally:
+        col.visit_dir = orig
+    v = main.db.one("SELECT * FROM visits WHERE trace_id=?", trace)
+    motion = main.db.one("SELECT 1 FROM suggestions WHERE trace_id=? AND source='motion'", trace)
+    assert v["activity"] < main.collector.s.quiet_activity     # the old test alone would have said quiet
+    assert v["quiet"] == 0 and v["status"] == "frames" and motion is None   # on to LM Studio
+
+
+def test_recheck_quiet_frees_visits_with_a_small_bird():
+    def quiet_visit(trace, clip):
+        main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": time.time() - 3600,
+                              "time": "2026-11-05T12:00:00-05:00"})
+        main.db.add_suggestion(trace, None, "motion", "frame-picker",
+                               {"bird_present": False, "species": "Empty", "confidence": 0.9}, "")
+        main.db.set_visit(trace, clip=str(clip.relative_to(settings.image_dir)), status="prelabelled",
+                          quiet=1, rec_at=1.0)
+
+    bird = settings.image_dir / "visits" / "recheck" / "bird" / "clip.mp4"
+    empty = settings.image_dir / "visits" / "recheck" / "empty" / "clip.mp4"
+    make_small_bird_video(bird)
+    empty.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:size=640x360:rate=10:duration=4",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-y", str(empty)], check=True)
+    quiet_visit("trace0430", bird)
+    quiet_visit("trace0431", empty)
+    quiet_visit("trace0432", bird)
+    main.db.set_label("trace0432", "Empty", [], None, "confirmed")    # a person decided: left alone
+
+    assert main.collector.recheck_quiet() == 1
+    v = main.db.one("SELECT * FROM visits WHERE trace_id='trace0430'")
+    assert v["quiet"] == 0 and v["status"] == "frames" and v["rec_at"] is None
+    assert not main.db.one("SELECT 1 FROM suggestions WHERE trace_id='trace0430' AND source='motion'")
+    for trace in ("trace0431", "trace0432"):
+        v = main.db.one("SELECT * FROM visits WHERE trace_id=?", trace)
+        assert v["quiet"] == 1 and v["status"] == "prelabelled"
+        assert main.db.one("SELECT 1 FROM suggestions WHERE trace_id=? AND source='motion'", trace)

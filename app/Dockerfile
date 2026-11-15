@@ -3,7 +3,8 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1 \
     HF_HOME=/data/hf
-# Set by the edge workflow (UNSUB_BUILD=edge) so the site shows the version as 0.28.0-edge; empty for releases.
+# Set by the edge workflow (UNSUB_BUILD=edge.<short commit>) so the site shows the version as e.g. 0.29.0-edge.da495c4;
+# empty for releases.
 ARG UNSUB_BUILD=
 ENV UNSUB_BUILD=$UNSUB_BUILD
 WORKDIR /app

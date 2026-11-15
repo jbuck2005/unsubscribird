@@ -33,6 +33,7 @@ from .auth import COOKIE, MAX_AGE, Auth
 from .bakeoff import Bakeoff
 from .detect import Detector
 from .embed import EmbedWorker, Embedder
+from .health import DeepHealth
 from .prefs import Prefs
 from .prelabel import Prelabeler, consensus
 from .recognition import Recognizer
@@ -50,6 +51,7 @@ prelabeler = Prelabeler(settings, db)
 embedder = Embedder(threads=settings.embed_threads)
 embed_worker = EmbedWorker(settings, db, embedder, detector=Detector() if settings.detect_enabled else None)
 collector.detector = embed_worker.detector
+health = DeepHealth(embed_worker.detector, embedder)
 trainer = Trainer(db, embed_worker, settings.data_dir / "models")
 recognizer = Recognizer(settings, db, collector.publish, canonical=lambda n: canonical(n, species_index()))
 retention = Retention(settings, db)
@@ -265,6 +267,18 @@ def review_json(v, index: dict[str, str]) -> dict[str, Any]:
 # ---- pages ----------------------------------------------------------------------
 def _page(request: Request, template: str, page: str):
     return templates.TemplateResponse(request, template, {"version": version_label, "page": page})
+
+
+@app.get("/healthz")
+def healthz(deep: bool = False):
+    """200 when the app is up. With ?deep=1, also runs OWL-ViT and BioCLIP 2 on a built-in frame (cached for a
+    minute) and answers 503 if either fails, so a deploy script can roll back a broken image. No login: it shows
+    only the version and which checks passed."""
+    body: dict[str, Any] = {"ok": True, "version": version_label}
+    if not deep:
+        return body
+    body.update(health.check())
+    return JSONResponse(body, status_code=200 if body["ok"] else 503)
 
 
 @app.get("/", response_class=HTMLResponse)
