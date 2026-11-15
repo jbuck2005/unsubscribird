@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* "Nothing moved" no longer hides small birds. A bird moving inside or behind the feeder changes only a few hundred
+  pixels, too few for the quiet-clip threshold, so those visits were suggested as Empty and skipped LM Studio. A
+  clip is now quiet only if no single changed region is big enough to be a bird. At start-up, unlabelled
+  "nothing moved" visits of the last 7 days are looked at again, and the ones with something moving go on to
+  LM Studio.
 * eBird checklists: a bird nobody counted goes in as 1 (every visit shows at least one) instead of X. The number of
   visits stays in each bird's comment; it isn't a count of birds, since the same ones keep coming back.
 
