@@ -5,6 +5,27 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-15: v0.29.0 is all of edge
+
+**Changed:** I decided v0.29.0 ships everything on `edge` that passes. Squash-merged into `edge`: #54 (count only),
+#55 (small birds), #43 (Python 3.15) and #58 (release notes, including the Python 3.15 line). Then #59 merged
+`edge` into `main`, and I fast-forwarded `edge` to the same commit, so `main` and `edge` are both at `88841e4`.
+
+**Branches:** only `main`, `edge` and `dev/scratchpad` are left. Every merged branch was auto-deleted.
+
+**Status:** waiting on me to push the tag (the cloud session gets a 403 on tag pushes):
+
+    git fetch origin && git tag -a v0.29.0 -m v0.29.0 88841e4 && git push origin v0.29.0
+
+`release.yml` checks the version and the one-a-day rule, builds the images and **drafts** the GitHub Release. I
+review and publish it by hand. This replaces the older plan below to tag `6156d72`.
+
+**Next**
+- Push the tag, review the draft, publish.
+- Backlog: the midnight-UTC test date bug, and making OWL-ViT detection less fragile.
+
+---
+
 ## 2026-11-14: Releasing v0.29.0
 
 **Checked:** `main` is at `6156d72` ("0.29.0 notes: phone layout and release guard rails (#48)"). Both
