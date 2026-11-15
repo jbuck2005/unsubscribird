@@ -33,7 +33,7 @@ def build_dataset(db: DB, worker: EmbedWorker) -> dict[str, Any]:
     non_bird = {r[0] for r in worker.species_rows() if r[2] == "other"}
     X, y, main, groups, frame_ids = [], [], [], [], []
     missing = 0
-    for lab in db.q("SELECT l.* FROM labels l JOIN visits v USING(trace_id) WHERE v.excluded=0"):
+    for lab in db.q("SELECT l.* FROM labels l JOIN visits v USING(trace_id) WHERE v.excluded=0 AND l.train=1"):
         per_frame = json.loads(lab["frame_species"] or "{}")
         for fid in json.loads(lab["frame_ids"]):
             r = db.one("""SELECT e.* FROM embeddings e JOIN frames f ON f.id=e.frame_id
@@ -303,7 +303,7 @@ class Trainer:
         bundle = joblib.load(model_row["path"])
         right = total = 0
         for lab in self.db.q("""SELECT l.* FROM labels l JOIN visits v USING(trace_id)
-                                 WHERE v.excluded=0 AND l.updated > ?""", model_row["created"]):
+                                 WHERE v.excluded=0 AND l.train=1 AND l.updated > ?""", model_row["created"]):
             got = self.visit_probs(bundle, lab["trace_id"])
             if got is None:
                 continue
@@ -316,7 +316,7 @@ class Trainer:
         """Train a candidate; activate it only if it is not worse than the active model on fresh data."""
         active = self.db.one("SELECT * FROM models WHERE active=1")
         new = self.db.one("""SELECT COUNT(*) n FROM labels l JOIN visits v USING(trace_id)
-                             WHERE v.excluded=0 AND l.updated > ?""", active["created"] if active else 0)["n"]
+                             WHERE v.excluded=0 AND l.train=1 AND l.updated > ?""", active["created"] if active else 0)["n"]
         if new < min_new:
             return {"decision": "skipped", "reason": f"{new} new confirmed visits (< {min_new})"}
         fresh, n_fresh = self.fresh_accuracy(active) if active else (None, 0)

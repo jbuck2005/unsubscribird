@@ -137,6 +137,13 @@ table.cm .cm-cell:hover, table.cm .cm-cell:focus-visible, table.cm .cm-cell.on {
 .alsoseen { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .alsoseen .alsoin { min-width: 0; width: 150px; padding: 4px 8px; font-size: 13.5px; }
 .actions .countin { min-width: 0; width: 8.5em; padding: 4px 8px; font-size: 13.5px; }
+.countonly { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--muted); cursor: pointer;
+  user-select: none; white-space: nowrap; }
+.actions .countonly input { min-width: 0; width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent); cursor: pointer; }
+.visit.notrain .countonly { color: var(--text); font-weight: 600; }
+/* Count only: the ticks still say which frames show the bird, but greyed, since none of them will train. */
+.visit.notrain .frame.in { border-color: var(--line); border-style: dashed; }
+.visit.notrain .frame .tick { background: rgba(0,0,0,.55); }
 .chip.also { border: 0; font: inherit; font-size: 13px; cursor: pointer; color: var(--text); }
 .chip.also:hover, .chip.also:focus-visible { background: var(--accent-soft); color: var(--accent); }
 button.btn { font: inherit; border-radius: 6px; border: 1px solid var(--line); background: var(--chip);
@@ -237,6 +244,8 @@ pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8p
   .actions > input:first-child { flex: 1 1 100%; }   /* the species box gets its own row */
   .alsoseen { flex: 1 1 calc(100% - 8.5em - 8px); min-width: 0; } .alsoseen .alsoin { flex: 1; width: auto; min-width: 0; }
   .actions .countin { width: 7.5em; flex: none; }
+  .countonly { min-height: 36px; padding: 0 4px; }   /* a thumb-sized target */
+  .actions .countonly input { flex: none; }
   .batch button.btn:disabled { display: none; }   /* nothing to confirm: no button */
   .cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }   /* two stat cards a row */
 }

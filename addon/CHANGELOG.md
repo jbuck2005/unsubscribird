@@ -7,6 +7,11 @@
   clip is now quiet only if no single changed region is big enough to be a bird. At start-up, unlabelled
   "nothing moved" visits of the last 7 days are looked at again, and the ones with something moving go on to
   LM Studio.
+* **Review: Count only.** A new checkbox next to Confirm (key `o`) saves the species and how many for the counts,
+  FeederWatch and eBird, but keeps the visit's frames out of training. Use it when a bird is too hidden or blurry
+  to learn from. Count-only visits show a "count only" chip, aren't cross-checked on Check labels, and don't count
+  towards the Model tab's training frames. **Exclude** is unchanged: it still drops a visit from everything, and its
+  wording now says so.
 * eBird checklists: a bird nobody counted goes in as 1 (every visit shows at least one) instead of X. The number of
   visits stays in each bird's comment; it isn't a count of birds, since the same ones keep coming back.
 

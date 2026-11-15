@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS suggestions (
 );
 CREATE INDEX IF NOT EXISTS suggestions_visit ON suggestions(trace_id);
 
--- Only rows here are training data: every label was confirmed by a person.
+-- Every label was confirmed by a person. Training uses the ones with train=1 (count-only visits have train=0).
 CREATE TABLE IF NOT EXISTS labels (
     trace_id TEXT PRIMARY KEY REFERENCES visits(trace_id) ON DELETE CASCADE,
     species TEXT NOT NULL,
@@ -114,6 +114,10 @@ class DB:
             for col in ("frame_species", "also", "also_seen"):
                 if col not in lcols:
                     c.execute(f"ALTER TABLE labels ADD COLUMN {col} TEXT")
+            # train=0 is a count-only label: the species and count go into counts and eBird, but its
+            # frames never train the model (a bird hidden behind the feeder, a blurry clip).
+            if "train" not in lcols:
+                c.execute("ALTER TABLE labels ADD COLUMN train INTEGER NOT NULL DEFAULT 1")
             # Cross-validated (out-of-fold) check of every confirmed visit, per trained model.
             c.execute("""CREATE TABLE IF NOT EXISTS label_checks (
                 model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
@@ -210,24 +214,26 @@ class DB:
                        result.get("confidence"), result.get("other_animal"), result.get("notes"), raw, time.time()))
 
     def set_label(self, trace_id: str, species: str, frame_ids: list[int], count: int | None,
-                  source: str, frame_species: dict[int, str] | None = None, also_seen: list[str] | None = None) -> None:
+                  source: str, frame_species: dict[int, str] | None = None, also_seen: list[str] | None = None,
+                  train: bool = True) -> None:
         """frame_species: frames (from frame_ids) that show a different species than `species`.
-        also_seen: other species in the visit that have no frame of their own."""
+        also_seen: other species in the visit that have no frame of their own.
+        train=False: count only, never training data."""
         now = time.time()
         fs = {str(f): s for f, s in (frame_species or {}).items() if f in frame_ids and s != species}
         seen = sorted({s for s in also_seen or [] if s not in (species, "Empty")})
         also = sorted({s for s in fs.values() if s != "Empty"} | set(seen))
         with self.tx() as c:   # a person just confirmed it, so it also counts as checked now
             c.execute("""INSERT INTO labels(trace_id, species, count, frame_ids, source, created, updated, checked,
-                                            frame_species, also, also_seen)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                                            frame_species, also, also_seen, train)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                          ON CONFLICT(trace_id) DO UPDATE SET species=excluded.species, count=excluded.count,
                          frame_ids=excluded.frame_ids, source=excluded.source, updated=excluded.updated,
                          checked=excluded.checked, frame_species=excluded.frame_species, also=excluded.also,
-                         also_seen=excluded.also_seen""",
+                         also_seen=excluded.also_seen, train=excluded.train""",
                       (trace_id, species, count, json.dumps(frame_ids), source, now, now, now,
                        json.dumps(fs) if fs else None, json.dumps(also) if also else None,
-                       json.dumps(seen) if seen else None))
+                       json.dumps(seen) if seen else None, int(bool(train))))
 
     def set_label_frames(self, trace_id: str, frame_ids: list[int], frame_species: dict[str, str] | None,
                          touch: bool = True) -> None:

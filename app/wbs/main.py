@@ -557,7 +557,7 @@ def api_public_portrait(trace_id: str, species: str = ""):
 # ---- API ------------------------------------------------------------------------
 # Cross-check of confirmed labels by the active model (out-of-fold, so it never saw the visit):
 # doubtful = it disagrees, or gives the user's label under 60 %. Hidden once checked after that model.
-DOUBTFUL = """l.trace_id IS NOT NULL AND v.excluded=0 AND c.trace_id IS NOT NULL
+DOUBTFUL = """l.trace_id IS NOT NULL AND v.excluded=0 AND l.train=1 AND c.trace_id IS NOT NULL
               AND (c.predicted != l.species OR c.p_label < 0.6)
               AND (l.checked IS NULL OR l.checked < m.created)"""
 QUEUES = {
@@ -620,6 +620,8 @@ class LabelIn(BaseModel):
     frame_species: dict[int, str] = {}
     # Other species in the visit without a frame of their own (two birds in one frame). Not training data.
     also_seen: list[str] = []
+    # False: count only. The species and count go into counts and eBird; the frames never train the model.
+    train: bool = True
 
 
 def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str, Any]:
@@ -634,8 +636,8 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
         raise HTTPException(400, "how many must be 1 to 99")
     valid = {r["id"] for r in db.q("SELECT id FROM frames WHERE trace_id=? AND rejected=0", trace_id)}
     frame_ids = [i for i in body.frame_ids if i in valid]
-    if not frame_ids:
-        raise HTTPException(400, "pick at least one frame")
+    if not frame_ids and body.train:
+        raise HTTPException(400, "pick at least one frame (or tick Count only)")
     per_frame = {}
     for fid, sp in body.frame_species.items():
         if fid not in frame_ids:
@@ -656,11 +658,11 @@ def save_label(trace_id: str, body: LabelIn, index: dict[str, str]) -> dict[str,
             seen.add(other)
     cons = visit_json(v, index)["consensus"]
     source = "confirmed" if cons and cons["species"] == name else "corrected"
-    db.set_label(trace_id, name, frame_ids, body.count, source, per_frame, sorted(seen))
+    db.set_label(trace_id, name, frame_ids, body.count, source, per_frame, sorted(seen), train=body.train)
     db.set_visit(trace_id, flagged=None, flag_note=None)     # a person has looked: the flag is answered
     also = sorted({s for s in per_frame.values() if s != "Empty"} | seen)
     vj = visit_json(v, index)   # the clip's name follows the new label
-    return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also,
+    return {"ok": True, "species": name, "source": source, "frame_species": per_frame, "also": also, "train": body.train,
             "also_seen": sorted(seen), "clip_name": vj["clip_name"], "clip_href": vj["clip_href"]}
 
 
@@ -705,7 +707,8 @@ class ExcludeIn(BaseModel):
 
 @app.post("/api/visits/{trace_id}/exclude")
 def api_exclude(trace_id: str, body: ExcludeIn):
-    """Keep a visit (and its label) out of training and out of the review queues; reversible."""
+    """Keep a visit (and its label) out of everything: training, counts, eBird and the review queues; reversible.
+    To count a visit without training on it, label it with train=False instead."""
     if not db.one("SELECT 1 FROM visits WHERE trace_id=?", trace_id):
         raise HTTPException(404)
     db.set_visit(trace_id, excluded=int(body.excluded))
@@ -812,13 +815,13 @@ def api_model():
     frames = db.one("SELECT COUNT(*) n FROM frames f JOIN visits v USING(trace_id) "
                     "WHERE f.rejected=0 AND v.status IN ('frames','prelabelled')")["n"]
     embedded = db.one("SELECT COUNT(*) n FROM embeddings e JOIN frames f ON f.id=e.frame_id WHERE f.rejected=0")["n"]
-    labelled = db.q("SELECT frame_ids FROM labels JOIN visits USING(trace_id) WHERE excluded=0")
+    labelled = db.q("SELECT frame_ids FROM labels JOIN visits USING(trace_id) WHERE excluded=0 AND train=1")
     lab_frames = {i for r in labelled for i in json.loads(r["frame_ids"])}
     lab_embedded = db.one(f"SELECT COUNT(*) n FROM embeddings WHERE frame_id IN ({','.join(map(str, lab_frames)) or '0'})")["n"]
     models = [{**dict(m), "classes": json.loads(m["classes"]), "metrics": json.loads(m["metrics"])}
               for m in db.q("SELECT * FROM models ORDER BY id DESC LIMIT 20")]
     vcount = {r["species"]: r["n"] for r in db.q("""SELECT species, COUNT(*) n FROM labels JOIN visits USING(trace_id)
-                                                      WHERE excluded=0 GROUP BY species""")}
+                                                      WHERE excluded=0 AND train=1 GROUP BY species""")}
     return {"frames": frames, "embedded": embedded, "labelled_frames": len(lab_frames),
             "labelled_embedded": lab_embedded, "embed": embed_worker.stats, "trainer": trainer.status,
             "min_visits": 3, "visits_per_species": vcount, "models": models,
@@ -1060,9 +1063,11 @@ def api_stats():
     counts = {r["status"]: r["n"] for r in db.q("SELECT status, COUNT(*) n FROM visits GROUP BY status")}
     LIVE = "FROM labels JOIN visits USING(trace_id) WHERE excluded=0"
     labelled = db.one(f"SELECT COUNT(*) n {LIVE}")["n"]
-    frames = db.one(f"SELECT COALESCE(SUM(json_array_length(frame_ids)),0) n {LIVE}")["n"]
+    TRAIN_FRAMES = "CASE WHEN train=1 THEN json_array_length(frame_ids) ELSE 0 END"   # count-only frames don't train
+    frames = db.one(f"SELECT COALESCE(SUM({TRAIN_FRAMES}),0) n {LIVE}")["n"]
+    count_only = db.one(f"SELECT COUNT(*) n {LIVE} AND train=0")["n"]
     by_species = [dict(r) for r in db.q(f"""SELECT species, COUNT(*) visits,
-                  SUM(json_array_length(frame_ids)) frames,
+                  SUM({TRAIN_FRAMES}) frames, SUM(train=0) count_only,
                   SUM(source='corrected') corrected {LIVE} GROUP BY species ORDER BY visits DESC""")]
     agree = db.one(f"SELECT COUNT(*) n, SUM(source='confirmed') ok {LIVE}")
     excluded = db.one("SELECT COUNT(*) n FROM visits WHERE excluded=1")["n"]
@@ -1072,7 +1077,7 @@ def api_stats():
     except OSError:
         disk = None
     return {"version": version_label, "visits": counts, "labelled_visits": labelled, "labelled_frames": frames,
-            "excluded_visits": excluded,
+            "excluded_visits": excluded, "count_only_visits": count_only,
             "by_species": by_species,
             "vlm_agreement": (round(agree["ok"] / agree["n"], 3) if agree["n"] else None),
             "collector": collector.stats, "prelabel": {**prelabeler.stats, "lmstudio": prelabeler.lm.status},

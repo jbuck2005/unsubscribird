@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS bakeoff (
 def sample_visits(db: DB, per_species: int, total: int, seed: int = 0) -> list[dict[str, Any]]:
     """Up to `per_species` confirmed visits per species (newest first within a species, shuffled), capped."""
     by_species: dict[str, list] = defaultdict(list)
-    for lab in db.q("SELECT l.* FROM labels l JOIN visits v USING(trace_id) WHERE v.excluded=0 ORDER BY l.updated DESC"):
+    for lab in db.q("SELECT l.* FROM labels l JOIN visits v USING(trace_id) WHERE v.excluded=0 AND l.train=1 ORDER BY l.updated DESC"):
         by_species[lab["species"]].append(lab)
     rnd = random.Random(seed)
     picked = []
