@@ -111,8 +111,9 @@ def test_batch_confirm_mixed_results():
 def test_gallery_day_and_species():
     from datetime import datetime, timedelta
     c = client()
-    # Early today, not noon: before noon, noon is "the future" and would be the newest visit for other tests.
-    noon = datetime.now().replace(hour=0, minute=2, second=0, microsecond=0)
+    # The first seconds of today: anything later is "the future" for a test run just after midnight, and would be
+    # the newest visit for other tests.
+    noon = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     def mk(trace, when, rec, label=None):
         main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": when.timestamp(), "time": when.isoformat()})
         fid = main.db.add_frame(trace, "clip", f"visits/{trace}/f.jpg", None, 1.0, 0.5, 10, 10)
@@ -120,7 +121,7 @@ def test_gallery_day_and_species():
         if label:
             main.db.set_label(trace, label, [fid], None, "corrected")
     mk("gal1", noon, "Blue Jay")
-    mk("gal2", noon + timedelta(minutes=5), "Blue Jay", label="Black-capped Chickadee")   # your label wins
+    mk("gal2", noon + timedelta(seconds=5), "Blue Jay", label="Black-capped Chickadee")   # your label wins
     mk("gal3", noon - timedelta(days=1), "Blue Jay")                                       # yesterday
     mk("gal4", noon, "Empty")
     day = noon.date().isoformat()

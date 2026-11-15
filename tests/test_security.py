@@ -39,7 +39,7 @@ def logged_in():
 
 def visit(trace, species, excluded=0):
     """A visit with a clip and one frame on disk."""
-    when = datetime.now().replace(hour=0, minute=2, second=0, microsecond=0)
+    when = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)   # today, never in the future
     main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": when.timestamp(), "time": when.isoformat()})
     d = settings.image_dir / "visits" / trace
     d.mkdir(parents=True, exist_ok=True)
