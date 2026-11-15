@@ -178,9 +178,9 @@ behind it. I worried the bridge's SD path was double counting.
 
 **Status.** Merged into `edge` on 2026-11-15.
 
-**Next.** Merged, then watch `:edge`: the recheck line in the log, and how many empty clips with wind now reach LM
+**Next.** Watch `:edge`: the recheck line in the log, and how many empty clips with wind now reach LM
 Studio. To try real clips first, there's a probe script, `quiet_check.py`, in the project files. Run it with
-`docker exec -i <container> python - 2026/11/14 < quiet_check.py`.
+`docker exec -i unsubscribird python - 2026/11/14 < quiet_check.py`.
 
 ---
 
