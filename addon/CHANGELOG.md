@@ -20,6 +20,7 @@
 * Libraries updated: torch 2.15 (CPU build), transformers 5, open_clip 4, numpy 2.5, scipy 1.18, scikit-learn 1.9,
   pillow 13, pydantic 2.14, fastapi 0.162. OWL-ViT works with transformers 5, and the image build now runs both
   models once, so a library change that breaks them fails before it is published.
+* The image runs on Python 3.15 (was 3.12).
 * Edge builds show the commit in the version label.
 * A pre-release **`:edge`** image is now published on every change merged to the `edge` branch, a few minutes
   after its tests pass, so the newest work can be tried before it is released. Its pages show the version with

@@ -45,6 +45,7 @@ pre-release **edge channel** so the newest work can be tried before it is releas
   station that follows `:edge` can roll back a broken image by itself.
 - **Newer libraries.** torch 2.15, transformers 5 and open_clip 4, among others. OWL-ViT was adapted to
   transformers 5, and every image build now runs both models once before it can be published.
+- **Python 3.15** in the image (was 3.12).
 
 **Carried into the release from the preceding feature work**
 
