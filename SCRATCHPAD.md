@@ -5,6 +5,27 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-16: Review on my phone had no Count only box (PR #60)
+
+**What I saw.** On the Review page (Waiting tab) on my phone, each visit offered Confirm, Empty, Squirrel, Unknown
+bird and Exclude next to How many, but no Count only checkbox.
+
+**Cause.** Count only (#55) is in 0.29.0 and the code renders the box right after How many, so it isn't missing.
+Pages load `app.js?v=<version>`, and my station builds `edge` itself without `UNSUB_BUILD`, so every build since
+0.29.0 was staged showed plain `0.29.0`. The script URL never changed, and my phone kept its cached `app.js` from
+before #55. (Most likely cause; I couldn't reach the station from the cloud session to confirm.)
+
+**What I changed** (PR #60 into `edge`, `dev/static-cache-busting`): the `?v=` on scripts, styles and icons is now
+a short hash of the files in `static/`, worked out at start-up, so any change to them gives new URLs. The version
+in the footer is unchanged. `pytest -q`: 237 passed.
+
+**Now.** Reload the Review page without the cache (or clear the site's data on the phone) and the box should be
+there, beside How many.
+
+**Next.** Merge #60 into `edge`; after that, deploys can't leave a stale page behind.
+
+---
+
 ## 2026-11-15: v0.29.0 is all of edge
 
 **Changed:** I decided v0.29.0 ships everything on `edge` that passes. Squash-merged into `edge`: #54 (count only),
