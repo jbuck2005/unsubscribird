@@ -67,3 +67,19 @@ def test_an_edge_build_shows_the_suffix(monkeypatch):
     assert importlib.reload(wbs).version_label == f"{wbs.__version__}-edge.da495c4"
     monkeypatch.delenv("UNSUB_BUILD")
     assert importlib.reload(wbs).version_label == wbs.__version__
+
+
+def test_page_assets_change_url_when_their_content_changes(tmp_path):
+    """A station that builds edge itself keeps one version number for many builds, so ?v= must follow the files,
+    or a browser keeps an old app.js (a Review page without newer controls)."""
+    (tmp_path / "app.js").write_text("one")
+    first = main.static_version(tmp_path)
+    assert first == main.static_version(tmp_path)
+    (tmp_path / "app.js").write_text("two")
+    assert main.static_version(tmp_path) != first
+    c = TestClient(main.app)
+    v = main.templates.env.globals["asset_v"]
+    for page in ("/", "/login"):
+        html = c.get(page).text
+        assert f"?v={v}" in html, page
+        assert not re.search(r"/static/[^\"']+\?v=\d+\.\d+", html), page
