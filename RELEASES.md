@@ -15,6 +15,27 @@ How versions move:
 
 ---
 
+## 0.30.0 — 2026-11-17
+
+A small release of fixes you see on the pages: better training frames on Review, pages that refresh properly on
+phones after an update, and colour dots on the kids' page that look the same everywhere.
+
+**New in this release**
+
+- **Review: only bird frames start ticked.** On an unconfirmed visit labelled as a bird, only the frames where the
+  detector boxed a bird (the yellow box) start ticked for training. Frames with only a moving region (dashed blue)
+  or no box start unticked; click one to add it. If the detector found no bird anywhere in the visit, LM Studio's
+  per-frame answers decide as before. Saved labels keep their frames.
+
+**Fixed**
+
+- **Stale pages on phones.** Scripts, styles and icons are now versioned by their content, not the version number,
+  so a phone picks up changed files right away instead of using old cached copies.
+- **Kids' page colour dots.** Species dots are drawn in CSS in a fixed colour instead of emoji, so a species looks
+  the same on its chip, its card and the big player on every platform. Mystery birds get a dashed ring.
+
+---
+
 ## 0.29.0 — 2026-11-14
 
 The release that gathers up the autumn's feature work (the trading cards, the Patterns page's eBird export, the

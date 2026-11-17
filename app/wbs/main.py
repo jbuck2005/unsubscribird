@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import shutil
@@ -145,6 +146,21 @@ app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates",
                             context_processors=[lambda request: {"base": base_path(request)}])
 templates.env.globals["cfg"] = settings   # the same object prefs updates, so saved changes show on the next page
+
+
+def static_version(static_dir: Path = HERE / "static") -> str:
+    """A short hash of every file under static/, for the ?v= on page assets. The version number alone is not
+    enough: a station that builds edge itself keeps the same version for many builds, and a phone kept the old
+    app.js (the Review page without the Count only box) because its URL never changed."""
+    h = hashlib.sha256()
+    for f in sorted(static_dir.rglob("*")):
+        if f.is_file():
+            h.update(f.relative_to(static_dir).as_posix().encode() + b"\0")
+            h.update(f.read_bytes())
+    return h.hexdigest()[:12]
+
+
+templates.env.globals["asset_v"] = static_version()
 
 
 # ---- helpers ------------------------------------------------------------------

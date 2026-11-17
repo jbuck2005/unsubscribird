@@ -156,6 +156,11 @@ const Autocomplete = {
 };
 
 // ---- review page ----------------------------------------------------------------
+// Species that aren't birds: their frames are never picked by the bird detector's box.
+const NOT_BIRDS = ["Squirrel", "Chipmunk", "Other animal"];
+// The detector (OWL-ViT) boxed a bird in this frame: the solid yellow box on the review card.
+const birdBoxed = (f) => f.det_source === "owlvit" && f.det_label === "bird";
+
 const Review = {
   queue: "review", offset: 0, visits: [], focus: 0, species: [],
 
@@ -192,7 +197,7 @@ const Review = {
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
       : q === "excluded" ? "Visits kept out of counts, eBird and training. <b>Restore</b> puts one back."
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
-      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
+      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used, and only frames where the detector boxed a bird (yellow box) start ticked; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     $("#queues button.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
     this.load();
@@ -209,15 +214,21 @@ const Review = {
     this.updateConfirmAll();
   },
 
-  // Which frames to include by default for a given species.
+  // Which frames to include by default for a given species. For a bird, only the frames where the detector boxed
+  // a bird (the yellow box) start ticked; LM Studio decides only when the detector found no bird in the visit
+  // (detector off, frames not scanned yet, or a miss), so a visit never starts with nothing ticked.
   defaultFrames(v, species) {
-    const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const isEmpty = species === "Empty";
+    if (!isEmpty && !NOT_BIRDS.includes(species)) {
+      const boxed = v.frames.filter(birdBoxed).map((f) => f.id);
+      if (boxed.length) return boxed;
+    }
+    const byFrame = Object.fromEntries(v.suggestions.filter((s) => s.frame_id).map((s) => [s.frame_id, s]));
     const chosen = v.frames.filter((f) => {
       const s = byFrame[f.id];
       if (!s) return true;
       if (isEmpty) return !s.bird_present && !s.other_animal;
-      if (["Squirrel", "Chipmunk", "Other animal"].includes(species)) return !!s.other_animal;
+      if (NOT_BIRDS.includes(species)) return !!s.other_animal;
       return !!s.bird_present;
     }).map((f) => f.id);
     return chosen.length ? chosen : v.frames.map((f) => f.id);
