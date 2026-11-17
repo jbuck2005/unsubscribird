@@ -5,6 +5,22 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-17: Coloured species bubbles didn't match on my phone (PR #61)
+
+**What I saw.** On the kids' page on my Android phone, the Downy Woodpecker had a purple circle on its filter chip
+but a purple square on its card. The markers were emoji, and emoji look different on every platform and font.
+
+**What I changed** (PR #61 into `edge`, `dev/species-dots`): `kids.js` now turns each species emoji from the API
+into a round CSS dot in a fixed colour, on the chips, the cards and the big player. Mystery birds get a dashed ring.
+The API and Home Assistant still get the emoji. New test checks every emoji has a dot colour. `pytest -q`: 237 passed.
+
+**Status.** Open, waiting for review. Best merged with #60, or my phone may keep the cached `kids.js`.
+
+**Next.** Colours are still assigned in order of each day's first sighting, so a species can change colour from day
+to day. If I want one colour per species forever, that's a follow-up.
+
+---
+
 ## 2026-11-16: Review on my phone had no Count only box (PR #60)
 
 **What I saw.** On the Review page (Waiting tab) on my phone, each visit offered Confirm, Empty, Squirrel, Unknown
