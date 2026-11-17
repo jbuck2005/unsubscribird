@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.30.0
 
+* **Phones get fresh pages after an update.** Scripts, styles and icons are versioned by a short hash of their
+  content instead of the version number, so any change to them gives new URLs and phones stop using stale cached
+  copies.
+* **Kids' page: round colour dots.** Species dots are drawn in CSS in a fixed colour instead of emoji circles,
+  which looked different on every platform (on Android one species showed as a circle on its chip and a square on
+  its card). Mystery birds get a dashed ring. The API and Home Assistant keep the emoji.
 * **Review: only bird frames start ticked.** On an unconfirmed visit labelled as a bird, only the frames where the
   detector boxed a bird (the yellow box) are ticked for training. Frames with only a moving region (dashed blue) or
   no box start unticked; click one to add it. If the detector found no bird anywhere in the visit (detector off,
