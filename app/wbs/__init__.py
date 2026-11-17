@@ -2,7 +2,7 @@
 
 import os
 
-__version__ = "0.29.0"
+__version__ = "0.30.0"
 
 # What the pages and /api/stats show. A pre-release image (the :edge channel) is built with
 # UNSUB_BUILD=edge.<short commit> and shows as "0.29.0-edge.da495c4"; a release or a local build shows the plain
