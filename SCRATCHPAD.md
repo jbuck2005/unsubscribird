@@ -5,6 +5,26 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-17: Releasing v0.30.0 (all of edge)
+
+**Changed:** #60 (assets versioned by content), #61 (kids' page colour dots) and #62 (only yellow-box frames start
+ticked for training) were already on `edge`. #63 set the version to 0.30.0 and wrote the changelog and RELEASES.md
+entries; #60 and #61 had no changelog lines, so I added them. #64 merged `edge` into `main`, and I fast-forwarded
+`edge` to the same commit, so both are at `773770d`.
+
+**Status:** waiting on me to push the tag (the cloud session gets a 403 on tag pushes):
+
+    git fetch origin && git tag -a v0.30.0 -m v0.30.0 773770d && git push origin v0.30.0
+
+`release.yml` builds `:0.30.0` and `:latest` and **drafts** the GitHub Release from the changelog. I review and
+publish it by hand. Nothing else was released today, so the one-a-day check passes.
+
+**Next**
+- Push the tag, review the draft, publish.
+- Delete `dev/release-0.30.0` if auto-delete didn't.
+
+---
+
 ## 2026-11-17: Docker host stopped seeing new edge commits
 
 **What I saw.** My phone looked stale, so I checked whether the container on the Docker host really runs edge HEAD.
