@@ -20,8 +20,9 @@ future rewrite of `known_hosts` can't break updates again. The other GitHub mirr
 
 **Stale UI on the phone.** That part is browser caching of `app.js`, which PR #60 (content-hashed static assets) fixes.
 
-**Status.** Fetch works again; the next updater run went through cleanly. The ESPHome mirror job on that host still
-fails because the HA machine's host key was lost in the same rewrite.
+**Status.** Fetch works again; the next updater run went through cleanly. PRs #60 to #62 then deployed by themselves. The HA machine's host key
+was lost in the same rewrite; I checked it against my PC's copy and pinned it the same way, and the ESPHome mirror
+syncs again.
 
 **Next.** Merge #60 so pages stop serving stale scripts after a deploy.
 
