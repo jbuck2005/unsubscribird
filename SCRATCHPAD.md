@@ -57,7 +57,8 @@ in the footer is unchanged. `pytest -q`: 237 passed.
 **Now.** Reload the Review page without the cache (or clear the site's data on the phone) and the box should be
 there, beside How many.
 
-**Next.** Merge #60 into `edge`; after that, deploys can't leave a stale page behind.
+**Status.** I merged #60 into `edge` on 2026-11-17. After the next deploy, the asset URLs follow the files, so a
+stale page can't stick around.
 
 ---
 
