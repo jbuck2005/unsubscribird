@@ -17,7 +17,7 @@ before, so Confirm all never skips a visit for having no frames. Squirrel, Chipm
 old rule. Saved labels and Count only are unchanged. New `tests/test_bird_frames.py` runs the real function in node.
 `pytest -q`: 240 passed.
 
-**Status.** PR #62 into `edge`, waiting for CI and my review.
+**Status.** PR #62 merged into `edge`; it goes out with the next `:edge` build.
 
 **Next.** Once it's on edge, check a few fresh visits on Review: the yellow-boxed frames should be the only ones
 ticked.
