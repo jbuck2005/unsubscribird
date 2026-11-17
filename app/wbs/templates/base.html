@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="{{ base }}/static/theme.js?v={{ version }}"></script>
+  <script src="{{ base }}/static/theme.js?v={{ asset_v }}"></script>
   <title>{{ cfg.site_name }}</title>
-  {{ brand.icons(base, version) }}
-  <link rel="stylesheet" href="{{ base }}/static/style.css?v={{ version }}">
+  {{ brand.icons(base, asset_v) }}
+  <link rel="stylesheet" href="{{ base }}/static/style.css?v={{ asset_v }}">
 </head>
 <body data-page="{{ page }}">
   <header>
-    <span class="brand"><img src="{{ base }}/static/brand/mark-192.png?v={{ version }}" alt="">{{ brand.wordmark(cfg.site_name) }}</span>
+    <span class="brand"><img src="{{ base }}/static/brand/mark-192.png?v={{ asset_v }}" alt="">{{ brand.wordmark(cfg.site_name) }}</span>
     <button type="button" class="navtoggle" aria-expanded="false" aria-controls="mainnav" aria-label="Menu"><span aria-hidden="true">☰</span>{% if page %} <span class="navpage">{{ page|title }}</span>{% endif %}</button>
     <nav id="mainnav">
       <a href="{{ base }}/" title="The kids' page">🏠 Home</a>
@@ -28,6 +28,6 @@
   </header>
   <main>{% block main %}{% endblock %}</main>
   <div id="lightbox" hidden><img alt=""></div>
-  <script src="{{ base }}/static/app.js?v={{ version }}"></script>
+  <script src="{{ base }}/static/app.js?v={{ asset_v }}"></script>
 </body>
 </html>
