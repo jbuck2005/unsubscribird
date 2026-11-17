@@ -5,6 +5,28 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-17: Docker host stopped seeing new edge commits
+
+**What I saw.** My phone looked stale, so I checked whether the container on the Docker host really runs edge HEAD.
+
+**What I found.** It does: 0.29.0 at 88841e4, and nothing newer has merged to `edge` (PRs #60 to #62 are still open).
+But the 5-minute updater's `git fetch` had failed every run since about midnight UTC with "Host key verification
+failed". GitHub's host keys had dropped out of the host's `known_hosts` when that file was rewritten, so the next
+merge would never have deployed. The attribution check and health-check rollback were not involved.
+
+**What changed.** On the host only, not in this repo: I re-added GitHub's host keys (fingerprints checked against the
+ones GitHub publishes) and pinned them in a separate known-hosts file that the SSH config uses for github.com, so a
+future rewrite of `known_hosts` can't break updates again. The other GitHub mirror jobs on that host get past GitHub again too.
+
+**Stale UI on the phone.** That part is browser caching of `app.js`, which PR #60 (content-hashed static assets) fixes.
+
+**Status.** Fetch works again; the next updater run went through cleanly. The ESPHome mirror job on that host still
+fails because the HA machine's host key was lost in the same rewrite.
+
+**Next.** Merge #60 so pages stop serving stale scripts after a deploy.
+
+---
+
 ## 2026-11-17: Only bird-detected frames start ticked for training (PR #62)
 
 **What I wanted.** On Review, only frames where the detector found a bird (the yellow box) should be ticked for
