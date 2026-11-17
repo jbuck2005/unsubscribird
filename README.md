@@ -236,8 +236,8 @@ never with a merge commit, so `edge` stays a line of single commits. A squash ke
 
    `.github/workflows/release.yml` checks that the tag matches both version files, and that no other release was
    made the same day. It then builds and pushes `:<version>` and `:latest`, and **drafts** a GitHub Release with
-   the changelog section as its notes. It never publishes that release: read it over and press **Publish** on
-   GitHub yourself.
+   the version's `RELEASES.md` section as its notes (the changelog section if it has none). It never publishes that
+   release: read it over and press **Publish** on GitHub yourself.
 
 **One release a day.** A second `v*` tag on a day that already had a release fails the workflow before anything is
 built, and nothing is published. Re-run the workflow the next day, or delete the tag (`git push origin :v0.30.0`)

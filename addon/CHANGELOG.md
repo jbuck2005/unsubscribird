@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* Releases: the drafted GitHub Release takes its notes from the version's story in `RELEASES.md`, joined into one
+  line per item so GitHub shows it without stray line breaks. The changelog section is used if there is no story.
+
 ## 0.30.0
 
 * **Phones get fresh pages after an update.** Scripts, styles and icons are versioned by a short hash of their

@@ -113,7 +113,7 @@ jobs:
           done
 
   draft:
-    # Only after every image is up. Drafts the GitHub Release with this version's changelog section as its notes,
+    # Only after every image is up. Drafts the GitHub Release with this version's RELEASES.md section as its notes,
     # and never publishes it: review it and press Publish yourself. A re-run leaves an existing release alone.
     needs: [version, manifest]
     runs-on: ubuntu-latest
@@ -131,8 +131,8 @@ jobs:
             echo "A release for v$VERSION already exists: left as it is"
             exit 0
           fi
-          awk -v h="## $VERSION" '$0 == h {on=1; next} on && /^## / {exit} on' addon/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          [ -s "$RUNNER_TEMP/notes.md" ] || echo "See addon/CHANGELOG.md." > "$RUNNER_TEMP/notes.md"
-          printf '\n---\nImages: `ghcr.io/%s/unsubscribird:%s` (amd64 and arm64).\n' "${GITHUB_REPOSITORY_OWNER,,}" "$VERSION" >> "$RUNNER_TEMP/notes.md"
+          # This version's story from RELEASES.md (the changelog section if it has none), unwrapped for GitHub.
+          python3 .github/scripts/release_notes.py --version "$VERSION" --owner "$GITHUB_REPOSITORY_OWNER" \
+            > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" --draft --verify-tag --title "un-subscribird $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md"
