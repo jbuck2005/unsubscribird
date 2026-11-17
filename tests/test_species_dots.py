@@ -1,7 +1,7 @@
 """The kids' page draws its own coloured dots in place of the species emoji, so every emoji needs one."""
 from pathlib import Path
 
-from app.wbs.recognition import DOTS
+from wbs.recognition import DOTS
 
 STATIC = Path(__file__).resolve().parents[1] / "app" / "wbs" / "static"
 
