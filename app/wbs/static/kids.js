@@ -4,6 +4,12 @@ const BASE = document.documentElement.dataset.base || "";   // set when a proxy 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// Species colour markers: the API sends an emoji per species (Home Assistant shows those as text), but emoji
+// look different on every platform and font (Android drew one as a circle on a chip and a square on a card).
+// The page draws its own round dot in a fixed colour for each one instead.
+const DOT_COLOURS = { "🔵": "blue", "🟢": "green", "🟠": "orange", "🟣": "purple", "🟡": "yellow", "🔴": "red",
+                      "🟤": "brown", "⚫": "black", "⚪": "white", "❔": "unknown" };
+const dot = (e) => DOT_COLOURS[e] ? `<span class="dot dot-${DOT_COLOURS[e]}" aria-hidden="true"></span>` : (e ? esc(e) + " " : "");
 const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } } };
 
@@ -67,7 +73,7 @@ function render(keepPlaying) {
   $("#chips").innerHTML = Object.keys(state.counts || {}).length > 1 || state.species
     ? `<button class="chip ${state.species ? "" : "on"}" data-sp="">All birds</button>` +
       Object.entries(state.counts).map(([sp, n]) =>
-        `<button class="chip ${sp === state.species ? "on" : ""}" data-sp="${esc(sp)}">${esc(dots[sp] || "")} ${esc(sp)}<b>${n}</b></button>`).join("")
+        `<button class="chip ${sp === state.species ? "on" : ""}" data-sp="${esc(sp)}">${dot(dots[sp])}${esc(sp)}<b>${n}</b></button>`).join("")
     : "";
   const about = state.about[state.species];
   $("#about").hidden = !about;
@@ -94,7 +100,7 @@ function render(keepPlaying) {
     <article class="tile" data-i="${i}" tabindex="0" aria-label="${esc(v.species)} at ${esc(fmtTime(v.ts))}">
       <video muted loop playsinline preload="none" ${v.poster ? `poster="${esc(v.poster)}"` : ""} data-src="${esc(v.clip)}"></video>
       <span class="play">▶</span>
-      <div class="label"><span>${esc(v.dot || "")} ${esc(v.species)}${(v.also || []).length ? ` <small>+ ${esc(v.also.join(", "))}</small>` : ""}</span><span class="time">${esc(fmtTime(v.ts))}</span></div>
+      <div class="label"><span>${dot(v.dot)}${esc(v.species)}${(v.also || []).length ? ` <small>+ ${esc(v.also.join(", "))}</small>` : ""}</span><span class="time">${esc(fmtTime(v.ts))}</span></div>
     </article>`).join("");
   $$("#grid .tile").forEach((t) => {
     const vid = $("video", t);
@@ -126,7 +132,7 @@ function showClip() {
   if (v.poster) player.poster = v.poster;
   player.muted = false;
   player.play().catch(() => { player.muted = true; player.play().catch(() => {}); });
-  $("#v-name").textContent = `${v.dot || ""} ${v.species}${(v.also || []).length ? " + " + v.also.join(", ") : ""}`;
+  $("#v-name").innerHTML = `${dot(v.dot)}${esc(v.species)}${(v.also || []).length ? " + " + esc(v.also.join(", ")) : ""}`;
   $("#v-time").textContent = fmtTime(v.ts);
   $("#v-count").textContent = `${state.open + 1} / ${state.shown.length}`;
   $("#v-prev").disabled = state.open === 0;

@@ -47,6 +47,16 @@ body { transition: background-color .6s ease, color .6s ease; }
   padding: 6px 14px; box-shadow: var(--shadow); }
 .chip.on { outline: 3px solid var(--accent); }
 .chip b { margin-left: 4px; color: var(--accent); }
+/* Species colour dots (kids.js draws them in place of emoji, which differ by platform). Fixed colours, same
+   everywhere; a thin ring keeps the white and black dots visible on either theme. */
+.dot { display: inline-block; width: .8em; height: .8em; border-radius: 50%; margin-right: .4em; vertical-align: -.05em;
+  flex: none; box-shadow: inset 0 0 0 1px rgba(20, 33, 50, .28); }
+:root[data-theme="dark"] .dot, .viewer .dot { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+.dot-blue { background: #2f7fd6; } .dot-green { background: #2e9e4f; } .dot-orange { background: #f0841f; }
+.dot-purple { background: #8a55cc; } .dot-yellow { background: #f2c12e; } .dot-red { background: #d83b3b; }
+.dot-brown { background: #8b5a2b; } .dot-black { background: #1c1c1c; } .dot-white { background: #ffffff; }
+.dot-unknown, :root[data-theme="dark"] .dot-unknown, .viewer .dot-unknown { background: transparent; box-shadow: none;
+  border: 2px dashed var(--muted); }
 .about { margin: 8px 24px 0; color: var(--muted); }
 .about a { color: var(--accent); font-weight: 700; }
 
