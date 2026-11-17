@@ -5,6 +5,25 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-17: Only bird-detected frames start ticked for training (PR #62)
+
+**What I wanted.** On Review, only frames where the detector found a bird (the yellow box) should be ticked for
+training. Before, LM Studio's per-frame "bird present" decided, so frames with just a moving region or nothing in
+them were often ticked too.
+
+**What changed.** `defaultFrames` in `app.js` now ticks only frames with an OWL-ViT box labelled bird, for any bird
+species. If no frame in the visit has a bird box (detector off, not scanned yet, or a miss), LM Studio decides as
+before, so Confirm all never skips a visit for having no frames. Squirrel, Chipmunk, Other animal and Empty keep the
+old rule. Saved labels and Count only are unchanged. New `tests/test_bird_frames.py` runs the real function in node.
+`pytest -q`: 240 passed.
+
+**Status.** PR #62 into `edge`, waiting for CI and my review.
+
+**Next.** Once it's on edge, check a few fresh visits on Review: the yellow-boxed frames should be the only ones
+ticked.
+
+---
+
 ## 2026-11-17: Coloured species bubbles didn't match on my phone (PR #61)
 
 **What I saw.** On the kids' page on my Android phone, the Downy Woodpecker had a purple circle on its filter chip
