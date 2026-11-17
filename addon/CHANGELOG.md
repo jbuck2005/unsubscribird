@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+* **Review: only bird frames start ticked.** On an unconfirmed visit labelled as a bird, only the frames where the
+  detector boxed a bird (the yellow box) are ticked for training. Frames with only a moving region (dashed blue) or
+  no box start unticked; click one to add it. If the detector found no bird anywhere in the visit (detector off,
+  frames not scanned yet, or a miss), LM Studio's per-frame answers decide as before. Saved labels keep their frames.
+
 ## 0.29.0
 
 * "Nothing moved" no longer hides small birds. A bird moving inside or behind the feeder changes only a few hundred
