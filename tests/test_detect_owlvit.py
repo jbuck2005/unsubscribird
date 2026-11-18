@@ -61,3 +61,48 @@ def test_owl_works_with_the_transformers_5_processor(monkeypatch):
 
 def test_owl_finds_nothing(monkeypatch):
     assert detector(monkeypatch, found=False).owl(Image.new("RGB", (64, 64))) is None
+
+
+def fake_transformers(seen):
+    class Loader:
+        @classmethod
+        def from_pretrained(cls, model_id, **kw):
+            seen.append((cls.__name__, model_id, kw))
+            obj = cls()
+            obj.config = types.SimpleNamespace(_commit_hash="abc123")
+            obj.eval = lambda: obj
+            return obj
+
+    tf = types.ModuleType("transformers")
+    tf.OwlViTProcessor = type("OwlViTProcessor", (Loader,), {})
+    tf.OwlViTForObjectDetection = type("OwlViTForObjectDetection", (Loader,), {})
+    return tf
+
+
+def test_owl_model_revision_can_be_pinned(monkeypatch):
+    seen = []
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers(seen))
+    monkeypatch.setenv("UNSUB_OWL_REVISION", "0123abcd")
+    detect.Detector()._load()
+    assert [kw for _, _, kw in seen] == [{"revision": "0123abcd"}] * 2
+
+
+def test_owl_model_is_unpinned_by_default(monkeypatch):
+    seen = []
+    monkeypatch.setitem(sys.modules, "transformers", fake_transformers(seen))
+    monkeypatch.delenv("UNSUB_OWL_REVISION", raising=False)
+    detect.Detector()._load()
+    assert [kw for _, _, kw in seen] == [{}, {}]
+
+
+def test_bioclip_revision_loads_a_pinned_snapshot(monkeypatch):
+    from wbs import embed
+    calls = []
+    hub = types.ModuleType("huggingface_hub")
+    hub.snapshot_download = lambda repo, revision: calls.append((repo, revision)) or "/cache/bioclip@" + revision
+    monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
+    monkeypatch.delenv("UNSUB_BIOCLIP_REVISION", raising=False)
+    assert embed.model_source() == (embed.HF_ID, "") and not calls
+    monkeypatch.setenv("UNSUB_BIOCLIP_REVISION", "feed42")
+    assert embed.model_source() == ("local-dir:/cache/bioclip@feed42", "feed42")
+    assert calls == [("imageomics/bioclip-2", "feed42")]
