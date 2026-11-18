@@ -5,6 +5,24 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-18: Plan for Orange Pi 6 and its NPU
+
+**Did:** researched the Orange Pi 6 / 6 Plus (CIX P1 SoC, Arm China Zhouyi NPU, about 30 TOPS) and its NPU
+toolchain, and wrote `docs/plans/orange-pi-6-npu.md` on `dev/orange-pi-npu` (docs PR #66 into `edge`).
+Key points: our arm64 image should already run on the board on CPU. The NPU takes ONNX, compiled with an x86
+tool (`cixbuild`) or run through ONNX Runtime's Zhouyi provider. CLIP ViT-B/32 is known to run at about 17 ms
+on it; nobody has shown OWL-ViT or BioCLIP 2 yet. The vendor stack is young and its licence is unclear.
+Plan: a pluggable inference backend (torch / onnx / cix), export and pin our own ONNX models (this also fixes
+the transformers-upgrade fragility on the current host), then an NPU backend with its own embedder name and
+a retrained classifier, and a detector bake-off (OWL-ViT ONNX vs YOLO-World vs our own small detector).
+
+**Status:** planning only, no code. PR #66 open for my review.
+
+**Next:** answer the open questions in the doc (which board and RAM, replace or sit beside the current host,
+add-on or compose only, accuracy margin, where model files live). Phases 1 and 2 can start without the board.
+
+---
+
 ## 2026-11-18: Health review of both repos
 
 **Checked:** branches, edge vs main, open PRs and issues, CI runs, the code (auth, public endpoints, XSS, MQTT
