@@ -30,7 +30,7 @@ from . import frames as framelib
 from .collector import Collector
 from .config import OLD_NAMES_USED, settings
 from .db import DB
-from .auth import COOKIE, MAX_AGE, Auth
+from .auth import COOKIE, MAX_AGE, Auth, RateLimit
 from .bakeoff import Bakeoff
 from .detect import Detector
 from .embed import EmbedWorker, Embedder
@@ -371,6 +371,20 @@ for _old in ("dataset", "model", "status"):
     app.add_api_route(f"/{_old}", _to_admin(_old), methods=["GET"], include_in_schema=False)
 
 
+def safe_next(target: str) -> str:
+    """Where to go after logging in: a path on this site only. "//host" and "/\\host" (browsers read a backslash
+    as a slash) would leave the site, so anything with a backslash, a control character or a second leading slash
+    goes to /admin instead."""
+    if (target.startswith("/") and not target.startswith("//") and "\\" not in target
+            and not any(ord(ch) < 32 or ord(ch) == 127 for ch in target)):
+        return target
+    return "/admin"
+
+
+login_limit = RateLimit(10, 300)   # wrong passwords per client address in 5 minutes
+flag_limit = RateLimit(30, 3600)   # "Wrong bird?" flags per client address in an hour
+
+
 @app.get("/login", response_class=HTMLResponse)
 def page_login(request: Request, next: str = "/admin"):
     return templates.TemplateResponse(request, "login.html", {"version": version_label, "page": "login",
@@ -380,14 +394,21 @@ def page_login(request: Request, next: str = "/admin"):
 
 @app.post("/login", response_class=HTMLResponse)
 def do_login(request: Request, password: str = Form(""), next: str = Form("/admin")):
-    target = next if next.startswith("/") and not next.startswith("//") else "/admin"
+    target = safe_next(next)
+    client = (request.scope.get("client") or ("",))[0]
+    if login_limit.blocked(client):
+        return templates.TemplateResponse(request, "login.html", {"version": version_label, "page": "login",
+                                                                  "next": target, "error": "Too many tries. Wait a few minutes.",
+                                                                  "configured": bool(auth.password)}, status_code=429)
     if auth.check_password(password):
+        login_limit.clear(client)
         r = RedirectResponse(base_path(request) + target, status_code=303)
         # Secure when the browser came over HTTPS (directly or through a proxy). Plain HTTP logins still work on a LAN.
         https = "https" in (request.scope["scheme"], request.headers.get("x-forwarded-proto"))
         r.set_cookie(COOKIE, auth.make_cookie(), max_age=MAX_AGE, httponly=True, samesite="lax", secure=https,
                      path=base_path(request) or "/")
         return r
+    login_limit.hit(client)
     return templates.TemplateResponse(request, "login.html", {"version": version_label, "page": "login",
                                                               "next": target, "error": "That isn't the password.",
                                                               "configured": bool(auth.password)}, status_code=401)
@@ -487,11 +508,15 @@ class FlagIn(BaseModel):
 
 
 @app.post("/api/public/flag/{trace_id}")
-def api_public_flag(trace_id: str, body: FlagIn):
+def api_public_flag(request: Request, trace_id: str, body: FlagIn):
     """"Wrong bird?" from the home page: the visit goes into Review's Flagged queue until someone labels it.
     Only visits the home page shows; the note is plain text, kept short."""
     if not public_visit(trace_id):
         raise HTTPException(404, "not found")
+    client = (request.scope.get("client") or ("",))[0]
+    if flag_limit.blocked(client):
+        raise HTTPException(429, "too many flags, try again later")
+    flag_limit.hit(client)
     note = " ".join(body.note.split())[:80]
     db.set_visit(trace_id, flagged=time.time(), flag_note=note or None)
     return {"ok": True}

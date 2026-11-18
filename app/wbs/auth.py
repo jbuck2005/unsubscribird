@@ -12,7 +12,9 @@ import hashlib
 import hmac
 import os
 import secrets
+import threading
 import time
+from collections import deque
 from pathlib import Path
 
 from .config import env
@@ -73,3 +75,41 @@ class Auth:
 
     def is_public(self, path: str) -> bool:
         return path in PUBLIC_EXACT or path.startswith(PUBLIC_PREFIXES)
+
+
+class RateLimit:
+    """At most `limit` hits per client address in a sliding window of `window` seconds, kept in memory only (a
+    restart forgets it). Behind a reverse proxy every client shares the proxy's address, so the limit is shared."""
+
+    MAX_CLIENTS = 4096   # addresses remembered; the oldest go first, so a flood of addresses can't eat memory
+
+    def __init__(self, limit: int, window: float) -> None:
+        self.limit, self.window = limit, window
+        self._hits: dict[str, deque] = {}
+        self._lock = threading.Lock()
+
+    def _recent(self, client: str, now: float) -> deque:
+        q = self._hits.get(client)
+        if q is None:
+            return deque()
+        while q and q[0] <= now - self.window:
+            q.popleft()
+        if not q:
+            self._hits.pop(client, None)
+        return q
+
+    def blocked(self, client: str, now: float | None = None) -> bool:
+        with self._lock:
+            return len(self._recent(client, now or time.time())) >= self.limit
+
+    def hit(self, client: str, now: float | None = None) -> None:
+        now = now or time.time()
+        with self._lock:
+            self._recent(client, now)
+            if client not in self._hits and len(self._hits) >= self.MAX_CLIENTS:
+                self._hits.pop(next(iter(self._hits)))
+            self._hits.setdefault(client, deque()).append(now)
+
+    def clear(self, client: str) -> None:
+        with self._lock:
+            self._hits.pop(client, None)

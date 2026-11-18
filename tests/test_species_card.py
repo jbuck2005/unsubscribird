@@ -60,3 +60,13 @@ def test_wrong_bird_flag_goes_to_review_until_labelled():
     assert q["total"] >= 1 and q["visits"][0]["trace_id"] == "fl1" and q["visits"][0]["flag_note"].startswith("looks like")
     c.post("/api/visits/fl1/label", json={"species": "Blue Jay", "frame_ids": [fid]})      # a person looked
     assert all(x["trace_id"] != "fl1" for x in c.get("/api/visits?queue=flagged").json()["visits"])
+
+
+def test_wrong_bird_flags_are_rate_limited(monkeypatch):
+    from wbs.auth import RateLimit
+    monkeypatch.setattr(main, "flag_limit", RateLimit(2, 3600))
+    visit("fl3", datetime.now() - timedelta(hours=1), "Blue Jay")
+    c = TestClient(main.app)
+    assert c.post("/api/public/flag/fl3", json={}).status_code == 200
+    assert c.post("/api/public/flag/fl3", json={}).status_code == 200
+    assert c.post("/api/public/flag/fl3", json={}).status_code == 429

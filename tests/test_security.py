@@ -243,3 +243,41 @@ def test_a_failed_clip_waits_for_its_next_try_then_gives_up_after_the_last():
         c.process_pending()
     assert mine() == col.MAX_CLIP_ATTEMPTS
     assert stored("haoffline1")["status"] == "failed"   # no snapshot either
+
+
+# ---- after logging in, only paths on this site ------------------------------------
+@pytest.mark.parametrize("target", ["//evil.example/x", "/\\evil.example/x", "/\\/evil.example", "https://evil.example",
+                                    "/admin\r\nSet-Cookie: x=1", "admin"])
+def test_login_never_redirects_off_the_site(target):
+    secure()
+    r = anonymous().post("/login", data={"password": "hunter2-bird", "next": target})
+    assert r.status_code == 303 and r.headers["location"] == "/admin"
+
+
+def test_login_keeps_a_plain_path():
+    secure()
+    r = anonymous().post("/login", data={"password": "hunter2-bird", "next": "/admin/dataset?q=1"})
+    assert r.headers["location"] == "/admin/dataset?q=1"
+
+
+def test_wrong_passwords_are_limited_and_a_good_login_waits_too():
+    secure()
+    c = anonymous()
+    for _ in range(10):
+        assert c.post("/login", data={"password": "wrong"}).status_code == 401
+    assert c.post("/login", data={"password": "wrong"}).status_code == 429
+    r = c.post("/login", data={"password": "hunter2-bird"})   # even the right one, until the window passes
+    assert r.status_code == 429 and "wbs_session" not in r.cookies
+
+
+def test_rate_limit_window_slides_and_forgets_clients():
+    from wbs.auth import RateLimit
+    rl = RateLimit(2, 60)
+    rl.hit("a", now=100)
+    rl.hit("a", now=110)
+    assert rl.blocked("a", now=120) and not rl.blocked("b", now=120)
+    assert not rl.blocked("a", now=161)       # the first hit has left the window
+    rl.MAX_CLIENTS = 3
+    for i in range(10):
+        rl.hit(f"c{i}", now=200)
+    assert len(rl._hits) <= 3

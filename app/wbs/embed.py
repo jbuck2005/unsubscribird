@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from .config import Settings
+from .config import Settings, env
 from .db import DB
 
 LOG = logging.getLogger("unsub.embed")
@@ -31,6 +31,18 @@ NON_BIRD_TEXT = {
     "Chipmunk": "a photo of Tamias striatus, chipmunk.",
     "Other animal": "a photo of a mammal.",
 }
+
+
+def model_source() -> tuple[str, str]:
+    """(open_clip model name, pinned revision or ""). open_clip's hf-hub: names can't take a revision, so a pinned
+    one (UNSUB_BIOCLIP_REVISION, a commit of the Hugging Face repo) is fetched into the HF cache first and loaded
+    from that folder. Empty = the newest files, as before."""
+    rev = env("UNSUB_BIOCLIP_REVISION")
+    if not rev:
+        return HF_ID, ""
+    from huggingface_hub import snapshot_download
+    path = snapshot_download(HF_ID.removeprefix("hf-hub:"), revision=rev)
+    return f"local-dir:{path}", rev
 
 
 def species_text(name: str, scientific: str, kind: str) -> str | None:
@@ -73,11 +85,12 @@ class Embedder:
         import torch
         torch.set_num_threads(self.threads)
         t = time.time()
-        model, _, preprocess = open_clip.create_model_and_transforms(HF_ID)
+        name, rev = model_source()
+        model, _, preprocess = open_clip.create_model_and_transforms(name)
         model.eval()
         self._torch, self._model, self._preprocess = torch, model, preprocess
-        self._tokenizer = open_clip.get_tokenizer(HF_ID)
-        LOG.info("BioCLIP 2 loaded in %.0fs", time.time() - t)
+        self._tokenizer = open_clip.get_tokenizer(name)
+        LOG.info("BioCLIP 2 loaded in %.0fs (model revision %s)", time.time() - t, rev or "newest")
 
     def embed_image(self, path, crop_box: tuple[int, int, int, int] | None = None, img=None) -> np.ndarray:
         """Returns float32 (4 or 5, dim), L2-normalised; the 5th view is the bird crop if a box is given."""

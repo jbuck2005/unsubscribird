@@ -37,6 +37,9 @@ jobs:
           cache-dependency-path: app/requirements.txt
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
-      # torch and BioCLIP are imported lazily and the tests use a fake embedder, so the ML requirements are skipped.
-      - run: pip install -r app/requirements.txt pytest httpx
+      # torch and BioCLIP are imported lazily and the tests use a fake embedder, so the ML requirements are skipped
+      # (docker.yml runs the real models in the built image). Everything else installs at its pinned version.
+      - run: |
+          grep -vE '^(torch|torchvision|open_clip_torch|transformers)==' app/requirements.txt > "$RUNNER_TEMP/requirements-noml.txt"
+          pip install -r "$RUNNER_TEMP/requirements-noml.txt" pytest httpx
       - run: pytest -q
