@@ -5,6 +5,27 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-18: Health review of both repos
+
+**Checked:** branches, edge vs main, open PRs and issues, CI runs, the code (auth, public endpoints, XSS, MQTT
+input), and the OWL-ViT / BioCLIP backlog item. Tests pass (246). CI is green. `edge` is one commit ahead of
+`main` (#65, release notes from RELEASES.md). No open PRs or issues.
+
+**Found (nothing urgent here):**
+- Login `next` accepts `/\host`, which browsers treat as `//host`: an open redirect after login.
+- No limit on login attempts, and the public "Wrong bird?" flag has no rate limit either.
+- The HF models (OWL-ViT, BioCLIP 2) aren't pinned to a revision. The smoke test runs a blank frame, so it
+  proves the calls work but not that detection still finds a bird. `edge.yml` doesn't run the smoke test.
+- `tests.yml` says the ML packages are skipped, but it installs all of `requirements.txt` (torch included).
+- `backfill.py` assumes the bridge's clip folder is `vicohome`.
+- A stray `claude/project-thread-7ted09` branch is on the remote again. I need to delete it by hand.
+
+**Status:** report only, no code changed. Waiting on me to pick what to fix.
+
+**Next:** fix PRs into `edge` for whatever I pick.
+
+---
+
 ## 2026-11-17: Releasing v0.30.0 (all of edge)
 
 **Changed:** #60 (assets versioned by content), #61 (kids' page colour dots) and #62 (only yellow-box frames start
