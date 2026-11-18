@@ -166,7 +166,7 @@ models/
 
 ## The model tools project (spin-off)
 
-A separate, related repo (working name `unsubscribird-models`) that makes packs. It runs on a workstation, not
+A separate, related repo, **`unsubscribird-forge`**, that makes packs. It runs on a workstation, not
 on the station. It would cover:
 
 - **Export**: BioCLIP 2's image tower and OWL-ViT (image only, with the "bird" / "squirrel" queries baked in) to
@@ -181,9 +181,24 @@ on the station. It would cover:
   bar of no more than 1 to 2 % lower visit accuracy.
 - **Output**: packs with manifests in the format un-subscribird reads.
 
-Privacy carries over: calibration and training frames come from real households, stay on the machine that runs
-the tools, and are never committed. Packs built from public models (BioCLIP 2, OWL-ViT) could be shared; packs
-trained on one household's frames are not.
+### Publishing packs: proposed approach
+
+Two kinds of pack, handled differently:
+
+- **Public packs**, built only from public models (BioCLIP 2, OWL-ViT) and calibrated on public or synthetic
+  images: published as release assets of `unsubscribird-forge`, so a station owner with an NPU can just download
+  one. They are only published once the NPU SDK licence is clear about redistributing compiled models, and after
+  checking each source model's licence allows sharing derived weights. Each carries its manifest and checksums.
+- **Private packs**, trained or calibrated on a household's own frames (our own detector, or a pack fine-tuned on
+  a station's birds): the forge supports making these, but they stay on that household's machines and are never
+  published. Model weights can carry traces of the images they were trained on, and a feeder view can show a
+  home.
+
+So the answer to "publish or self-train" is both: public packs for a quick start, self-training for the best
+accuracy on your own feeder.
+
+Privacy carries over to the tools: calibration and training frames come from real households, stay on the
+machine that runs the forge, and are never committed.
 
 ## Phases (un-subscribird)
 
@@ -235,8 +250,9 @@ Phases 1 and 2 don't need the board or the spin-off. Phase 3 needs the board and
 - Accuracy: up to 1 to 2 % below the CPU model on the same visits is acceptable.
 - The spin-off trains our own small detector, and runs conversion on my x86 desktop.
 
-Still to decide: the spin-off's repo name, and whether packs built from public models get published (as release
-assets of the spin-off) or are always built locally.
+- The spin-off is called `unsubscribird-forge`.
+- Proposed: publish public packs (public models only) once the NPU SDK licence is clear, and support
+  self-training, with household-trained packs kept local and private.
 
 ## Sources
 
