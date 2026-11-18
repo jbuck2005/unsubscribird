@@ -1,6 +1,10 @@
 # Plan: run un-subscribird on an Orange Pi 6 and use its NPU
 
-Status: planning only, nothing built yet. Written 2026-11-18.
+Status: planning only, nothing built yet. Written 2026-11-18, updated the same day with James's answers.
+
+Decided: an **Orange Pi 6 (not Plus), 16 GB**. It runs beside the current Docker host for now, as a planning
+and test target, and does not replace it. The NPU is for Docker compose only; the Home Assistant add-on may come
+later. Exported models live in a `models/` folder.
 
 ## Goal
 
@@ -123,8 +127,12 @@ This is the backlog item about transformers breaking OWL-ViT. An exported ONNX g
   `cixbuild`.
 - OWL-ViT's text queries are fixed ("bird", "squirrel"), so the query embeddings can be computed once at export
   and baked in, leaving an image-only graph. That also removes the text tower from the detector at run time.
-- Where the files live is an open question (below). They are model weights, not user data, but the public repo
-  is the wrong place for hundreds of MB.
+- Files live in a `models/` folder. Committed there: a manifest per model (source and revision, export script
+  version, input shape, precision, SHA-256) and anything small. Not committed: the big exports (BioCLIP 2's
+  image tower is over 1 GB in FP32, and GitHub refuses files over 100 MB), which the export script writes into
+  `models/` locally or into `/data/models` on the station, checked against the manifest. A detector trained on
+  one household's frames stays in `/data/models` too and never goes in the public repo: weights can carry
+  traces of the images they were trained on.
 
 ### 3. A smaller or owned detector
 
@@ -162,7 +170,7 @@ switching.
 
 | Phase | What | Done when |
 |---|---|---|
-| 0. Board check | Flash the vendor image, install Docker, run today's `:edge` arm64 image on CPU. Record idle/load power, fan noise, CPU time per frame for OWL-ViT and BioCLIP 2. | The station runs on the board on CPU, with numbers |
+| 0. Board check | On the Orange Pi 6 (16 GB), beside the current host: flash the vendor image, install Docker, run today's `:edge` arm64 image on CPU. Record idle/load power, fan noise, CPU time per frame for OWL-ViT and BioCLIP 2. | The station runs on the board on CPU, with numbers |
 | 1. Backend interface | Refactor `detect.py` and `embed.py` behind `wbs/infer/`; `torch` backend is today's code. No behaviour change. | Tests pass, edge host unchanged |
 | 2. ONNX backend | Export OWL-ViT (image only, queries baked in) and the BioCLIP 2 image tower; `onnx` backend on CPU; parity tests in CI. Can run on the current x86 host too. | Embedding cosine vs torch > 0.999, same detections on the bake-off set |
 | 3. NPU proof | On the board: install the vendor runtime, run the ONNX files through the Zhouyi EP, then compile `.cix` with INT8 and with FP16. Measure speed and cosine vs FP32 for each. | A table of speed vs accuracy for each model and precision |
@@ -179,30 +187,35 @@ Phases 1 and 2 are useful even without the board: they fix the upgrade fragility
   exact versions and for falling back to CPU at any time.
 - **Licence.** SDK, driver and runtime licences are unknown. If they forbid redistribution we cannot publish
   `-cix` images with them inside; users would install the runtime on the host and mount it.
-- **Accuracy loss from INT8.** CLIP-style embeddings lost up to 15% cosine in one test. The classifier would be
-  retrained on NPU embeddings, which absorbs some of that, but fine species differences may suffer. FP16 or mixed
-  precision may be needed for the image tower.
+- **Accuracy loss from INT8.** Training a model for the NPU does not itself cost accuracy. The model is trained
+  as usual in full precision; any loss comes only from compiling it down to INT8. That loss is measurable (run the
+  same frames through both) and usually small for a CNN detector like YOLO with a good calibration set, often
+  under a point or two of mAP. It can be cut further by keeping sensitive layers in FP16 or by quantisation-aware
+  training. ViT embedders are touchier: CLIP-style embeddings drifted to 0.85 to 0.97 cosine in one test, and
+  retraining the classifier on NPU embeddings absorbs most of that. FP16 for the image tower is the fallback.
 - **Transformer support.** ViTs compile on this NPU (CLIP, SigLIP), but OWL-ViT's detection heads and box
   post-processing may fall back to CPU. Keep post-processing in numpy on the CPU regardless.
 - **Mainline kernel.** The NPU only works on the vendor kernel today. Moving to mainline or a newer distro may
   lose it.
 - **Power and heat.** About 15 W idle is more than a typical SBC. Fine for a mains-powered station, worth
   knowing.
-- **Two boards.** The Orange Pi 6 and 6 Plus share the SoC, but the NPU fixes I found were tested on the 6 Plus
-  and other P1 boards only.
+- **The plain Orange Pi 6 is the less-tested board.** It shares the SoC with the 6 Plus, but the NPU fixes I
+  found were tested on the 6 Plus and other P1 boards only, and it is newer (June 2026). Its own power figures
+  are not published yet.
+
+## Answers so far (2026-11-18)
+
+- Board: Orange Pi 6, not Plus, 16 GB.
+- It does not replace the current host; this is planning only for now.
+- Not needed in the Home Assistant add-on; maybe later.
+- Exported models live in a `models/` folder (see section 2).
 
 ## Open questions for James
 
-1. Which board: Orange Pi 6 or 6 Plus, and how much RAM? (16 GB is comfortable for both models plus the app.)
-2. Will the board replace the current Docker host for the station, or run beside it as an inference box?
-3. Docker compose only, or must the NPU also work in the Home Assistant add-on? (Probably not possible on HA OS.)
-4. Is a mixed-precision model acceptable if it costs some accuracy, and what margin is acceptable against the
-   CPU model?
-5. Where should exported model files live: GitHub release assets, a separate repo, or downloaded and converted
-   on the station at first start?
-6. For the detector: are you happy to label or review boxes to train our own small detector, or keep an
+1. What accuracy margin is acceptable for the NPU model against the CPU model on the same visits?
+2. For the detector: are you happy to label or review boxes to train our own small detector, or keep an
    open-vocabulary one?
-7. Do you already have an x86 machine you're happy to run CixBuilder on, or should conversion run in a workflow?
+3. Do you already have an x86 machine you're happy to run CixBuilder on, or should conversion run in a workflow?
 
 ## Sources
 
