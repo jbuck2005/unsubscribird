@@ -174,7 +174,7 @@ switching.
 | 1. Backend interface | Refactor `detect.py` and `embed.py` behind `wbs/infer/`; `torch` backend is today's code. No behaviour change. | Tests pass, edge host unchanged |
 | 2. ONNX backend | Export OWL-ViT (image only, queries baked in) and the BioCLIP 2 image tower; `onnx` backend on CPU; parity tests in CI. Can run on the current x86 host too. | Embedding cosine vs torch > 0.999, same detections on the bake-off set |
 | 3. NPU proof | On the board: install the vendor runtime, run the ONNX files through the Zhouyi EP, then compile `.cix` with INT8 and with FP16. Measure speed and cosine vs FP32 for each. | A table of speed vs accuracy for each model and precision |
-| 4. NPU backend | `cix` backend (sidecar or image variant), new embedder name, retrain the classifier on NPU embeddings, compare visit accuracy with the CPU model on the same visits. | NPU accuracy within an agreed margin of CPU, or a clear reason it isn't |
+| 4. NPU backend | `cix` backend (sidecar or image variant), new embedder name, retrain the classifier on NPU embeddings, compare visit accuracy with the CPU model on the same visits. | NPU visit accuracy no more than 1 to 2 % below CPU |
 | 5. Detector | Bake-off OWL-ViT ONNX vs YOLO-World vs a small trained detector. Pick one per backend. | A detector that is fast on the NPU and at least as good on small birds |
 | 6. Release | Docs, compose example with `/dev/aipu`, `-cix` images on edge, then a release. | On edge for at least a week without rollbacks |
 
@@ -210,12 +210,13 @@ Phases 1 and 2 are useful even without the board: they fix the upgrade fragility
 - Not needed in the Home Assistant add-on; maybe later.
 - Exported models live in a `models/` folder (see section 2).
 
-## Open questions for James
+- Accuracy: up to 1 to 2 % below the CPU model on the same visits is acceptable for the NPU model.
+- Detector: yes, train our own small detector from the station's boxes (option 3 in section 3), with the
+  bake-off deciding when it replaces OWL-ViT.
+- Conversion: on James's x86 desktop. It runs Windows, and CixBuilder needs x86 Linux with Python 3.10, so it
+  runs in WSL2 or a Linux container there (a pinned `tools/cixbuild` container image keeps the version fixed).
 
-1. What accuracy margin is acceptable for the NPU model against the CPU model on the same visits?
-2. For the detector: are you happy to label or review boxes to train our own small detector, or keep an
-   open-vocabulary one?
-3. Do you already have an x86 machine you're happy to run CixBuilder on, or should conversion run in a workflow?
+No open questions left for planning. Next questions come from phase 0 on the board.
 
 ## Sources
 
