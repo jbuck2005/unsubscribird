@@ -34,7 +34,7 @@ Two facts make NPU support easier than it looks:
 - Only two image encoders need the NPU: OWL-ViT (or its replacement) and the BioCLIP 2 image tower. Text
   embeddings change only when the species list changes, so they can stay on the CPU.
 - Embeddings are stored with an `embedder` name (`db.py`), and the classifier trains on them. An NPU embedder
-  can be a new name (say `bioclip-2-cix-int8`) beside `bioclip-2`, with its own trained model. Nothing has to be
+  can be a new name (say `bioclip-2-npu-int8`) beside `bioclip-2`, with its own trained model. Nothing has to be
   thrown away to try it.
 
 CI already builds and smoke-tests an arm64 image (`docker.yml` runs on `ubuntu-24.04-arm`; `edge.yml` and
@@ -203,7 +203,7 @@ Phases 1 and 2 don't need the board or the spin-off. Phase 3 needs the board and
   that needed a patch, header/library mismatches, a compiler update that made a model slower. Plan for pinning
   exact versions and for falling back to CPU at any time.
 - **Licence.** SDK, driver and runtime licences are unknown. If they forbid redistribution we cannot publish
-  `-cix` images with them inside; users would install the runtime on the host and mount it.
+  `-npu` images with them inside; users would install the runtime on the host and mount it.
 - **Accuracy loss from INT8.** (Mostly the spin-off's problem; un-subscribird only enforces the 1 to 2 % bar.)
   Training a model for the NPU does not itself cost accuracy. The model is trained as usual in full precision;
   any loss comes only from compiling it down to INT8. That loss is measurable (run the
