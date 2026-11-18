@@ -10,12 +10,14 @@ sessions. It is never merged into `main` or `edge`.
 **Changed:** un-subscribird will only support running on an NPU, not build models for one. I pick CPU (default,
 today's code) or NPU in settings. NPU mode loads a prebuilt "model pack" (ONNX + manifest with checksums) from
 `models/` and falls back to CPU if anything is wrong. Export, NPU conversion, detector training and evaluation
-move to a separate related project (working name `unsubscribird-models`). Plan doc rewritten on PR #66.
+move to a separate related project (`unsubscribird-forge`). Plan doc rewritten on PR #66.
 
 **Status:** planning only, PR #66 open for my review.
 
-**Next:** pick the spin-off's name; decide whether packs from public models get published or are always built
-locally. Then phases 1 (backend interface) and 2 (pack loader) can start without the board.
+**Decided:** the spin-off is `unsubscribird-forge`. Proposed: publish packs built only from public models once
+the NPU SDK licence is clear, and support self-training, with packs trained on my own frames kept local.
+
+**Next:** phases 1 (backend interface) and 2 (pack loader) can start without the board.
 
 ---
 
