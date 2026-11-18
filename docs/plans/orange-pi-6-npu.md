@@ -1,16 +1,24 @@
 # Plan: run un-subscribird on an Orange Pi 6 and use its NPU
 
-Status: planning only, nothing built yet. Written 2026-11-18, updated the same day with James's answers.
+Status: planning only, nothing built yet. Written 2026-11-18; scope narrowed the same day (see Decisions).
 
-Decided: an **Orange Pi 6 (not Plus), 16 GB**. It runs beside the current Docker host for now, as a planning
-and test target, and does not replace it. The NPU is for Docker compose only; the Home Assistant add-on may come
-later. Exported models live in a `models/` folder.
+## Scope
+
+un-subscribird only learns to **use** an NPU. It does not build, train or convert models for one. That work
+moves to a separate, related project (see "The model tools project" below).
+
+The person running the station picks how recognition runs, in their settings:
+
+- **CPU** (the default, and what every station does today): torch, OWL-ViT and BioCLIP 2, exactly as now.
+- **NPU**: the station loads a prebuilt model pack from a `models/` folder and runs it on the NPU.
+
+If the NPU pack is missing, broken or the device isn't there, the station says so on the status page and keeps
+running on the CPU.
 
 ## Goal
 
-Run the station on an Orange Pi 6 (or 6 Plus) and move the two heavy model calls, bird detection and the
-BioCLIP 2 image embedding, onto the board's NPU. Along the way, make detection stop depending on whatever
-`transformers` does next (the transformers 5 break of OWL-ViT), by running models we export and pin ourselves.
+Run the station on an Orange Pi 6 and, when the person chooses, run the two heavy model calls (bird detection
+and the BioCLIP 2 image embedding) on its NPU, from model packs made elsewhere.
 
 ## What the station runs today
 
@@ -21,7 +29,7 @@ BioCLIP 2 image embedding, onto the board's NPU. Along the way, make detection s
 | Zero-shot text | `app/wbs/embed.py` | BioCLIP 2 text tower, one embedding per species, cached until the list changes | open_clip + torch, CPU |
 | Classify | `app/wbs/train.py`, `recognition.py` | logistic regression on the stored embeddings, temperature calibrated, per visit | scikit-learn, CPU |
 
-Two facts make the NPU move easier than it looks:
+Two facts make NPU support easier than it looks:
 
 - Only two image encoders need the NPU: OWL-ViT (or its replacement) and the BioCLIP 2 image tower. Text
   embeddings change only when the species list changes, so they can stay on the CPU.
@@ -92,93 +100,102 @@ No source shows OWL-ViT or BioCLIP 2 on this NPU.
 less than SigLIP so400m at 384 px. Expect somewhere around 0.1 to 0.4 s a view on the NPU, so 0.5 to 2 s a
 frame for 5 views. Batching all 5 views in one call needs a fixed batch of 5 compiled in.
 
-## Architecture changes
+## Changes in un-subscribird
 
 ### 1. A pluggable inference backend
 
 Today `Detector` and `Embedder` import torch and their model libraries directly. Split each into an interface
-and backends:
+and two backends:
 
 ```
 wbs/infer/
-  base.py        Detector.find(img) -> box | None;  ImageEncoder.encode(views) -> (n, dim) float32
-  torch_cpu.py   today's code, unchanged behaviour (the default)
-  onnx.py        onnxruntime, CPU provider; same exported models on any machine
-  cix.py         onnxruntime ZhouyiExecutionProvider, or NOE with a compiled .cix
+  base.py     Detector.find(img) -> box | None;  ImageEncoder.encode(views) -> (n, dim) float32
+  torch.py    today's code, unchanged behaviour (the default)
+  pack.py     loads a model pack from models/ and runs it with onnxruntime, on the NPU (Zhouyi provider)
+              or on the CPU provider for testing
 ```
 
-- Chosen by `UNSUB_INFER_BACKEND=torch|onnx|cix` (default `torch`), with a health check that falls back to
-  `torch` or `onnx` and says so on the status page if the NPU fails to load.
-- Each backend reports its own embedder name, so embeddings from different backends never mix in training.
-- Text embeddings stay on torch (or a pinned ONNX text tower on CPU), cached as now.
+- Chosen by one setting, `UNSUB_INFER_BACKEND=cpu|npu` (default `cpu`), shown on the Settings page. Detection
+  and embedding can be set separately later if that turns out useful.
+- If `npu` fails to load or its health check fails, the station falls back to `cpu` and shows why.
+- Each backend reports its own embedder name (from the pack's manifest), so embeddings from the CPU and the NPU
+  never mix. Switching backends means the station re-embeds and retrains its classifier on the new embeddings,
+  which the existing training already does; nothing has to be thrown away to try it, and switching back is
+  instant because the CPU embeddings are still stored.
+- Text embeddings for zero-shot stay on the CPU, cached as now.
 - The `/healthz?deep=1` check runs one real call on whichever backend is active, so the auto-rollback on the
   edge host covers it.
+- Box post-processing stays in numpy on the CPU, whatever model the pack holds.
 
-### 2. Own the models: export once, pin the files
+### 2. The model pack: the contract between the two projects
 
-This is the backlog item about transformers breaking OWL-ViT. An exported ONNX graph does not change when
-`transformers` or `open_clip` do.
+A pack is a folder under `models/` (mounted at `/data/models` in the container):
 
-- A script (`tools/export_models.py`, run by hand or in a workflow) exports the OWL-ViT (or replacement) image
-  path and the BioCLIP 2 image tower to ONNX with fixed shapes, and records the source model revision and a
-  checksum of every file.
-- The `onnx` backend loads those files and needs only `onnxruntime` and `numpy`. On x86 that is a smaller,
-  steadier image than torch, and it is the stepping stone to the NPU: the same ONNX file is the input to
-  `cixbuild`.
-- OWL-ViT's text queries are fixed ("bird", "squirrel"), so the query embeddings can be computed once at export
-  and baked in, leaving an image-only graph. That also removes the text tower from the detector at run time.
-- Files live in a `models/` folder. Committed there: a manifest per model (source and revision, export script
-  version, input shape, precision, SHA-256) and anything small. Not committed: the big exports (BioCLIP 2's
-  image tower is over 1 GB in FP32, and GitHub refuses files over 100 MB), which the export script writes into
-  `models/` locally or into `/data/models` on the station, checked against the manifest. A detector trained on
-  one household's frames stays in `/data/models` too and never goes in the public repo: weights can carry
-  traces of the images they were trained on.
+```
+models/
+  bioclip-2-npu-int8/
+    manifest.json   kind (embedder | detector), embedder name, file, runtime (onnxruntime-zhouyi),
+                    input shape and preprocessing (size, mean, std), output (embedding dim, or box format
+                    and labels), precision, source model and revision, tool versions, SHA-256 of each file
+    model.onnx
+```
 
-### 3. A smaller or owned detector
+- un-subscribird only reads packs. It checks the SHA-256 against the manifest, refuses a pack whose manifest
+  version or output format it doesn't know, and never downloads anything on its own.
+- The manifest format is versioned and documented in un-subscribird, because that's where it is read. The model
+  tools project writes packs to match.
+- Detector packs declare their box format (for example OWL-ViT style or YOLO style), and un-subscribird has a
+  small post-processor for each supported format. A new format is a small change here.
+- Big weights never go in the public repo (GitHub refuses files over 100 MB; BioCLIP 2's image tower is over
+  1 GB). A pack made from one household's frames stays on that station.
 
-OWL-ViT is a large ViT and it already misses small birds. Options, in order of effort:
+### 3. Images and CI
 
-1. Export OWL-ViT to ONNX as is (keeps today's behaviour, fixes the upgrade problem, may not suit the NPU).
-2. YOLO-World with fixed "bird" / "squirrel" prompts baked in: known to compile for this NPU [11].
-3. Train our own small detector (a YOLO-class model at 640 px) on the station's own boxes: every OWL-ViT
-   detection and every hand-ticked training frame (#62) is a labelled box already. This is the most robust and
-   the fastest on the NPU, and it learns small feeder birds that OWL-ViT misses. It needs a labelling and
-   review loop and must check the licence of whichever detector family we start from (some YOLO code is AGPL).
+- The plain arm64 image already exists, so CPU mode on the Orange Pi 6 needs no new image.
+- NPU mode needs the vendor runtime (`onnxruntime-zhouyi`, `libnoe`) in the container and `--device /dev/aipu`
+  in compose. Two options:
+  - an image variant `:edge-npu` / `:<version>-npu` on a base that matches the vendor packages (they target
+    Python 3.10/3.11; our image is Python 3.15), or
+  - mount the host's vendor runtime into the normal image.
+  Which one depends on the vendor licence: until it allows redistribution, don't bake their files into a public
+  image.
+- GitHub's runners have no NPU. CI tests the pack loader with a tiny made-up ONNX model generated in the test,
+  run on the CPU provider: manifest checks, checksum refusal, fallback to CPU, and that each backend keeps its own
+  embedder name. The real NPU test runs on the board, the same way the edge host proves a build today.
+- Docs: a compose example for NPU mode. The Home Assistant add-on stays CPU only (maybe later).
 
-The bake-off page (`bakeoff.py`) is the natural place to compare detectors on the station's own visits before
-switching.
+## The model tools project (spin-off)
 
-### 4. Images and CI
+A separate, related repo (working name `unsubscribird-models`) that makes packs. It runs on a workstation, not
+on the station. It would cover:
 
-- The plain arm64 image already exists. Phase 1 just proves it on the board.
-- An NPU image variant, `:edge-cix` / `:<version>-cix`, built on a Debian/Ubuntu base that matches the vendor
-  packages (the vendor runtime targets Python 3.10/3.11; our image is Python 3.15, which may not have wheels).
-  Alternative: keep our image unchanged and run a small local NPU inference sidecar container that the app
-  calls over a Unix socket. The sidecar isolates the vendor stack and its Python version, and nothing leaves the
-  machine.
-- The container needs `--device /dev/aipu` and the host's driver version must match the runtime in the image.
-  Document this for docker compose; the Home Assistant add-on probably cannot use the NPU (HA OS does not ship
-  the vendor driver), so the add-on stays on the CPU backend.
-- GitHub's arm runners have no NPU. CI can build the `-cix` image and run the `onnx` backend on CPU against the
-  same exported files, plus a parity test (ONNX vs torch embeddings, cosine above a threshold). The real NPU
-  test runs on the board itself, the same way the edge host proves a build today.
-- `.cix` compilation needs the x86 CixBuilder. Run it in a manual workflow on an x86 runner, or by hand, and
-  attach the outputs with checksums. Do not bake vendor binaries into the public image until the licence allows
-  redistribution.
+- **Export**: BioCLIP 2's image tower and OWL-ViT (image only, with the "bird" / "squirrel" queries baked in) to
+  fixed-shape ONNX, pinned to a model revision. This also gives a way out of the transformers-upgrade problem,
+  because an exported file doesn't change when the library does.
+- **Conversion**: calibration and INT8 / FP16 builds for the NPU, in a pinned container with the vendor's
+  CixBuilder (x86 Linux, Python 3.10), run on my x86 desktop in WSL2 or a Linux container.
+- **Detector training**: a small YOLO-class detector trained on boxes exported from a station (OWL-ViT
+  detections and hand-ticked training frames), with a licence check on the detector family (some YOLO code is
+  AGPL).
+- **Evaluation**: speed and accuracy of each pack against the CPU model on the same frames, with the acceptance
+  bar of no more than 1 to 2 % lower visit accuracy.
+- **Output**: packs with manifests in the format un-subscribird reads.
 
-## Phases
+Privacy carries over: calibration and training frames come from real households, stay on the machine that runs
+the tools, and are never committed. Packs built from public models (BioCLIP 2, OWL-ViT) could be shared; packs
+trained on one household's frames are not.
+
+## Phases (un-subscribird)
 
 | Phase | What | Done when |
 |---|---|---|
-| 0. Board check | On the Orange Pi 6 (16 GB), beside the current host: flash the vendor image, install Docker, run today's `:edge` arm64 image on CPU. Record idle/load power, fan noise, CPU time per frame for OWL-ViT and BioCLIP 2. | The station runs on the board on CPU, with numbers |
-| 1. Backend interface | Refactor `detect.py` and `embed.py` behind `wbs/infer/`; `torch` backend is today's code. No behaviour change. | Tests pass, edge host unchanged |
-| 2. ONNX backend | Export OWL-ViT (image only, queries baked in) and the BioCLIP 2 image tower; `onnx` backend on CPU; parity tests in CI. Can run on the current x86 host too. | Embedding cosine vs torch > 0.999, same detections on the bake-off set |
-| 3. NPU proof | On the board: install the vendor runtime, run the ONNX files through the Zhouyi EP, then compile `.cix` with INT8 and with FP16. Measure speed and cosine vs FP32 for each. | A table of speed vs accuracy for each model and precision |
-| 4. NPU backend | `cix` backend (sidecar or image variant), new embedder name, retrain the classifier on NPU embeddings, compare visit accuracy with the CPU model on the same visits. | NPU visit accuracy no more than 1 to 2 % below CPU |
-| 5. Detector | Bake-off OWL-ViT ONNX vs YOLO-World vs a small trained detector. Pick one per backend. | A detector that is fast on the NPU and at least as good on small birds |
-| 6. Release | Docs, compose example with `/dev/aipu`, `-cix` images on edge, then a release. | On edge for at least a week without rollbacks |
+| 0. Board check | On the Orange Pi 6 (16 GB), beside the current host: flash the vendor image, install Docker, run today's `:edge` arm64 image on CPU. Record idle/load power, fan noise, CPU time per frame. | The station runs on the board on CPU, with numbers |
+| 1. Backend interface | Refactor `detect.py` and `embed.py` behind `wbs/infer/`; the CPU backend is today's code. No behaviour change. | Tests pass, edge host unchanged |
+| 2. Pack loader | Manifest format, `pack.py` on onnxruntime, the Settings choice, fallback to CPU, tests with a made-up model. | CPU-provider tests pass in CI |
+| 3. NPU mode | Vendor runtime in the container (image variant or host mount), `/dev/aipu` in compose, first real pack from the model tools project on the board. | A visit recognised on the NPU, within 1 to 2 % of CPU accuracy |
+| 4. Release | Docs and compose example, on edge for at least a week without rollbacks, then a release. | Released |
 
-Phases 1 and 2 are useful even without the board: they fix the upgrade fragility on the current host.
+Phases 1 and 2 don't need the board or the spin-off. Phase 3 needs the board and a first pack.
 
 ## Risks
 
@@ -187,14 +204,17 @@ Phases 1 and 2 are useful even without the board: they fix the upgrade fragility
   exact versions and for falling back to CPU at any time.
 - **Licence.** SDK, driver and runtime licences are unknown. If they forbid redistribution we cannot publish
   `-cix` images with them inside; users would install the runtime on the host and mount it.
-- **Accuracy loss from INT8.** Training a model for the NPU does not itself cost accuracy. The model is trained
-  as usual in full precision; any loss comes only from compiling it down to INT8. That loss is measurable (run the
+- **Accuracy loss from INT8.** (Mostly the spin-off's problem; un-subscribird only enforces the 1 to 2 % bar.)
+  Training a model for the NPU does not itself cost accuracy. The model is trained as usual in full precision;
+  any loss comes only from compiling it down to INT8. That loss is measurable (run the
   same frames through both) and usually small for a CNN detector like YOLO with a good calibration set, often
   under a point or two of mAP. It can be cut further by keeping sensitive layers in FP16 or by quantisation-aware
   training. ViT embedders are touchier: CLIP-style embeddings drifted to 0.85 to 0.97 cosine in one test, and
   retraining the classifier on NPU embeddings absorbs most of that. FP16 for the image tower is the fallback.
-- **Transformer support.** ViTs compile on this NPU (CLIP, SigLIP), but OWL-ViT's detection heads and box
-  post-processing may fall back to CPU. Keep post-processing in numpy on the CPU regardless.
+- **Transformer support.** ViTs compile on this NPU (CLIP, SigLIP), but OWL-ViT's detection heads may fall back
+  to CPU. That's why box post-processing stays in un-subscribird on the CPU.
+- **Two projects drifting apart.** The manifest version is the guard: un-subscribird refuses a pack it doesn't
+  understand, and falls back to CPU.
 - **Mainline kernel.** The NPU only works on the vendor kernel today. Moving to mainline or a newer distro may
   lose it.
 - **Power and heat.** About 15 W idle is more than a typical SBC. Fine for a mains-powered station, worth
@@ -203,20 +223,20 @@ Phases 1 and 2 are useful even without the board: they fix the upgrade fragility
   found were tested on the 6 Plus and other P1 boards only, and it is newer (June 2026). Its own power figures
   are not published yet.
 
-## Answers so far (2026-11-18)
+## Decisions (2026-11-18)
 
-- Board: Orange Pi 6, not Plus, 16 GB.
-- It does not replace the current host; this is planning only for now.
-- Not needed in the Home Assistant add-on; maybe later.
-- Exported models live in a `models/` folder (see section 2).
+- Board: Orange Pi 6, not Plus, 16 GB. It runs beside the current host, for planning and testing; it does not
+  replace it.
+- Scope: un-subscribird only supports running on an NPU. Making models (export, conversion, detector training,
+  evaluation) is a separate related project.
+- The person picks CPU or NPU in their settings; CPU stays the default.
+- NPU mode is for Docker compose; not needed in the Home Assistant add-on for now, maybe later.
+- Packs live in a `models/` folder.
+- Accuracy: up to 1 to 2 % below the CPU model on the same visits is acceptable.
+- The spin-off trains our own small detector, and runs conversion on my x86 desktop.
 
-- Accuracy: up to 1 to 2 % below the CPU model on the same visits is acceptable for the NPU model.
-- Detector: yes, train our own small detector from the station's boxes (option 3 in section 3), with the
-  bake-off deciding when it replaces OWL-ViT.
-- Conversion: on James's x86 desktop. It runs Windows, and CixBuilder needs x86 Linux with Python 3.10, so it
-  runs in WSL2 or a Linux container there (a pinned `tools/cixbuild` container image keeps the version fixed).
-
-No open questions left for planning. Next questions come from phase 0 on the board.
+Still to decide: the spin-off's repo name, and whether packs built from public models get published (as release
+assets of the spin-off) or are always built locally.
 
 ## Sources
 
