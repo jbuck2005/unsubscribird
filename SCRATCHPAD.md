@@ -35,8 +35,10 @@ a retrained classifier, and a detector bake-off (OWL-ViT ONNX vs YOLO-World vs o
 add-on maybe later. Exported models go in a `models/` folder (manifests committed, big weights and anything
 trained on my own frames kept out of git). Doc updated on the PR.
 
-**Next:** still open: accuracy margin, own detector or not, where to run CixBuilder. Phases 1 and 2 can start
-without the board.
+**Also decided:** up to 1 to 2 % accuracy loss on the NPU is fine; we train our own small detector; conversion
+runs on my x86 desktop in WSL2 or a Linux container.
+
+**Next:** nothing open for planning. Phases 1 and 2 can start without the board; phase 0 when it arrives.
 
 ---
 
