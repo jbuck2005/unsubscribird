@@ -5,6 +5,19 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-18: Review fixes (PR #67 into edge)
+
+**Changed:** after login I only go to a path on this site (`/\host` was an open redirect). Wrong passwords are
+limited to 10 per address in 5 minutes, and "Wrong bird?" flags to 30 an hour. `UNSUB_OWL_REVISION` and
+`UNSUB_BIOCLIP_REVISION` can pin the models (empty = as before; the log shows the revision in use).
+`wbs.backfill` takes the clip folder. CI skips the ML packages. 260 tests pass.
+
+**Status:** #67 open, waiting on CI and my merge.
+
+**Next:** merge #67. Then read the revisions from the station log and set the two pins in the stack `.env`.
+
+---
+
 ## 2026-11-18: Plan for Orange Pi 6 and its NPU
 
 **Did:** researched the Orange Pi 6 / 6 Plus (CIX P1 SoC, Arm China Zhouyi NPU, about 30 TOPS) and its NPU
