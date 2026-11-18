@@ -31,8 +31,12 @@ a retrained classifier, and a detector bake-off (OWL-ViT ONNX vs YOLO-World vs o
 
 **Status:** planning only, no code. PR #66 open for my review.
 
-**Next:** answer the open questions in the doc (which board and RAM, replace or sit beside the current host,
-add-on or compose only, accuracy margin, where model files live). Phases 1 and 2 can start without the board.
+**Decided (same day):** Orange Pi 6 (not Plus), 16 GB, beside the current host, planning only. Compose only,
+add-on maybe later. Exported models go in a `models/` folder (manifests committed, big weights and anything
+trained on my own frames kept out of git). Doc updated on the PR.
+
+**Next:** still open: accuracy margin, own detector or not, where to run CixBuilder. Phases 1 and 2 can start
+without the board.
 
 ---
 
