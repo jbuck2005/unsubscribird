@@ -48,7 +48,7 @@ async function load(keepPlaying = false) {
   const q = new URLSearchParams({ day: state.day });
   const r = await fetch(`${BASE}/api/public/day?${q}`);
   const data = await r.json();
-  state.visits = data.visits.map((v) => ({ ...v, clip: BASE + v.clip, poster: v.poster && BASE + v.poster,
+  state.visits = data.visits.map((v) => ({ ...v, clip: v.clip && BASE + v.clip, poster: v.poster && BASE + v.poster,
     posters: Object.fromEntries(Object.entries(v.posters || {}).map(([s, p]) => [s, p && BASE + p])) }));
   state.counts = data.counts;
   state.dots = data.dots || {};
@@ -98,18 +98,20 @@ function render(keepPlaying) {
   $("#see-yesterday").hidden = !isToday;
   $("#grid").innerHTML = state.shown.map((v, i) => `
     <article class="tile" data-i="${i}" tabindex="0" aria-label="${esc(v.species)} at ${esc(fmtTime(v.ts))}">
-      <video muted loop playsinline preload="none" ${v.poster ? `poster="${esc(v.poster)}"` : ""} data-src="${esc(v.clip)}"></video>
-      <span class="play">▶</span>
+      ${v.clip ? `<video muted loop playsinline preload="none" ${v.poster ? `poster="${esc(v.poster)}"` : ""} data-src="${esc(v.clip)}"></video>
+      <span class="play">▶</span>` : `<img class="still" loading="lazy" alt="" data-src="${esc(v.poster || "")}">`}
       <div class="label"><span>${dot(v.dot)}${esc(v.species)}${(v.also || []).length ? ` <small>+ ${esc(v.also.join(", "))}</small>` : ""}</span><span class="time">${esc(fmtTime(v.ts))}</span></div>
     </article>`).join("");
   $$("#grid .tile").forEach((t) => {
-    const vid = $("video", t);
+    const vid = $("video", t), still = $("img.still", t);
+    if (still?.dataset.src) still.src = still.dataset.src;   // poster: BASE added at load
     t.addEventListener("mouseenter", () => {
+      if (!vid) return;   // no clip: the tile is a still picture
       if (!vid.src) vid.src = vid.dataset.src;
       vid.currentTime = 0;
       vid.play().catch(() => {});
     });
-    t.addEventListener("mouseleave", () => vid.pause());
+    t.addEventListener("mouseleave", () => vid?.pause());
     // Ctrl-click (Cmd on a Mac): the player with the bird's card beside it.
     t.addEventListener("click", (e) => openViewer(+t.dataset.i, e.ctrlKey || e.metaKey));
     t.addEventListener("keydown", (e) => { if (e.key === "Enter") openViewer(+t.dataset.i); });
@@ -117,7 +119,7 @@ function render(keepPlaying) {
 }
 
 // ---- big player ---------------------------------------------------------------------
-const viewer = $("#viewer"), player = $("#v-video");
+const viewer = $("#viewer"), player = $("#v-video"), photo = $("#v-photo");
 function openViewer(i, withCard = false) {
   $$("#grid video").forEach((v) => v.pause());
   state.open = i;
@@ -128,10 +130,19 @@ function openViewer(i, withCard = false) {
 function showClip() {
   const v = state.shown[state.open];
   if (!v) return closeViewer();
-  player.src = v.clip;
-  if (v.poster) player.poster = v.poster;
-  player.muted = false;
-  player.play().catch(() => { player.muted = true; player.play().catch(() => {}); });
+  // A visit without a clip shows its best frame instead of the player.
+  player.hidden = !v.clip;
+  photo.hidden = !!v.clip;
+  if (v.clip) {
+    player.src = v.clip;
+    player.poster = v.poster || "";
+    player.muted = false;
+    player.play().catch(() => { player.muted = true; player.play().catch(() => {}); });
+  } else {
+    player.pause();
+    player.removeAttribute("src");
+    if (v.poster) photo.src = v.poster; else photo.removeAttribute("src");
+  }
   $("#v-name").innerHTML = `${dot(v.dot)}${esc(v.species)}${(v.also || []).length ? " + " + esc(v.also.join(", ")) : ""}`;
   $("#v-time").textContent = fmtTime(v.ts);
   $("#v-count").textContent = `${state.open + 1} / ${state.shown.length}`;

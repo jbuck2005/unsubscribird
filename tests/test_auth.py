@@ -97,6 +97,28 @@ def test_public_day_lists_bird_clips_newest_first():
     assert "Mystery bird" not in d["about"]
 
 
+def test_public_day_shows_visits_without_a_clip():
+    """Most visits have no clip when the camera bridge can't fetch one. Home still shows them (with their snapshot)
+    so its count matches the gallery; only the clip link is missing."""
+    when = datetime.now().replace(hour=0, minute=0, second=3, microsecond=0)
+    trace = "kid-noclip"
+    main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": when.timestamp(), "time": when.isoformat()})
+    p = settings.image_dir / "visits" / trace
+    p.mkdir(parents=True, exist_ok=True)
+    (p / "snap.jpg").write_bytes(b"snapshot")
+    main.db.add_frame(trace, "snapshot", f"visits/{trace}/snap.jpg", f"visits/{trace}/snap.jpg", None, None, None, None)
+    main.db.set_visit(trace, rec_species="Blue Jay", rec_source="model", rec_at=1)
+    main.db.set_label(trace, "Black-capped Chickadee", [], None, "confirmed")
+    c = TestClient(main.app)
+    d = c.get(f"/api/public/day?day={when.date().isoformat()}").json()
+    mine = [v for v in d["visits"] if v["trace_id"] == trace]
+    assert len(mine) == 1 and mine[0]["species"] == "Black-capped Chickadee"
+    assert mine[0]["clip"] is None and mine[0]["poster"] == f"/img/visits/{trace}/snap.jpg"
+    assert d["counts"]["Black-capped Chickadee"] >= 1
+    assert c.get(mine[0]["poster"]).status_code == 200          # its picture is public
+    assert c.get(f"/clips/{trace}/x.mp4").status_code == 404     # there is no clip to play
+
+
 def test_pages_carry_the_theme_script_and_location():
     c = TestClient(main.app)
     for path in ("/", "/login", "/admin/model"):

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+* **Home shows every visit of the day.** The kids' page only listed visits that had a clip, so on a day when the
+  camera bridge fetched few clips it said "2 visits so far today" while the gallery had 24. Visits without a clip
+  now show too, with their best frame as a still picture (in the tile and the big viewer), and count on the chips,
+  the bird's card and the collection book.
+
+## Unreleased
+
 * Releases: the drafted GitHub Release takes its notes from the version's story in `RELEASES.md`, joined into one
   line per item so GitHub shows it without stray line breaks. The changelog section is used if there is no story.
 
