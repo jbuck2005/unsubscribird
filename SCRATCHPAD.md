@@ -5,6 +5,19 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-22: Home page missed most of today's visits (PR #68 into edge)
+
+**Changed:** Home said "2 visits so far today" while the gallery had 24 confirmed visits. The cause: the public
+visit filter required a clip, and the bridge only fetched clips for two of them. Visits without a clip now show
+on home with their best frame as a still (tile and big viewer), and count on the chips, the bird's card and the
+collection book. Clip links still need a real clip.
+
+**Status:** PR #68 open, merging once CI is green.
+
+**Next:** after the edge deploy, check that the home count matches the gallery for the day.
+
+---
+
 ## 2026-11-18: Orange Pi 6 plan, scope narrowed
 
 **Changed:** un-subscribird will only support running on an NPU, not build models for one. I pick CPU (default,
