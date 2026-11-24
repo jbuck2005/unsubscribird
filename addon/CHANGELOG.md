@@ -6,9 +6,15 @@
   camera bridge fetched few clips it said "2 visits so far today" while the gallery had 24. Visits without a clip
   now show too, with their best frame as a still picture (in the tile and the big viewer), and count on the chips,
   the bird's card and the collection book.
-
-## Unreleased
-
+* **Safer login.** After logging in you only go to a page on this site. A crafted link such as `next=/\host`
+  used to send the browser to another site. Wrong passwords are limited to 10 per address in 5 minutes.
+* The public "Wrong bird?" button is limited to 30 flags per address an hour, so nobody can flood the Flagged
+  queue.
+* **Pin the models** (optional): `UNSUB_OWL_REVISION` and `UNSUB_BIOCLIP_REVISION` take a commit of each model's
+  Hugging Face repo, so a change upstream can't change detection or recognition without you knowing. The log
+  shows the revision in use. Left empty, the newest files are used, as before.
+* `python -m wbs.backfill <folder>` takes the bridge's `clip_folder` (default `vicohome`).
+* CI installs only the packages the unit tests need. The real models still run in the Docker build check.
 * Releases: the drafted GitHub Release takes its notes from the version's story in `RELEASES.md`, joined into one
   line per item so GitHub shows it without stray line breaks. The changelog section is used if there is no story.
 

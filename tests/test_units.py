@@ -128,3 +128,9 @@ def test_whole_picture_change_is_not_a_blob():
     clip = make_clip(bird_at=(0, 0))
     clip[10:] = np.clip(clip[10:].astype(int) + 80, 0, 255)   # exposure jump
     assert frames.largest_blob(clip) < frames.QUIET_BLOB
+
+
+def test_backfill_uses_the_bridges_clip_folder():
+    from wbs.backfill import parse
+    rec = parse("12345678" + "1800000000" + "abcDEF.mp4", "birdclips")
+    assert rec["clip_url"] == "/local/birdclips/123456781800000000abcDEF.mp4"

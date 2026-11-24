@@ -16,6 +16,8 @@ import threading
 import time
 from typing import Any
 
+from .config import env
+
 LOG = logging.getLogger("unsub.detect")
 OWL_ID = "google/owlvit-base-patch32"
 QUERIES = ["a photo of a bird", "a photo of a squirrel"]
@@ -43,9 +45,13 @@ class Detector:
         if self._model is None:
             from transformers import OwlViTForObjectDetection, OwlViTProcessor
             t = time.time()
-            self._proc = OwlViTProcessor.from_pretrained(OWL_ID)
-            self._model = OwlViTForObjectDetection.from_pretrained(OWL_ID).eval()
-            LOG.info("OWL-ViT loaded in %.0fs", time.time() - t)
+            # UNSUB_OWL_REVISION pins the model files to one commit of the Hugging Face repo, so an upstream change
+            # to the model can't change detection silently. Empty = the newest files.
+            kw = {"revision": rev} if (rev := env("UNSUB_OWL_REVISION")) else {}
+            self._proc = OwlViTProcessor.from_pretrained(OWL_ID, **kw)
+            self._model = OwlViTForObjectDetection.from_pretrained(OWL_ID, **kw).eval()
+            commit = getattr(self._model.config, "_commit_hash", None) or rev or "unknown"
+            LOG.info("OWL-ViT loaded in %.0fs (model revision %s)", time.time() - t, commit)
 
     def owl(self, img) -> dict[str, Any] | None:
         """Best bird/squirrel box as {'label','score','box' (normalised)} or None."""
