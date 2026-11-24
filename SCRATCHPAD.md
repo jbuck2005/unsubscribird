@@ -25,7 +25,7 @@ today's code) or NPU in settings. NPU mode loads a prebuilt "model pack" (ONNX +
 `models/` and falls back to CPU if anything is wrong. Export, NPU conversion, detector training and evaluation
 move to a separate related project (`unsubscribird-forge`). Plan doc rewritten on PR #66.
 
-**Status:** planning only, PR #66 open for my review.
+**Status:** planning only. PR #66 merged into edge on 2026-11-24.
 
 **Decided:** the spin-off is `unsubscribird-forge`. Proposed: publish packs built only from public models once
 the NPU SDK licence is clear, and support self-training, with packs trained on my own frames kept local.
