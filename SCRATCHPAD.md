@@ -5,6 +5,17 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-24: Orange Pi 6 plan moved out of un-subscribird
+
+**Did:** the plan (#66) went into the wrong repo. Reverted it on edge (#69). It belongs in a new
+`unsubscribird-forge` repo.
+
+**Status:** waiting on me to create `unsubscribird-forge` (public) and add it to the project.
+
+**Next:** commit the plan there, with edge/main and the usual project rules.
+
+---
+
 ## 2026-11-22: Home page missed most of today's visits (PR #68 into edge)
 
 **Changed:** Home said "2 visits so far today" while the gallery had 24 confirmed visits. The cause: the public
