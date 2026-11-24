@@ -18,11 +18,11 @@ either repo.
 
 ## 2026-11-24: Orange Pi 6 plan moved out of un-subscribird
 
-**Did:** the plan (#66) went into the wrong repo. Reverted it on edge (#69). It belongs in my
-`orangepi6` repo.
+**Did:** the plan (#66) went into the wrong repo. Reverted it on edge (#69). It belongs in
+`unsubscribird-forge`.
 
-**Update:** the plan's real home is my `orangepi6` repo (PR #26 there). Nothing NPU or CPU related belongs in
-un-subscribird. Nothing was pushed to `unsubscribird-forge`.
+**Update:** settled: the plan lives in `unsubscribird-forge` (PR #1 there). It's NPU model work, but not part
+of my `orangepi6` board project (#26 there is closed). Nothing NPU or CPU related belongs in un-subscribird.
 
 ---
 
