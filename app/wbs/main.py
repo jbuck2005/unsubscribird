@@ -192,7 +192,9 @@ def about_links(names) -> dict[str, dict[str, str]]:
 
 # What anyone on the network may see (visits v LEFT JOIN labels l). Unreviewed visits only with a named species
 # from the list: nothing filters people, so Uncertain, catch-alls and free text wait for a human.
-PUBLIC_VISIT = """v.clip IS NOT NULL AND v.excluded=0 AND COALESCE(l.species, v.rec_species) != 'Empty'
+# A visit without a clip (the camera bridge could not fetch one) is still a visit: the home page shows its best
+# frame instead. Only the /clips route needs a clip.
+PUBLIC_VISIT = """v.excluded=0 AND COALESCE(l.species, v.rec_species) != 'Empty'
                   AND (l.species IS NOT NULL OR (v.rec_species IN (SELECT name FROM species)
                                                  AND v.rec_species NOT IN ('Other animal', 'Unknown bird')))"""
 
@@ -453,11 +455,11 @@ def api_public_day(day: str | None = None, species: str | None = None):
         for s in [name, *also[r["trace_id"]]]:   # each species' own frame, for the chip it is found by
             f = recognizer.best_frame(r["trace_id"], s if s != "Mystery bird" else None)
             posters[s] = f"/img/{f['thumb'] or f['path']}" if f else None
-        clip = clip_basename(r, None if name == "Mystery bird" else name) + ".mp4"
+        clip = clip_basename(r, None if name == "Mystery bird" else name) + ".mp4" if r["clip"] else None
         out.append({"trace_id": r["trace_id"], "ts": r["ts"], "species": tile,
                     "also": [s for s in [name, *also[r["trace_id"]]] if s != tile],
                     "dot": colours.get(r["shown"] if tile == name else tile, ""),
-                    "clip": f"/clips/{r['trace_id']}/{clip}", "poster": posters.get(tile), "posters": posters})
+                    "clip": clip and f"/clips/{r['trace_id']}/{clip}", "poster": posters.get(tile), "posters": posters})
     out.reverse()   # newest first
     return {"day": d.isoformat(), "today": d == datetime.now().date(), "species": species,
             "weather": patterns.current(db) if d == datetime.now().date() else None,

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* **Home shows every visit of the day.** The kids' page only listed visits that had a clip, so on a day when the
+  camera bridge fetched few clips it said "2 visits so far today" while the gallery had 24. Visits without a clip
+  now show too, with their best frame as a still picture (in the tile and the big viewer), and count on the chips,
+  the bird's card and the collection book.
 * **Safer login.** After logging in you only go to a page on this site. A crafted link such as `next=/\host`
   used to send the browser to another site. Wrong passwords are limited to 10 per address in 5 minutes.
 * The public "Wrong bird?" button is limited to 30 flags per address an hour, so nobody can flood the Flagged
