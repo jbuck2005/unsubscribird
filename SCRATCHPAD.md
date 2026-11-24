@@ -5,6 +5,17 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-24: Review fixes merged (#67)
+
+**Changed:** #67 had a changelog conflict after #68. I merged `edge` into it, which also folded #68's duplicate
+`## Unreleased` heading into one. Then I squash-merged #67 into `edge` once CI was green. No other PRs are open in
+either repo.
+
+**Next:** after the station updates, read the model revisions from its log and set `UNSUB_OWL_REVISION` and
+`UNSUB_BIOCLIP_REVISION` in the stack `.env`.
+
+---
+
 ## 2026-11-24: Orange Pi 6 plan moved out of un-subscribird
 
 **Did:** the plan (#66) went into the wrong repo. Reverted it on edge (#69). It belongs in a new
