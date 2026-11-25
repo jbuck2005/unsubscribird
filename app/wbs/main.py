@@ -39,6 +39,7 @@ from .prefs import Prefs
 from .prelabel import Prelabeler, consensus
 from .recognition import Recognizer
 from .retention import Retention
+from .triage import Triage
 from .train import Trainer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -56,6 +57,7 @@ health = DeepHealth(embed_worker.detector, embedder)
 trainer = Trainer(db, embed_worker, settings.data_dir / "models")
 recognizer = Recognizer(settings, db, collector.publish, canonical=lambda n: canonical(n, species_index()))
 retention = Retention(settings, db)
+triage = Triage(settings, db)
 weather = patterns.WeatherSampler(settings, db, settings.ha_api_url, settings.ha_token)
 bakeoff = Bakeoff(db, prelabeler.lm, prelabeler, settings.image_dir, lambda n: canonical(n, species_index()))
 if settings.ha_publish:
@@ -71,6 +73,7 @@ async def lifespan(app: FastAPI):
     trim_existing_clips()
     prelabeler.start()
     retention.start()
+    triage.start()
     if settings.embed_enabled:
         embed_worker.start()
     if settings.ha_publish:
@@ -88,6 +91,7 @@ async def lifespan(app: FastAPI):
     embed_worker.stop.set()
     recognizer.stop.set()
     retention.stop.set()
+    triage.stop.set()
     weather.stop.set()
 
 
@@ -603,12 +607,14 @@ def api_public_portrait(trace_id: str, species: str = ""):
 DOUBTFUL = """l.trace_id IS NOT NULL AND v.excluded=0 AND l.train=1 AND c.trace_id IS NOT NULL
               AND (c.predicted != l.species OR c.p_label < 0.6)
               AND (l.checked IS NULL OR l.checked < m.created)"""
+NOT_FILED = "COALESCE(v.triage, '') != 'filed'"   # sure Empty visits skip To review (triage.py)
 QUEUES = {
-    "review": "v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0",
-    "uncertain": "v.rec_source='uncertain' AND l.trace_id IS NULL AND v.excluded=0",
+    "review": f"v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0 AND {NOT_FILED}",
+    "uncertain": f"v.rec_source='uncertain' AND l.trace_id IS NULL AND v.excluded=0 AND {NOT_FILED}",
     "check": DOUBTFUL,
     # To review, narrowed in Python to visits where the model and LM Studio disagree (see visit_disagrees).
-    "disagree": "v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0",
+    "disagree": f"v.status='prelabelled' AND l.trace_id IS NULL AND v.excluded=0 AND {NOT_FILED}",
+    "filed": "v.triage='filed' AND l.trace_id IS NULL AND v.excluded=0",
     "waiting": "v.status IN ('new','frames') AND l.trace_id IS NULL AND v.excluded=0",
     "labelled": "l.trace_id IS NOT NULL AND v.excluded=0",
     "excluded": "v.excluded=1",
@@ -756,6 +762,17 @@ def api_exclude(trace_id: str, body: ExcludeIn):
         raise HTTPException(404)
     db.set_visit(trace_id, excluded=int(body.excluded))
     return {"ok": True, "excluded": body.excluded}
+
+
+@app.post("/api/visits/{trace_id}/unfile")
+def api_unfile(trace_id: str):
+    """A filed Empty visit goes back to To review, and is never filed again."""
+    with db.tx() as c:
+        n = c.execute("UPDATE visits SET triage='kept', triaged=? WHERE trace_id=? AND triage='filed'",
+                      (time.time(), trace_id)).rowcount
+    if not n:
+        raise HTTPException(404, "visit isn't filed")
+    return {"ok": True}
 
 
 @app.post("/api/visits/{trace_id}/keep")
@@ -1125,4 +1142,4 @@ def api_stats():
             "vlm_agreement": (round(agree["ok"] / agree["n"], 3) if agree["n"] else None),
             "collector": collector.stats, "prelabel": {**prelabeler.stats, "lmstudio": prelabeler.lm.status},
             "recognition": recognizer.stats if settings.ha_publish else "disabled",
-            "retention": retention.stats(), "disk": disk}
+            "retention": retention.stats(), "triage": triage.stats(), "disk": disk}

@@ -1,8 +1,9 @@
-"""Storage retention: delete the clips of visits a person confirmed as Empty, once they are old enough.
+"""Storage retention: delete the clips of Empty visits once they are old enough.
 
+Empty visits are those a person confirmed as Empty, and unconfirmed ones filed as surely Empty (triage.py).
 Only the clip.mp4 goes. Frames, thumbnails, labels and embeddings stay, so training, the Dataset page and Check
-labels work as before. Visits that aren't labelled Empty by a person, or are excluded, are never touched.
-A label changed in the last day is left alone too, so a slip of the key can still be undone with the clip intact.
+labels work as before. Other visits, and excluded ones, are never touched. A label changed (or a visit filed) in
+the last day is left alone too, so a slip of the key can still be undone with the clip intact.
 """
 
 from __future__ import annotations
@@ -23,10 +24,12 @@ def due(db, days: int, now: float | None = None, limit: int = MAX_PER_DAY) -> li
     if days <= 0:
         return []
     now = now or time.time()
-    return db.q("""SELECT v.trace_id, v.clip FROM visits v JOIN labels l USING(trace_id)
-                   WHERE l.species='Empty' AND v.clip IS NOT NULL AND v.excluded=0
-                     AND v.ts < ? AND l.updated < ?
-                   ORDER BY v.ts LIMIT ?""", now - days * DAY, now - LABEL_GRACE_S, limit)
+    grace = now - LABEL_GRACE_S
+    return db.q("""SELECT v.trace_id, v.clip FROM visits v LEFT JOIN labels l USING(trace_id)
+                   WHERE v.clip IS NOT NULL AND v.excluded=0 AND v.ts < ?
+                     AND ((l.species='Empty' AND l.updated < ?)
+                          OR (l.trace_id IS NULL AND v.triage='filed' AND v.triaged < ?))
+                   ORDER BY v.ts LIMIT ?""", now - days * DAY, grace, grace, limit)
 
 
 def remove_empty_clips(settings, db, now: float | None = None, per_day: int = MAX_PER_DAY) -> dict:

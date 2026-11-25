@@ -185,7 +185,7 @@ const Review = {
   },
 
   async counts() {
-    for (const q of ["review", "uncertain", "disagree", "check", "flagged", "waiting", "labelled", "failed", "excluded"]) {
+    for (const q of ["review", "uncertain", "disagree", "check", "flagged", "waiting", "filed", "labelled", "failed", "excluded"]) {
       const r = await api(`/api/visits?queue=${q}&limit=0`);
       $(`[data-count="${q}"]`).textContent = r.total;
     }
@@ -196,6 +196,7 @@ const Review = {
     $(".hint").innerHTML = q === "check"
       ? "Confirmed visits the latest model doubts, most doubtful first. It checked each one <b>without having seen it</b> (cross-validation). <b>Keep</b> if your label is right, type a new species and <b>Update</b> if not, or <b>Exclude</b> a visit that shouldn't train at all."
       : q === "excluded" ? "Visits kept out of counts, eBird and training. <b>Restore</b> puts one back."
+      : q === "filed" ? "Visits every signal calls Empty: nothing moved (or LM Studio saw nothing), the detector boxed nothing and the trained model agrees. They count as Empty but don't train, and their clips are deleted like confirmed Empty ones. Each morning a few of the day before come back to <b>To review</b> as training negatives. <b>Back to review</b> if one isn't empty, or <b>Confirm all</b> to make the loaded ones training data."
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
       : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used, and only frames where the detector boxed a bird (yellow box) start ticked; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
@@ -305,6 +306,8 @@ const Review = {
         ${v.disagree && !v.label ? `<span class="chip unknown" title="The trained model and LM Studio name different things: look before confirming">⚠ disagree</span>` : ""}
         ${v.flagged ? `<span class="chip unknown" title="Someone pressed Wrong bird? on the home page. Saving a label answers it.">⚑ flagged${v.flag_note ? `: “${esc(v.flag_note)}”` : ""}</span>` : ""}
         ${v.quiet ? '<span class="chip alt" title="The frame picker saw no movement in the clip, so LM Studio was skipped">nothing moved</span>' : ""}
+        ${v.triage === "sample" && !v.label ? '<span class="chip alt" title="A filed Empty visit picked back for review as a training negative, from a time of day with few confirmed Empty visits">Empty sample</span>' : ""}
+        ${v.triage === "filed" && !v.label ? '<span class="chip alt" title="Every signal called this visit Empty, so it skipped To review">filed Empty</span>' : ""}
         ${v.error ? `<span class="meta err">${esc(v.error)}</span>` : ""}
         ${v.label ? `<span class="chip label">✓ ${esc(v.label.species)}${(v.label.also || []).length ? " + " + esc(v.label.also.join(", ")) : ""}</span>` : ""}
         <span class="chip alt countonly-chip" title="Counted, but its frames are not training data" ${v.label && !v._train ? "" : "hidden"}>count only</span>
@@ -325,6 +328,7 @@ const Review = {
         <button class="btn" data-a="Squirrel">Squirrel (s)</button>
         <button class="btn" data-a="Unknown bird">Unknown bird (u)</button>
         ${v.label ? '<button class="btn" data-a="unlabel">Remove label</button>' : ""}
+        ${v.triage === "filed" && !v.label ? '<button class="btn" data-a="unfile" title="Not empty, or worth a look: put it in To review">Back to review</button>' : ""}
         ${v.label && v.check ? '<button class="btn" data-a="keep" title="Your label is right (c)">Keep ✓ (c)</button>' : ""}
         <button class="btn" data-a="${v.excluded ? "restore" : "exclude"}" title="${v.excluded ? "Use this visit again" : "Not a real visit: keep it out of counts, eBird and training"}">${v.excluded ? "Restore" : "Exclude"}</button>
         <span class="msg"></span>
@@ -368,6 +372,7 @@ const Review = {
       if (a === "confirm") this.save(v, el);
       else if (a === "unlabel") this.unlabel(v, el);
       else if (a === "keep") this.keep(v, el);
+      else if (a === "unfile") this.unfile(v, el);
       else if (a === "exclude" || a === "restore") this.exclude(v, el, a === "exclude");
       else { this.pickSpecies(v, el, a); }
     }));
@@ -623,6 +628,15 @@ const Review = {
     } catch (err) { $(".msg", el).className = "msg err"; $(".msg", el).textContent = err.message; }
   },
 
+  async unfile(v, el) {
+    try {
+      await api(`/api/visits/${v.trace_id}/unfile`, { method: "POST" });
+      v.triage = "kept"; $('button[data-a="unfile"]', el)?.remove();
+      el.classList.add("done"); $(".msg", el).className = "msg"; $(".msg", el).textContent = "Back in To review.";
+      this.counts(); this.setFocus(this.focus + 1);
+    } catch (err) { $(".msg", el).className = "msg err"; $(".msg", el).textContent = err.message; }
+  },
+
   async exclude(v, el, on) {
     try {
       await api(`/api/visits/${v.trace_id}/exclude`, { method: "POST", body: JSON.stringify({ excluded: on }) });
@@ -779,6 +793,7 @@ async function statusPage() {
     ["To review", v.prelabelled || 0], ["Waiting for frames/model", (v.new || 0) + (v.frames || 0)], ["Failed", v.failed || 0],
     ["MQTT", s.collector.mqtt, true], ["Clips fetched", s.collector.clips],
     ["LM Studio", s.prelabel.lmstudio, true], ["Seconds per frame", s.prelabel.seconds_per_frame ?? "–"],
+    ["Empty visits filed", s.triage.on ? `${s.triage.filed} (${s.triage.per_day} a day back to review)` : "off", true],
     ["Empty clips deleted", s.retention.empty_clip_days ? `${s.retention.clips_removed} (after ${s.retention.empty_clip_days} days)` : "off", true],
     ["NAS free", s.disk ? `${s.disk.free_gb} GB` : "–"],
   ].map(([k, val, small]) => `<div class="card"><div class="k">${k}</div><div class="v ${small ? "small" : ""}">${esc(val)}</div></div>`).join("");
