@@ -5,6 +5,22 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-25: Fewer Empty visits to review (#70)
+
+**Changed:** Too many Empty clips were reaching To review and they added little to training. #70 files the visits
+that every signal calls Empty (nothing moved or LM Studio saw nothing, no detector box, the trained model agrees at
+90 %+, not flagged) into a new Filed Empty tab. They still count as Empty but don't train unless I confirm them.
+Each morning 2 of the previous day's come back to To review as negatives, from the times of day with the fewest
+confirmed Empty visits. Doubtful empties always stay in To review. Back to review returns one; Settings can turn
+it off or change the daily number. Filed clips follow the 14-day Empty clip retention.
+
+**Status:** PR into `edge`, tests pass locally (268). Not proven on my station yet.
+
+**Next:** After it deploys, look over the Filed Empty tab for a few days for anything that isn't empty, and see
+how much To review shrinks. Tune the thresholds in `triage.py` if needed.
+
+---
+
 ## 2026-11-24: Review fixes merged (#67)
 
 **Changed:** #67 had a changelog conflict after #68. I merged `edge` into it, which also folded #68's duplicate
