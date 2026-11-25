@@ -37,9 +37,17 @@ PREFS = (
          "Removes the camera's dark wake-up, at the first keyframe at or after this time (keyframes are 2 s apart). "
          "New clips only: clips already cut stay as they are. 0 = no cut.", "float", 0, 10, unit="s"),
     Pref("empty_clip_days", "Clips and frames", "Delete Empty clips after",
-         "Clips of visits you confirmed as Empty are deleted this many days after the visit (checked hourly). "
+         "Clips of visits you confirmed as Empty, or that were filed as Empty, are deleted this many days after "
+         "the visit (checked hourly). "
          "Their frames and labels stay, so training isn't affected. Excluded visits are kept. 0 = keep forever.",
          "int", 0, 3650, unit="days"),
+    Pref("empty_auto_file", "Clips and frames", "File sure Empty visits",
+         "Visits where nothing moved (or LM Studio saw nothing), the detector boxed nothing and the trained model "
+         "agrees skip To review and go to Filed Empty. They count as Empty but don't train unless you confirm them. "
+         "Their clips are deleted like confirmed Empty ones. Off = every visit goes to To review.", "bool"),
+    Pref("empty_review_per_day", "Clips and frames", "Empty visits to review per day",
+         "Each morning this many of the previous day's filed Empty visits, spread over the times of day, come "
+         "back to To review as training negatives. 0 = none.", "int", 0, 50),
     Pref("frames_per_visit", "Clips and frames", "Frames kept per visit", "New visits only.", "int", 1, 6),
     Pref("prelabel_paused", "Clips and frames", "Pause AI pre-labels",
          "Stops using LM Studio, to free the GPU. Clips, recognition and the kids' page keep working. New visits "

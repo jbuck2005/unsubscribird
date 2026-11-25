@@ -123,10 +123,18 @@ Home Assistant Green, use Docker on another computer instead.
   place, right after download: a lossless stream copy from the first keyframe at or after `UNSUB_CLIP_SKIP_SECONDS`
   (default 2; the camera's keyframes are 2 s apart). Clips with no keyframe within 0.5 s after that, or that would
   drop under 2 s, stay whole. `visits.clip_cut` records the cut.
-* **Empty clips don't pile up.** Once a visit you confirmed as Empty is `UNSUB_EMPTY_CLIP_DAYS` old (default 14,
-  0 = keep forever; also on the Settings page), its clip is deleted. Frames, thumbnails and the label stay, so
-  training is unaffected. Excluded visits, and labels changed in the last day, are left alone.
-  `visits.clip_removed` records when.
+* **Sure Empty visits skip review.** A visit goes to the **Filed Empty** queue instead of To review when every
+  signal agrees it is empty: nothing moved (or LM Studio saw nothing in any frame), the detector boxed nothing,
+  the trained model (if one is active) says Empty at 90 % or more, and nobody flagged it. It still counts as Empty,
+  but it isn't training data unless you confirm it. Each morning `UNSUB_EMPTY_REVIEW_PER_DAY` (default 2) of the
+  previous day's filed visits come back to To review as training negatives: the times of day with the fewest
+  confirmed Empty visits in the last two weeks first, and in each the clip that moved most. **Back to review**
+  returns any filed visit for good. `UNSUB_EMPTY_AUTO_FILE=false` (also on the Settings page) turns it off and
+  puts every filed visit back. `visits.triage` records it.
+* **Empty clips don't pile up.** Once a visit you confirmed as Empty, or a filed Empty visit, is
+  `UNSUB_EMPTY_CLIP_DAYS` old (default 14, 0 = keep forever; also on the Settings page), its clip is deleted.
+  Frames, thumbnails and the label stay, so training is unaffected. Excluded visits, and labels changed or visits
+  filed in the last day, are left alone. `visits.clip_removed` records when.
 * Frames come from the full-resolution clip (2304x1296), not the 640x360 snapshot. Each clip is scored at
   2 fps for change against its median frame, motion (a frame must differ from *both* neighbours) and sharpness;
   the best few frames, at least 1.5 s apart, are kept.

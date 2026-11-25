@@ -108,6 +108,10 @@ class Settings:
     clip_skip_s: float = field(default_factory=lambda: float(_env("UNSUB_CLIP_SKIP_SECONDS", "2")))
     # Delete the clip (only the clip) of a visit a person confirmed as Empty, this many days after the visit. 0 = keep.
     empty_clip_days: int = field(default_factory=lambda: int(_env("UNSUB_EMPTY_CLIP_DAYS", "14")))
+    # Visits every signal calls Empty skip To review (triage.py); this many of each day's come back the next day
+    # as training negatives, spread over the times of day. Off = every visit goes to To review, as before.
+    empty_auto_file: bool = field(default_factory=lambda: _env("UNSUB_EMPTY_AUTO_FILE", "true").lower() in ("1", "true", "yes"))
+    empty_review_per_day: int = field(default_factory=lambda: int(_env("UNSUB_EMPTY_REVIEW_PER_DAY", "2")))
 
     @property
     def db_path(self) -> Path:

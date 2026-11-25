@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+* **Fewer Empty visits to review.** Visits that every signal calls Empty (nothing moved or LM Studio saw nothing,
+  no detector box, the trained model agrees at 90 % or more, not flagged) skip To review and go to a new
+  **Filed Empty** queue. They count as Empty but don't train unless you confirm them, and their clips are deleted
+  after `UNSUB_EMPTY_CLIP_DAYS` like confirmed Empty ones. Each morning 2 of the previous day's (Settings: *Empty
+  visits to review per day*) come back to To review as training negatives, from the times of day with the fewest
+  confirmed Empty visits. Doubtful empties always stay in To review. **Back to review** returns one; Settings:
+  *File sure Empty visits* turns it off.
 * **Home shows every visit of the day.** The kids' page only listed visits that had a clip, so on a day when the
   camera bridge fetched few clips it said "2 visits so far today" while the gallery had 24. Visits without a clip
   now show too, with their best frame as a still picture (in the tile and the big viewer), and count on the chips,
