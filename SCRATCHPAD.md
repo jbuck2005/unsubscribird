@@ -14,7 +14,7 @@ Each morning 2 of the previous day's come back to To review as negatives, from t
 confirmed Empty visits. Doubtful empties always stay in To review. Back to review returns one; Settings can turn
 it off or change the daily number. Filed clips follow the 14-day Empty clip retention.
 
-**Status:** PR into `edge`, tests pass locally (268). Not proven on my station yet.
+**Status:** Squash-merged into `edge` (CI green), so Zeus picks it up on its next update. Not proven on my station yet.
 
 **Next:** After it deploys, look over the Filed Empty tab for a few days for anything that isn't empty, and see
 how much To review shrinks. Tune the thresholds in `triage.py` if needed.
