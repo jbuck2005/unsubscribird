@@ -12,8 +12,8 @@ only picks the sharpest unused moment. #71 adds ◀ and ▶ on each frame (1 s b
 and a clip player in the card (🎞 Pick a frame from the clip) with ±1 s and ±0.1 s steps. Select this frame adds
 the frame on screen, ticked; Confirm or Update saves it. Also fixed a triage test that failed just after midnight.
 
-**Status:** PR into `edge`, squash-merge once CI is green. Only tried with generated clips in a headless browser,
-not proven on my station yet.
+**Status:** Squash-merged into `edge` (CI green), so Zeus picks it up on its next update. Only tried with
+generated clips in a headless browser, not proven on my station yet.
 
 **Next:** On Zeus, open the Purple Finch visit from 2026-11-24, step to the finch and select it, on a phone too.
 Check the saved frame matches what the player showed.
