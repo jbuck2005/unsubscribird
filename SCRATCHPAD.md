@@ -5,6 +5,21 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-26: Pick the exact frame on Review (#71)
+
+**Changed:** A Purple Finch was only in its clip for a moment around 3 s and I had no way to grab that frame; ↻
+only picks the sharpest unused moment. #71 adds ◀ and ▶ on each frame (1 s back or forward, Shift+click 0.2 s)
+and a clip player in the card (🎞 Pick a frame from the clip) with ±1 s and ±0.1 s steps. Select this frame adds
+the frame on screen, ticked; Confirm or Update saves it. Also fixed a triage test that failed just after midnight.
+
+**Status:** PR into `edge`, squash-merge once CI is green. Only tried with generated clips in a headless browser,
+not proven on my station yet.
+
+**Next:** On Zeus, open the Purple Finch visit from 2026-11-24, step to the finch and select it, on a phone too.
+Check the saved frame matches what the player showed.
+
+---
+
 ## 2026-11-25: Fewer Empty visits to review (#70)
 
 **Changed:** Too many Empty clips were reaching To review and they added little to training. #70 files the visits
