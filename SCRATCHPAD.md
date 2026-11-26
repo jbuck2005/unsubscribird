@@ -13,7 +13,8 @@ and a clip player in the card (🎞 Pick a frame from the clip) with ±1 s and �
 the frame on screen, ticked; Confirm or Update saves it. Also fixed a triage test that failed just after midnight.
 
 **Status:** Squash-merged into `edge` (CI green), so Zeus picks it up on its next update. Only tried with
-generated clips in a headless browser, not proven on my station yet.
+generated clips in a headless browser at first. 2026-11-26: I used it on Zeus to fix the Purple Finch visit's
+frames and it worked. One real visit so far, so keep an eye on it in normal use.
 
 **Next:** On Zeus, open the Purple Finch visit from 2026-11-24, step to the finch and select it, on a phone too.
 Check the saved frame matches what the player showed.
