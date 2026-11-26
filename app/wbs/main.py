@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import shutil
 import threading
 import time
@@ -785,28 +786,75 @@ def api_keep(trace_id: str):
     return {"ok": True}
 
 
-@app.post("/api/frames/{frame_id}/replace")
-def api_replace_frame(frame_id: int):
-    """Reject a frame (e.g. blurry) and grab a different moment from the same clip, then ask the model about it."""
-    f = db.one("SELECT * FROM frames WHERE id=? AND rejected=0", frame_id)
-    if not f:
-        raise HTTPException(404, "frame not found")
-    v = db.one("SELECT * FROM visits WHERE trace_id=?", f["trace_id"])
+class GrabIn(BaseModel):
+    t: float | None = None      # seconds into the clip: take the frame at exactly this moment
+    step: float | None = None   # seconds from the rejected frame (e.g. -1 or +0.2): a nudge back or forward
+
+
+def _visit_clip(trace_id: str) -> tuple[dict, Path]:
+    v = db.one("SELECT * FROM visits WHERE trace_id=?", trace_id)
+    if not v:
+        raise HTTPException(404, "visit not found")
     if not v["clip"] or not (settings.image_dir / v["clip"]).exists():
         raise HTTPException(409, "this visit has no clip to take another frame from")
-    clip = settings.image_dir / v["clip"]
-    used = [r["t"] for r in db.q("SELECT t FROM frames WHERE trace_id=? AND kind='clip' AND t IS NOT NULL",
-                                 v["trace_id"])]
-    t = framelib.replacement_time(clip, used)
-    if t is None:
-        raise HTTPException(409, "no other usable frame in this clip")
-    out_dir = clip.parent
-    name = f"f{int(round(t * 10)):04d}"
-    full, thumb = out_dir / f"{name}.jpg", out_dir / f"{name}_thumb.jpg"
+    return v, settings.image_dir / v["clip"]
+
+
+def _cut_frame(v: dict, clip: Path, t: float, width: int | None, height: int | None,
+               step_from: float | None = None) -> int:
+    """Cut the clip's frame at t (clamped into the clip) and add it to the visit. Refuses a moment that already
+    has a frame shown, so two cards never point at the same picture."""
+    duration = framelib.probe(clip)[0]
+    # Down to 1/100 s, rounded down: ffmpeg cuts the first frame at or after t, so the frame the player showed
+    # (its own start time) stays the one cut.
+    t = math.floor(min(max(0.0, t), max(0.0, duration - 0.05)) * 100 + 1e-6) / 100
+    shown = db.q("SELECT t FROM frames WHERE trace_id=? AND kind='clip' AND rejected=0 AND t IS NOT NULL",
+                 v["trace_id"])
+    if step_from is not None and abs(t - step_from) < 0.005:
+        raise HTTPException(409, "that is this frame: it is already at the start or end of the clip")
+    if any(abs(r["t"] - t) < 0.005 for r in shown):
+        raise HTTPException(409, f"there is already a frame at {t:.2f}s")
+    # f00307c = 3.07 s. Its own pattern: the frame picker's f0030 can hold anything from 2.95 to 3.04 s.
+    name = f"f{int(round(t * 100)):05d}c"
+    full, thumb = clip.parent / f"{name}.jpg", clip.parent / f"{name}_thumb.jpg"
     framelib.cut(clip, t, full)
     framelib.cut(clip, t, thumb, width=480)
     rel = lambda p: str(p.relative_to(settings.image_dir))  # noqa: E731
-    new_id = db.add_frame(v["trace_id"], "clip", rel(full), rel(thumb), t, None, f["width"], f["height"])
+    new_id = db.add_frame(v["trace_id"], "clip", rel(full), rel(thumb), t, None, width, height)
+    with db.tx() as c:      # the same moment picked again after it was rejected once: show it again
+        c.execute("UPDATE frames SET rejected=0 WHERE id=?", (new_id,))
+    return new_id
+
+
+def _suggest(trace_id: str, frame: dict) -> dict | None:
+    try:
+        return prelabeler.label_frame(trace_id, frame)
+    except Exception as err:  # the frame is still useful without a suggestion
+        LOG.warning("Suggestion for a picked frame failed: %s", err)
+        return None
+
+
+@app.post("/api/frames/{frame_id}/replace")
+def api_replace_frame(frame_id: int, body: GrabIn | None = None):
+    """Reject a frame (e.g. blurry) and take a different moment from the same clip, then ask the model about it.
+    With no body the sharpest unused moment is picked; `step` nudges from this frame's time, `t` names the moment."""
+    f = db.one("SELECT * FROM frames WHERE id=? AND rejected=0", frame_id)
+    if not f:
+        raise HTTPException(404, "frame not found")
+    v, clip = _visit_clip(f["trace_id"])
+    if body and body.t is not None:
+        t = body.t
+    elif body and body.step is not None:
+        if f["t"] is None:
+            raise HTTPException(409, "this frame has no time in the clip to step from")
+        t = f["t"] + body.step
+    else:
+        used = [r["t"] for r in db.q("SELECT t FROM frames WHERE trace_id=? AND kind='clip' AND t IS NOT NULL",
+                                     v["trace_id"])]
+        t = framelib.replacement_time(clip, used)
+        if t is None:
+            raise HTTPException(409, "no other usable frame in this clip")
+    new_id = _cut_frame(v, clip, t, f["width"], f["height"], step_from=f["t"])
     with db.tx() as c:
         c.execute("UPDATE frames SET rejected=1 WHERE id=?", (frame_id,))
     label = db.one("SELECT * FROM labels WHERE trace_id=?", v["trace_id"])
@@ -819,13 +867,26 @@ def api_replace_frame(frame_id: int):
                 fs[str(new_id)] = fs.pop(str(frame_id))
             db.set_label_frames(v["trace_id"], ids, fs)
     new = db.one("SELECT * FROM frames WHERE id=?", new_id)
-    try:
-        suggestion = prelabeler.label_frame(v["trace_id"], new)
-    except Exception as err:  # the frame is still useful without a suggestion
-        LOG.warning("Suggestion for replacement frame failed: %s", err)
-        suggestion = None
-    LOG.info("Visit %s: frame %s rejected, replaced by t=%.1fs (frame %s)", v["trace_id"], frame_id, t, new_id)
-    return {"ok": True, "frame": dict(new), "suggestion": suggestion}
+    LOG.info("Visit %s: frame %s rejected, replaced by t=%.1fs (frame %s)", v["trace_id"], frame_id, new["t"], new_id)
+    return {"ok": True, "frame": dict(new), "suggestion": _suggest(v["trace_id"], new)}
+
+
+@app.post("/api/visits/{trace_id}/frames")
+def api_add_frame(trace_id: str, body: GrabIn):
+    """Select this frame: add the clip's frame at `t` (where the player is paused) to the visit. It is not put in
+    the label here: the card ticks it, and Confirm or Update saves it like any other ticked frame."""
+    if body.t is None:
+        raise HTTPException(422, "t is required")
+    v, clip = _visit_clip(trace_id)
+    ref = db.one("SELECT width, height FROM frames WHERE trace_id=? AND kind='clip' LIMIT 1", trace_id)
+    if ref:
+        w, h = ref["width"], ref["height"]
+    else:
+        _, w, h = framelib.probe(clip)
+    new_id = _cut_frame(v, clip, body.t, w, h)
+    new = db.one("SELECT * FROM frames WHERE id=?", new_id)
+    LOG.info("Visit %s: frame picked by hand at t=%.1fs (frame %s)", trace_id, new["t"], new_id)
+    return {"ok": True, "frame": dict(new), "suggestion": _suggest(trace_id, new)}
 
 
 @app.delete("/api/visits/{trace_id}/label")
