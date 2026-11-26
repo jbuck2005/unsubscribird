@@ -804,10 +804,9 @@ def _cut_frame(v: dict, clip: Path, t: float, width: int | None, height: int | N
                step_from: float | None = None) -> int:
     """Cut the clip's frame at t (clamped into the clip) and add it to the visit. Refuses a moment that already
     has a frame shown, so two cards never point at the same picture."""
-    duration = framelib.probe(clip)[0]
     # Down to 1/100 s, rounded down: ffmpeg cuts the first frame at or after t, so the frame the player showed
-    # (its own start time) stays the one cut.
-    t = math.floor(min(max(0.0, t), max(0.0, duration - 0.05)) * 100 + 1e-6) / 100
+    # (its own start time) stays the one cut. Never past the last frame's start, where ffmpeg finds no frame.
+    t = math.floor(min(max(0.0, t), framelib.last_frame_time(clip)) * 100 + 1e-6) / 100
     shown = db.q("SELECT t FROM frames WHERE trace_id=? AND kind='clip' AND rejected=0 AND t IS NOT NULL",
                  v["trace_id"])
     if step_from is not None and abs(t - step_from) < 0.005:
