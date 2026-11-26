@@ -58,6 +58,57 @@ def test_replace_frame_endpoint(tmp_path):
     assert ids[0] not in lab
 
 
+def _visit_with_clip(trace, times=(1.0, 3.0)):
+    main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": time.time() - 100,
+                          "time": "2026-11-05T09:00:00-05:00", "bird": "Unidentified"})
+    vdir = settings.image_dir / "visits" / trace
+    clip = vdir / "clip.mp4"
+    make_video(clip)
+    rel = lambda p: str(p.relative_to(settings.image_dir))  # noqa: E731
+    ids = []
+    for t in times:
+        full = vdir / f"f{int(t * 10):04d}.jpg"
+        frames.cut(clip, t, full)
+        ids.append(main.db.add_frame(trace, "clip", rel(full), rel(full), t, 0.5, 640, 360))
+    main.db.set_visit(trace, clip=rel(clip), status="prelabelled")
+    return ids
+
+
+def test_step_back_and_forward():
+    trace = "trace0310"
+    ids = _visit_with_clip(trace)
+    main.db.set_label(trace, "Purple Finch", ids, None, "confirmed")
+    c = TestClient(main.app)
+    r = c.post(f"/api/frames/{ids[1]}/replace", json={"step": -1}).json()
+    assert r["frame"]["t"] == 2.0                                   # 3.0 s, one second back
+    back = r["frame"]["id"]
+    r = c.post(f"/api/frames/{back}/replace", json={"step": 0.2}).json()
+    assert r["frame"]["t"] == 2.2                                   # the small step
+    v = c.get(f"/api/visits/{trace}").json()
+    assert v["label"]["frame_ids"] == [ids[0], r["frame"]["id"]]     # the label follows each step
+    # Stepping onto a moment another frame already shows is refused, not doubled.
+    assert c.post(f"/api/frames/{ids[0]}/replace", json={"t": 2.2}).status_code == 409
+    # Past the end of the clip: clamped to its last frame; a second step there has nowhere to go.
+    last = c.post(f"/api/frames/{ids[0]}/replace", json={"step": 60}).json()["frame"]
+    assert 5.5 < last["t"] < 6.0
+    assert c.post(f"/api/frames/{last['id']}/replace", json={"step": 1}).status_code == 409
+
+
+def test_select_this_frame_adds_the_exact_moment():
+    trace = "trace0311"
+    ids = _visit_with_clip(trace)
+    c = TestClient(main.app)
+    r = c.post(f"/api/visits/{trace}/frames", json={"t": 3.07}).json()
+    new = r["frame"]
+    assert r["ok"] and new["t"] == 3.07 and new["path"].endswith("f00307c.jpg")
+    assert (settings.image_dir / new["thumb"]).exists()
+    shown = [f["id"] for f in c.get(f"/api/visits/{trace}").json()["frames"]]
+    assert set(shown) == {*ids, new["id"]}                          # added, nothing rejected
+    assert c.post(f"/api/visits/{trace}/frames", json={"t": 3.07}).status_code == 409  # already there
+    assert c.post(f"/api/visits/{trace}/frames", json={}).status_code == 422
+    assert c.post("/api/visits/nope/frames", json={"t": 1}).status_code == 404
+
+
 def test_replace_needs_a_clip():
     trace = "trace0301"
     main.db.upsert_visit({"trace_id": trace, "serial": "cam", "timestamp": time.time(), "time": "x"})

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* **Review: pick the exact frame.** Each frame has ◀ and ▶ beside ↻: they swap it for the frame 1 s earlier or
+  later in the clip (Shift+click: 0.2 s), and the label follows like ↻. **🎞 Pick a frame from the clip** opens
+  the clip in the card, with ±1 s and ±0.1 s steps; **Select this frame** adds the frame on screen to the visit,
+  ticked (Confirm or Update saves it). Made for very short visits where the bird is only in the clip for a moment.
 * **Fewer Empty visits to review.** Visits that every signal calls Empty (nothing moved or LM Studio saw nothing,
   no detector box, the trained model agrees at 90 % or more, not flagged) skip To review and go to a new
   **Filed Empty** queue. They count as Empty but don't train unless you confirm them, and their clips are deleted

@@ -86,6 +86,17 @@ def probe(path: Path) -> tuple[float, int, int]:
     return float(info["format"]["duration"]), int(st["width"]), int(st["height"])
 
 
+def last_frame_time(path: Path) -> float:
+    """Start time of the clip's last frame: the end of the clip less one frame. Seeking past it gives no frame."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                          "stream=avg_frame_rate:format=duration", "-of", "json", str(path)],
+                         capture_output=True, text=True, timeout=60, check=True).stdout
+    info = json.loads(out)
+    num, _, den = info["streams"][0].get("avg_frame_rate", "0/0").partition("/")
+    fps = float(num) / float(den) if den and float(den) and float(num) else 10.0
+    return max(0.0, float(info["format"]["duration"]) - 1.0 / fps)
+
+
 def decode_small(path: Path) -> np.ndarray:
     raw = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(path), "-vf",
                           f"fps={FPS},scale={AW}:{AH},format=gray", "-f", "rawvideo", "-"],

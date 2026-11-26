@@ -99,9 +99,19 @@ table.cm .cm-cell:hover, table.cm .cm-cell:focus-visible, table.cm .cm-cell.on {
 .frame:not(.in) .tick { background: rgba(0,0,0,.55); }
 .frame .num { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.55); color: #fff; border-radius: 4px;
   font-size: 12px; padding: 0 6px; }
-.frame .regrab { position: absolute; bottom: calc(2.6em + 18px); right: 6px; width: 30px; height: 30px; border-radius: 999px;
+/* ◀ ↻ ▶ on a frame: one second back, a sharper frame, one second forward. */
+.frame .fnav { position: absolute; bottom: calc(2.6em + 18px); right: 6px; display: flex; gap: 4px; }
+.frame .regrab, .frame .step { width: 30px; height: 30px; border-radius: 999px; padding: 0;
   border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 16px; cursor: pointer; }
-.frame .regrab:hover { background: var(--cta); color: var(--on-cta); }
+.frame .step { font-size: 12px; }
+.frame .regrab:hover, .frame .step:hover, .frame .regrab:focus-visible, .frame .step:focus-visible { background: var(--cta); color: var(--on-cta); }
+/* The clip player for picking an exact frame. */
+.picker { margin: 8px 0 0; }
+.picker .player { margin-top: 8px; }
+.picker video { display: block; width: 100%; max-width: 640px; max-height: 60vh; background: #000; border-radius: 8px; }
+.picker .pbtns { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.picker .pbtns .btn { min-width: 44px; min-height: 40px; }
+.picker .ptime { min-width: 5.5em; text-align: center; font-variant-numeric: tabular-nums; }
 .frame.busy { opacity: .5; pointer-events: none; }
 .frame .tagbtn { position: absolute; bottom: calc(2.6em + 18px); left: 6px; width: 30px; height: 30px; border-radius: 999px;
   border: 0; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; font-size: 14px; line-height: 30px; padding: 0; }
@@ -232,7 +242,9 @@ pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8p
   .frames { order: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }   /* a whole visit in one screen */
   .frame .cap { font-size: 11.5px; padding: 3px 6px; min-height: 0; }
   .frame .cap .why { display: none; }
-  .frame .regrab, .frame .tagbtn { bottom: auto; top: calc(50% - 15px); }
+  .frame .fnav, .frame .tagbtn { bottom: auto; top: calc(50% - 15px); }
+  .picker { order: 1; }
+  .picker .pickthis { flex: 1 0 100%; }
   .frame .ftag { top: 32px; }
   .preds { order: 2; gap: 6px; margin: 10px 0 0; }
   .preds .chip { font-size: 12.5px; }

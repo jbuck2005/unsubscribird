@@ -198,7 +198,7 @@ const Review = {
       : q === "excluded" ? "Visits kept out of counts, eBird and training. <b>Restore</b> puts one back."
       : q === "filed" ? "Visits every signal calls Empty: nothing moved (or LM Studio saw nothing), the detector boxed nothing and the trained model agrees. They count as Empty but don't train, and their clips are deleted like confirmed Empty ones. Each morning a few of the day before come back to <b>To review</b> as training negatives. <b>Back to review</b> if one isn't empty, or <b>Confirm all</b> to make the loaded ones training data."
       : q === "disagree" ? "Visits to review where the trained model and LM Studio name different things, newest first. Each card starts on LM Studio's answer, so check the frames before you confirm. These are also in <b>To review</b>; a squirrel and a bird in one clip often lands here. <b>Confirm all</b> skips them: confirm each with Enter (or change the card first)."
-      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used, and only frames where the detector boxed a bird (yellow box) start ticked; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
+      : "Correct any visits that are wrong, then <b>Confirm all</b> saves every loaded visit with its current species. Only confirmed visits become training data. Frames with a ✓ are used, and only frames where the detector boxed a bird (yellow box) start ticked; click a frame to include or exclude it, ↻ to swap a blurry frame for a sharper one from the clip, ◀ ▶ to move a frame 1 s back or forward (Shift+click: 0.2 s), <b>🎞 Pick a frame from the clip</b> to step through the clip and add the exact frame on screen, or 🏷 when a frame shows another species (a squirrel in a chickadee visit). Tick <b>Count only</b> when the bird is too hidden or blurry to learn from: it still counts, but trains nothing.";
     $$("#queues button").forEach((b) => b.classList.toggle("on", b.dataset.q === q));
     $("#queues button.on")?.scrollIntoView({ block: "nearest", inline: "nearest" });   // phones: the chips scroll sideways
     this.load();
@@ -278,7 +278,9 @@ const Review = {
           ${f.x1 != null ? `<span class="det ${f.det_source}" title="${f.det_source === "owlvit" ? `detector: ${esc(f.det_label)} ${Math.round(f.det_score * 100)}%` : "moving region"}"
             style="left:${f.x1 * 100}%;top:${f.y1 * 100}%;width:${(f.x2 - f.x1) * 100}%;height:${(f.y2 - f.y1) * 100}%"></span>` : ""}</div>
           <span class="tick">${v._frames.has(f.id) ? "✓" : "✕"}</span><span class="num">${n + 1}${f.t != null ? " · " + f.t + "s" : ""}</span>
-          ${v.clip ? `<button class="regrab" title="Blurry? Grab a different frame from the clip (Shift+${n + 1})">↻</button>` : ""}
+          ${v.clip ? `<span class="fnav"><button class="step" data-step="-1" title="1 s earlier in the clip (Shift+click: 0.2 s)" aria-label="1 second earlier">◀</button>` +
+            `<button class="regrab" title="Blurry? Grab a different frame from the clip (Shift+${n + 1})">↻</button>` +
+            `<button class="step" data-step="1" title="1 s later in the clip (Shift+click: 0.2 s)" aria-label="1 second later">▶</button></span>` : ""}
           <button class="tagbtn" title="This frame shows a different species (Alt+${n + 1}, or t then ${n + 1})">🏷</button>
           <span class="ftag" ${v._fs.has(f.id) ? "" : "hidden"}>${esc(v._fs.get(f.id) || "")}</span>
           <div class="cap">${cap}${why}</div></div>`;
@@ -315,6 +317,18 @@ const Review = {
         ${v.clip_href ? `<a class="meta clip" href="${BASE}${esc(v.clip_href)}" target="_blank" title="Play the clip (Save as keeps this name)">▶ ${esc(v.clip_name)}</a>` : ""}</div>
       ${preds}
       <div class="frames">${frames || '<span class="msg">No frames yet.</span>'}</div>
+      ${v.clip && v.clip_href ? `<div class="picker">
+        <button type="button" class="btn pickopen" aria-expanded="false" title="Play the clip here and pick the exact moment to use as a frame">🎞 Pick a frame from the clip</button>
+        <div class="player" hidden>
+          <video controls playsinline muted preload="none"></video>
+          <div class="pbtns">
+            <button type="button" class="btn" data-d="-1" title="Back 1 s">−1 s</button>
+            <button type="button" class="btn" data-d="-0.1" title="Back about one frame">−0.1</button>
+            <span class="ptime" aria-live="polite">0.00 s</span>
+            <button type="button" class="btn" data-d="0.1" title="Forward about one frame">+0.1</button>
+            <button type="button" class="btn" data-d="1" title="Forward 1 s">+1 s</button>
+            <button type="button" class="btn primary pickthis" title="Add the frame shown in the player to this visit, ticked">Select this frame</button>
+          </div></div></div>` : ""}
       <div class="actions">
         <input placeholder="Species…" value="${esc(initial)}" aria-label="Species">
         <span class="alsoseen" title="Another species in the visit with no frame of its own, e.g. two birds in one frame. Not used for training.">
@@ -340,6 +354,11 @@ const Review = {
     $$(".frame .regrab", el).forEach((b) => b.addEventListener("click", (e) => {
       e.stopPropagation(); this.regrab(v, el, +b.closest(".frame").dataset.f);
     }));
+    $$(".frame .step", el).forEach((b) => b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.regrab(v, el, +b.closest(".frame").dataset.f, { step: +b.dataset.step * (e.shiftKey ? 0.2 : 1) });
+    }));
+    this.bindPicker(v, el);
     $$(".frame", el).forEach((fe) => {
       fe.addEventListener("click", (e) => {
         if (e.target.closest(".tagbtn")) { e.stopPropagation(); return this.tagFrame(v, el, +fe.dataset.f); }
@@ -473,12 +492,72 @@ const Review = {
     return Object.fromEntries([...v._fs].filter(([fid]) => v._frames.has(fid)));
   },
 
-  async regrab(v, el, fid) {
+  // The clip player under the frames: step through it, then "Select this frame" adds the frame on screen, ticked.
+  bindPicker(v, el) {
+    const box = $(".picker", el);
+    if (!box) return;
+    const player = $(".player", box), vid = $("video", box), open = $(".pickopen", box), shown = $(".ptime", box);
+    // The time of the frame actually on screen. currentTime can sit between two frames; where the browser
+    // reports the presented frame (requestVideoFrameCallback), use that, so the server cuts the same picture.
+    let onScreen = null;
+    const watch = () => vid.requestVideoFrameCallback((now, meta) => { onScreen = meta.mediaTime; show(); watch(); });
+    const at = () => (onScreen != null && Math.abs(onScreen - vid.currentTime) < 0.25 ? onScreen : vid.currentTime);
+    const show = () => { shown.textContent = (Math.floor(at() * 100 + 1e-6) / 100).toFixed(2) + " s"; };   // as the server rounds
+    open.addEventListener("click", () => {
+      player.hidden = !player.hidden;
+      open.setAttribute("aria-expanded", !player.hidden);
+      if (!player.hidden && !vid.src) {
+        vid.src = BASE + v.clip_href; vid.load();
+        if (vid.requestVideoFrameCallback) watch();
+      }
+      if (player.hidden) vid.pause();
+    });
+    vid.addEventListener("timeupdate", show);
+    vid.addEventListener("seeked", show);
+    $$("[data-d]", box).forEach((b) => b.addEventListener("click", () => {
+      vid.pause();
+      const end = isFinite(vid.duration) ? vid.duration : Infinity;
+      vid.currentTime = Math.min(Math.max(0, at() + +b.dataset.d), end);
+    }));
+    $(".pickthis", box).addEventListener("click", () => { vid.pause(); this.pickFrame(v, el, at()); });
+  },
+
+  async pickFrame(v, el, t) {
+    const msg = $(".msg", el);
+    msg.className = "msg"; msg.textContent = `Adding the frame at ${t.toFixed(2)}s…`;
+    try {
+      const r = await api(`/api/visits/${v.trace_id}/frames`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ t: Math.round(t * 1000) / 1000 }) });
+      const nv = await api(`/api/visits/${v.trace_id}`);
+      const frames = new Set(v._frames); frames.add(r.frame.id);
+      nv._preset = { species: $(".actions input", el).value, frames, fs: new Map(v._fs), also: v._also,
+        count: $(".countin", el)?.value, edited: v._edited || !!v.label, train: v._train };
+      const ne = this.rerender(v, nv, el);
+      const s = r.suggestion;
+      $(".msg", ne).textContent = `Added the frame at ${r.frame.t}s, ticked` +
+        (s ? ` (model: ${s.bird_present ? (s.species || "bird") : (s.other_animal || "no bird")})` : "") +
+        (v.label ? ". Press Update to save it." : ".");
+    } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
+  },
+
+  rerender(v, nv, el) {
+    const i = this.visits.indexOf(v);
+    this.visits[i] = nv;
+    const ne = this.card(nv, i);
+    el.replaceWith(ne);
+    if (nv._preset.edited) this.markEdited(nv, ne);
+    this.setFocus(i, false);
+    return ne;
+  },
+
+  async regrab(v, el, fid, body = null) {
     const fe = $(`.frame[data-f="${fid}"]`, el);
     const msg = $(".msg", el);
-    fe.classList.add("busy"); msg.className = "msg"; msg.textContent = "Grabbing a different frame…";
+    fe.classList.add("busy"); msg.className = "msg";
+    msg.textContent = body?.step ? `Stepping ${body.step < 0 ? "back" : "forward"} ${Math.abs(body.step)} s…` : "Grabbing a different frame…";
     try {
-      const r = await api(`/api/frames/${fid}/replace`, { method: "POST" });
+      const r = await api(`/api/frames/${fid}/replace`, body ? { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body) } : { method: "POST" });
       const nv = await api(`/api/visits/${v.trace_id}`);
       const frames = new Set([...v._frames].filter((x) => x !== fid));
       if (v._frames.has(fid) || !frames.size) frames.add(r.frame.id);
@@ -663,7 +742,7 @@ const Review = {
   },
 
   key(e) {
-    if (e.target.tagName === "INPUT" || e.ctrlKey || e.metaKey || !lightbox.hidden) return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "VIDEO" || e.ctrlKey || e.metaKey || !lightbox.hidden) return;
     const el = $$(".visit")[this.focus];
     const v = this.visits[this.focus];
     if (!el || !v) return;

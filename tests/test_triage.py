@@ -123,6 +123,9 @@ def test_daily_sample_spreads_over_the_day(monkeypatch):
     assert cover[triage.block(at(13))] >= 2 and cover[triage.block(at(16))] >= 1
     # Other tests label Empty visits at today's time of day: count only this test's labels.
     monkeypatch.setattr(triage, "coverage", lambda db, now: {triage.block(at(13)): 2, triage.block(at(16)): 1})
+    # Only this test's visits: just after midnight, quiet visits other tests filed an hour ago are "yesterday" too.
+    with main.db.tx() as c:
+        c.execute("UPDATE visits SET triage='kept' WHERE triage='filed' AND trace_id NOT LIKE 'tri-s-%'")
     assert triage.sample_day(main.db, 2, now) == 2
     picked = {r["trace_id"] for r in main.db.q("SELECT trace_id FROM visits WHERE triage='sample'")}
     assert picked == {"tri-s-7b", "tri-s-16"}       # least covered block first, then the clip that moved most
