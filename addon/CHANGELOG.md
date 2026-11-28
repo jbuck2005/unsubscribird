@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* **Home page: "Wrong bird?" names the bird.** The box under a clip now offers the same species autocomplete as
+  Review: type "chick" or "bcc" and pick Black-capped Chickadee from the list (the day's other birds are offered
+  while it's empty). Anything else typed is still sent as a note. On Review, a flagged visit offers the kid's pick
+  first in the species box. The list comes from a new public `/api/public/species`, which holds names and seasons
+  only, no counts or labels.
 * **Review: pick the exact frame.** Each frame has ◀ and ▶ beside ↻: they swap it for the frame 1 s earlier or
   later in the clip (Shift+click: 0.2 s), and the label follows like ↻. **🎞 Pick a frame from the clip** opens
   the clip in the card, with ±1 s and ±0.1 s steps; **Select this frame** adds the frame on screen to the visit,

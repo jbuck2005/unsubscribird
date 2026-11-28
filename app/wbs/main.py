@@ -510,6 +510,21 @@ def api_public_collection(year: int | None = None):
             "to_find": sorted(n for n, r in birds.items() if r["active"] and n not in found)}
 
 
+@app.get("/api/public/species")
+def api_public_species():
+    """The species list for the kids' "Wrong bird?" picker: names and the season only. No visit counts, notes or
+    labels, since the page needs no login."""
+    from datetime import datetime
+    from .species import SEASON_WORDS, season_level
+    month = datetime.now().month
+    out = []
+    for r in db.q("SELECT name, scientific, kind FROM species ORDER BY kind DESC, name"):
+        lvl = season_level(r["name"], month)
+        out.append({"name": r["name"], "scientific": r["scientific"] or "", "kind": r["kind"], "season": lvl,
+                    "season_text": SEASON_WORDS.get(lvl) if lvl is not None else None})
+    return out
+
+
 class FlagIn(BaseModel):
     note: str = ""
 

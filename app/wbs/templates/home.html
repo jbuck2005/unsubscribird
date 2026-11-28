@@ -62,7 +62,7 @@
           <button id="v-flag-btn" title="Tell a grown-up this isn't the right bird">⚑ Wrong bird?</button>
         </div>
         <form id="v-flag" class="v-flag" hidden>
-          <label>What do you think it is? <input id="v-flag-note" maxlength="80" placeholder="Optional"></label>
+          <label>What do you think it is? <input id="v-flag-note" maxlength="80" placeholder="Start typing a bird (optional)"></label>
           <button type="submit">Send</button> <button type="button" id="v-flag-cancel">Cancel</button>
         </form>
         <p id="v-flag-msg" class="v-flag-msg" hidden></p>
@@ -71,6 +71,7 @@
     </div>
     <button class="nav next" id="v-next" aria-label="Next clip">▶</button>
   </div>
+  <script src="{{ base }}/static/species-ac.js?v={{ asset_v }}"></script>
   <script src="{{ base }}/static/kids.js?v={{ asset_v }}"></script>
 </body>
 </html>

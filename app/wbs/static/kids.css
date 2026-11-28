@@ -152,3 +152,17 @@ a.sticker:hover, a.sticker:focus-visible { transform: translateY(-3px) rotate(-1
   .viewer figure { max-width: 100%; }
 }
 .wordmark .un { color: var(--brand-un); } .wordmark .sub { color: var(--brand-sub); } .wordmark .bird { color: var(--brand-bird); }
+
+/* Species picker on "Wrong bird?" (species-ac.js, shared with the review page): above the big player. */
+.ac { position: fixed; z-index: 20; margin: 0; padding: 4px 0; list-style: none; max-height: 260px; overflow-y: auto;
+  max-width: min(440px, calc(100vw - 32px)); background: var(--panel); color: var(--text); border-radius: 10px;
+  box-shadow: var(--shadow); font-size: 16px; text-align: left; }
+.ac[hidden] { display: none; }
+.ac li { display: flex; align-items: baseline; gap: 8px; padding: 7px 12px; cursor: pointer; }
+.ac li i { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac li small { margin-left: auto; color: var(--muted); padding-left: 8px; }
+.ac li b { color: var(--accent); }
+.ac li:hover { background: var(--accent-soft); }
+.ac li.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.ac li.unlikely span { opacity: .7; }
+.ac li.none { color: var(--muted); cursor: default; }
