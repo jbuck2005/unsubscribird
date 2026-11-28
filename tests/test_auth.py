@@ -125,3 +125,22 @@ def test_pages_carry_the_theme_script_and_location():
         t = c.get(path).text
         assert "/static/theme.js" in t and f'data-lat="{settings.sun_lat}"' in t and 'id="theme-toggle"' in t or path == "/login"
     assert c.get("/static/theme.js").status_code == 200
+
+
+def test_kids_wrong_bird_uses_the_review_species_picker():
+    """The kids' "Wrong bird?" box offers the same species autocomplete as Review, from a public list that holds
+    names and seasons only (no counts or labels: that page needs no login)."""
+    secure()
+    c = TestClient(main.app)
+    kids = c.get("/").text
+    assert kids.index("/static/species-ac.js") < kids.index("/static/kids.js")
+    assert c.get("/static/species-ac.js").status_code == 200
+    teardown_function(None)
+    review = c.get("/admin").text
+    assert review.index("/static/species-ac.js") < review.index("/static/app.js")
+    secure()
+    sp = c.get("/api/public/species")
+    assert sp.status_code == 200
+    names = {s["name"]: s for s in sp.json()}
+    assert "Black-capped Chickadee" in names
+    assert set(names["Black-capped Chickadee"]) == {"name", "scientific", "kind", "season", "season_text"}

@@ -200,8 +200,24 @@ async function showCard() {
 $("#v-card-btn").addEventListener("click", () => { state.card = !state.card; showCard(); });
 
 // ---- "Wrong bird?": into the grown-ups' Flagged queue --------------------------------
-$("#v-flag-btn").addEventListener("click", () => { $("#v-flag").hidden = false; $("#v-flag-note").focus(); });
-$("#v-flag-cancel").addEventListener("click", () => { $("#v-flag").hidden = true; });
+// The same species picker as the grown-ups' review page (species-ac.js): type "chick" or "bcc" for Black-capped
+// Chickadee. Anything else typed is still sent as the note.
+let flagSpecies = [];
+const flagNote = $("#v-flag-note");
+Autocomplete.attach(flagNote, { species: () => flagSpecies,
+  // empty field: the day's other birds, most seen first (not the one this clip is already called)
+  hints: () => Object.entries(state.counts || {}).sort(([, a], [, b]) => b - a).map(([sp]) => sp)
+    .filter((sp) => sp !== state.shown[state.open]?.species) });
+async function loadFlagSpecies() {
+  if (flagSpecies.length) return;
+  try { const r = await fetch(`${BASE}/api/public/species`); if (r.ok) flagSpecies = await r.json(); } catch { /* note only */ }
+}
+$("#v-flag-btn").addEventListener("click", async () => {
+  $("#v-flag").hidden = false;
+  await loadFlagSpecies();
+  flagNote.focus();
+});
+$("#v-flag-cancel").addEventListener("click", () => { $("#v-flag").hidden = true; flagNote.value = ""; });
 $("#v-flag").addEventListener("submit", async (e) => {
   e.preventDefault();
   const v = state.shown[state.open];
