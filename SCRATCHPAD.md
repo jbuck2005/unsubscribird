@@ -5,6 +5,17 @@ sessions. It is never merged into `main` or `edge`.
 
 ---
 
+## 2026-11-28: Bird name autocomplete on the kids' Wrong bird? (#72)
+
+**Changed:** The Wrong bird? box on the home page was a plain text field. #72 gives it the same species picker as
+Review ("bcc" finds Black-capped Chickadee; empty box offers the day's other birds). The picker now lives in a
+shared species-ac.js used by both pages, fed on the home page by a new public /api/public/species (names and
+seasons only, no counts or labels). On Review, a flagged visit's note is offered first in the species box.
+**Status:** Tests pass; checked in a headless browser with made-up data. Not yet tried on my edge system.
+**Next:** Once it's on edge, flag a clip from a phone and a PC, and check the pick shows up first on Review.
+
+---
+
 ## 2026-11-26: Pick the exact frame on Review (#71)
 
 **Changed:** A Purple Finch was only in its clip for a moment around 3 s and I had no way to grab that frame; ↻
